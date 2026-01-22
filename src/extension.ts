@@ -611,7 +611,8 @@ function getTypeEmoji(type: ContentIssue["type"]): string {
 
 async function checkDocument(
   document: vscode.TextDocument,
-  showProgress: boolean = false
+  showProgress: boolean = false,
+  showCompletionNotification: boolean = true
 ): Promise<void> {
   if (!isExtensionEnabled()) {
     clearDiagnostics(document);
@@ -693,24 +694,32 @@ async function checkDocument(
       findingsTreeDataProvider.refresh();
     }
 
-    // Show completion notification for all checks
-    showCheckCompleteNotification(result.scores, result.issues.length);
+    // Show completion notification (unless suppressed for batch operations)
+    if (showCompletionNotification) {
+      showCheckCompleteNotification(result.scores, result.issues.length);
+    }
   } catch (error: any) {
     console.error("MarkupAI: Error checking content", error);
 
-    if (error?.statusCode === 401) {
-      vscode.window.showErrorMessage(
-        "MarkupAI: Invalid API token. Please check your settings."
-      );
-      updateStatusBarNoToken();
+    // Only show error notifications if not in batch mode
+    if (showCompletionNotification) {
+      if (error?.statusCode === 401) {
+        vscode.window.showErrorMessage(
+          "MarkupAI: Invalid API token. Please check your settings."
+        );
+        updateStatusBarNoToken();
+      } else {
+        vscode.window.showErrorMessage(
+          `MarkupAI: Error checking content - ${
+            error?.message || "Unknown error"
+          }`
+        );
+        statusBarItem.text = "⚠️ MarkupAI: Error";
+        statusBarItem.show();
+      }
     } else {
-      vscode.window.showErrorMessage(
-        `MarkupAI: Error checking content - ${
-          error?.message || "Unknown error"
-        }`
-      );
-      statusBarItem.text = "⚠️ MarkupAI: Error";
-      statusBarItem.show();
+      // In batch mode, rethrow the error so it can be caught and handled by checkMultipleFiles
+      throw error;
     }
   } finally {
     isCheckingDocument.set(docKey, false);
@@ -1878,7 +1887,8 @@ async function checkMultipleFiles(files: vscode.Uri[]): Promise<void> {
 
         try {
           const document = await vscode.workspace.openTextDocument(fileUri);
-          await checkDocument(document, false);
+          // Pass false for showProgress and showCompletionNotification during batch operations
+          await checkDocument(document, false, false);
           completed++;
         } catch (error: any) {
           failed++;
