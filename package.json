@@ -23,6 +23,13 @@
   "main": "./out/extension.js",
   "contributes": {
     "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "markupai-sidebar",
+          "title": "MarkupAI",
+          "icon": "$(checklist)"
+        }
+      ],
       "panel": [
         {
           "id": "markupai-panel",
@@ -32,6 +39,14 @@
       ]
     },
     "views": {
+      "markupai-sidebar": [
+        {
+          "id": "markupai.folderScanner",
+          "name": "Folder Scanner",
+          "type": "tree",
+          "contextualTitle": "MarkupAI Folder Scanner"
+        }
+      ],
       "markupai-panel": [
         {
           "id": "markupai.findings",
@@ -132,6 +147,41 @@
         "title": "Show Current File Only",
         "category": "MarkupAI",
         "icon": "$(file)"
+      },
+      {
+        "command": "markupai.selectFolder",
+        "title": "Select Folder to Scan",
+        "category": "MarkupAI",
+        "icon": "$(folder-opened)"
+      },
+      {
+        "command": "markupai.refreshFolderScanner",
+        "title": "Refresh Folder Scanner",
+        "category": "MarkupAI",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "markupai.checkAllFiles",
+        "title": "Check All Files",
+        "category": "MarkupAI",
+        "icon": "$(run-all)"
+      },
+      {
+        "command": "markupai.checkSelectedFiles",
+        "title": "Check Selected Files",
+        "category": "MarkupAI",
+        "icon": "$(run)"
+      },
+      {
+        "command": "markupai.toggleFileSelection",
+        "title": "Toggle File Selection",
+        "category": "MarkupAI",
+        "icon": "$(check)"
+      },
+      {
+        "command": "markupai.openFile",
+        "title": "Open File",
+        "category": "MarkupAI"
       }
     ],
     "menus": {
@@ -165,6 +215,38 @@
           "command": "markupai.showCurrentFileFindings",
           "when": "view == markupai.findings && markupai.showAllFiles",
           "group": "navigation@5"
+        },
+        {
+          "command": "markupai.selectFolder",
+          "when": "view == markupai.folderScanner",
+          "group": "navigation@1"
+        },
+        {
+          "command": "markupai.refreshFolderScanner",
+          "when": "view == markupai.folderScanner",
+          "group": "navigation@2"
+        },
+        {
+          "command": "markupai.checkAllFiles",
+          "when": "view == markupai.folderScanner",
+          "group": "navigation@3"
+        },
+        {
+          "command": "markupai.checkSelectedFiles",
+          "when": "view == markupai.folderScanner",
+          "group": "navigation@4"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "markupai.toggleFileSelection",
+          "when": "view == markupai.folderScanner && viewItem == file",
+          "group": "inline@1"
+        },
+        {
+          "command": "markupai.toggleFileSelection",
+          "when": "view == markupai.folderScanner && viewItem == file",
+          "group": "1_selection@1"
         }
       ],
       "editor/context": [
