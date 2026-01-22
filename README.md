@@ -22,6 +22,14 @@
   - Consistency score
   - Terminology score
 
+### 📁 Folder Scanner (NEW!)
+
+- Check multiple documents in a folder at once
+- Select specific files or check all files in a folder
+- View results in a tree structure with quality scores
+- Perfect for auditing entire documentation folders
+- [Learn more about Folder Scanner](FOLDER_SCANNER.md)
+
 ### ⚙️ Configurable
 
 - Choose your preferred English dialect (American, British, Canadian)
@@ -55,6 +63,9 @@ Open any text document and MarkupAI will automatically analyze your content!
 | `Markup AI: Select Dialect`        | Choose your preferred English dialect     |
 | `Markup AI: Show Content Scores`   | View detailed quality scores              |
 | `MarkupAI: Toggle Enable/Disable` | Enable or disable the extension           |
+| `MarkupAI: Select Folder to Scan` | Choose a folder to check multiple files   |
+| `MarkupAI: Check All Files`       | Check all files in selected folder        |
+| `MarkupAI: Check Selected Files`  | Check only selected files in folder       |
 
 ## Context Menu
 

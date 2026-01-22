@@ -1648,6 +1648,285 @@ class FindingsTreeDataProvider implements vscode.TreeDataProvider<FindingTreeIte
 let findingsTreeDataProvider: FindingsTreeDataProvider;
 
 // ============================================================================
+// Folder Scanner - TreeView for Bulk Checking
+// ============================================================================
+
+interface FolderScannerItem {
+  type: 'folder' | 'file';
+  uri: vscode.Uri;
+  label: string;
+  isSelected: boolean;
+  children?: FolderScannerItem[];
+}
+
+class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<FolderScannerItem> {
+  private _onDidChangeTreeData: vscode.EventEmitter<FolderScannerItem | undefined | null | void> = 
+    new vscode.EventEmitter<FolderScannerItem | undefined | null | void>();
+  readonly onDidChangeTreeData: vscode.Event<FolderScannerItem | undefined | null | void> = 
+    this._onDidChangeTreeData.event;
+
+  private rootFolder: vscode.Uri | null = null;
+  private selectedFiles: Set<string> = new Set();
+  private fileExtensions = ['.md', '.txt', '.rst', '.adoc', '.tex'];
+
+  refresh(): void {
+    this._onDidChangeTreeData.fire();
+  }
+
+  setRootFolder(folder: vscode.Uri): void {
+    this.rootFolder = folder;
+    this.selectedFiles.clear();
+    this.refresh();
+  }
+
+  toggleFileSelection(item: FolderScannerItem): void {
+    const uriString = item.uri.toString();
+    if (this.selectedFiles.has(uriString)) {
+      this.selectedFiles.delete(uriString);
+    } else {
+      this.selectedFiles.add(uriString);
+    }
+    this.refresh();
+  }
+
+  selectAll(): void {
+    if (!this.rootFolder) { return; }
+    this.getAllFiles().then(files => {
+      files.forEach(file => this.selectedFiles.add(file.toString()));
+      this.refresh();
+    });
+  }
+
+  deselectAll(): void {
+    this.selectedFiles.clear();
+    this.refresh();
+  }
+
+  getSelectedFiles(): vscode.Uri[] {
+    return Array.from(this.selectedFiles).map(uriString => vscode.Uri.parse(uriString));
+  }
+
+  async getAllFiles(): Promise<vscode.Uri[]> {
+    if (!this.rootFolder) { return []; }
+    const files: vscode.Uri[] = [];
+    await this.collectFiles(this.rootFolder, files);
+    return files;
+  }
+
+  private async collectFiles(folder: vscode.Uri, files: vscode.Uri[]): Promise<void> {
+    try {
+      const entries = await vscode.workspace.fs.readDirectory(folder);
+      
+      for (const [name, type] of entries) {
+        // Skip hidden files and folders, and common ignore patterns
+        if (name.startsWith('.') || name === 'node_modules' || name === 'dist' || name === 'build') {
+          continue;
+        }
+
+        const uri = vscode.Uri.joinPath(folder, name);
+        
+        if (type === vscode.FileType.Directory) {
+          await this.collectFiles(uri, files);
+        } else if (type === vscode.FileType.File) {
+          // Check if file has a supported extension
+          if (this.fileExtensions.some(ext => name.endsWith(ext))) {
+            files.push(uri);
+          }
+        }
+      }
+    } catch (error) {
+      console.error(`Error reading directory ${folder.fsPath}:`, error);
+    }
+  }
+
+  getTreeItem(element: FolderScannerItem): vscode.TreeItem {
+    const treeItem = new vscode.TreeItem(
+      element.label,
+      element.type === 'folder' 
+        ? vscode.TreeItemCollapsibleState.Expanded 
+        : vscode.TreeItemCollapsibleState.None
+    );
+
+    if (element.type === 'folder') {
+      treeItem.iconPath = vscode.ThemeIcon.Folder;
+      treeItem.contextValue = 'folder';
+    } else {
+      // File item
+      const isSelected = this.selectedFiles.has(element.uri.toString());
+      treeItem.iconPath = new vscode.ThemeIcon(
+        isSelected ? 'check' : 'circle-outline'
+      );
+      treeItem.contextValue = 'file';
+      treeItem.resourceUri = element.uri;
+      
+      // Check if file has been checked and show status
+      const docKey = element.uri.toString();
+      if (documentScores.has(docKey)) {
+        const score = documentScores.get(docKey)!;
+        const emoji = getScoreEmoji(score.overall);
+        treeItem.description = `${emoji} ${score.overall}`;
+      }
+
+      // Make file clickable to open it
+      treeItem.command = {
+        command: 'markupai.openFile',
+        title: 'Open File',
+        arguments: [element.uri]
+      };
+    }
+
+    return treeItem;
+  }
+
+  async getChildren(element?: FolderScannerItem): Promise<FolderScannerItem[]> {
+    if (!this.rootFolder) {
+      return [];
+    }
+
+    if (!element) {
+      // Root level - show folder contents
+      return this.getFolderContents(this.rootFolder);
+    } else if (element.type === 'folder') {
+      return this.getFolderContents(element.uri);
+    }
+    
+    return [];
+  }
+
+  private async getFolderContents(folder: vscode.Uri): Promise<FolderScannerItem[]> {
+    const items: FolderScannerItem[] = [];
+    
+    try {
+      const entries = await vscode.workspace.fs.readDirectory(folder);
+      
+      // Sort: folders first, then files
+      const folders: [string, vscode.FileType][] = [];
+      const files: [string, vscode.FileType][] = [];
+      
+      for (const entry of entries) {
+        const [name] = entry;
+        // Skip hidden and ignored items
+        if (name.startsWith('.') || name === 'node_modules' || name === 'dist' || name === 'build') {
+          continue;
+        }
+        
+        if (entry[1] === vscode.FileType.Directory) {
+          folders.push(entry);
+        } else if (entry[1] === vscode.FileType.File) {
+          // Only show supported file types
+          if (this.fileExtensions.some(ext => name.endsWith(ext))) {
+            files.push(entry);
+          }
+        }
+      }
+
+      // Add folders
+      for (const [name, type] of folders) {
+        const uri = vscode.Uri.joinPath(folder, name);
+        items.push({
+          type: 'folder',
+          uri: uri,
+          label: name,
+          isSelected: false
+        });
+      }
+
+      // Add files
+      for (const [name, type] of files) {
+        const uri = vscode.Uri.joinPath(folder, name);
+        const isSelected = this.selectedFiles.has(uri.toString());
+        items.push({
+          type: 'file',
+          uri: uri,
+          label: name,
+          isSelected: isSelected
+        });
+      }
+    } catch (error) {
+      console.error(`Error reading directory ${folder.fsPath}:`, error);
+    }
+
+    return items;
+  }
+}
+
+let folderScannerTreeDataProvider: FolderScannerTreeDataProvider;
+
+// ============================================================================
+// Bulk File Checking
+// ============================================================================
+
+async function checkMultipleFiles(files: vscode.Uri[]): Promise<void> {
+  const totalFiles = files.length;
+  let completed = 0;
+  let failed = 0;
+  const errors: string[] = [];
+
+  await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: `MarkupAI: Checking ${totalFiles} file(s)...`,
+      cancellable: false
+    },
+    async (progress) => {
+      for (const fileUri of files) {
+        const fileName = fileUri.path.split('/').pop() || fileUri.path;
+        progress.report({
+          message: `Checking ${fileName} (${completed + 1}/${totalFiles})`,
+          increment: (1 / totalFiles) * 100
+        });
+
+        try {
+          const document = await vscode.workspace.openTextDocument(fileUri);
+          await checkDocument(document, false);
+          completed++;
+        } catch (error: any) {
+          failed++;
+          errors.push(`${fileName}: ${error?.message || 'Unknown error'}`);
+          console.error(`MarkupAI: Error checking ${fileName}`, error);
+        }
+      }
+    }
+  );
+
+  // Refresh the folder scanner to show updated scores
+  folderScannerTreeDataProvider.refresh();
+  
+  // Refresh findings panel
+  if (findingsTreeDataProvider) {
+    findingsTreeDataProvider.refresh();
+  }
+
+  // Show completion summary
+  let message = `MarkupAI: Checked ${completed} file(s)`;
+  if (failed > 0) {
+    message += `, ${failed} failed`;
+  }
+
+  if (failed === 0) {
+    const action = await vscode.window.showInformationMessage(
+      message,
+      "View Findings"
+    );
+    if (action === "View Findings") {
+      vscode.commands.executeCommand("markupai.findings.focus");
+    }
+  } else {
+    const action = await vscode.window.showWarningMessage(
+      message,
+      "View Findings",
+      "Show Errors"
+    );
+    if (action === "View Findings") {
+      vscode.commands.executeCommand("markupai.findings.focus");
+    } else if (action === "Show Errors") {
+      const errorMessage = errors.join('\n');
+      vscode.window.showErrorMessage(`Errors:\n${errorMessage}`);
+    }
+  }
+}
+
+// ============================================================================
 // Activation
 // ============================================================================
 
@@ -1686,6 +1965,14 @@ export function activate(context: vscode.ExtensionContext) {
     showCollapseAll: true
   });
   context.subscriptions.push(findingsTreeView);
+
+  // Initialize Folder Scanner TreeView
+  folderScannerTreeDataProvider = new FolderScannerTreeDataProvider();
+  const folderScannerTreeView = vscode.window.createTreeView("markupai.folderScanner", {
+    treeDataProvider: folderScannerTreeDataProvider,
+    showCollapseAll: true
+  });
+  context.subscriptions.push(folderScannerTreeView);
 
   // Update tree view title with issue count
   const updateTreeViewTitle = () => {
@@ -1788,6 +2075,96 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("markupai.showCurrentFileFindings", () => {
       findingsTreeDataProvider.setShowAllFiles(false);
       updateTreeViewTitle();
+    })
+  );
+
+  // ============================================================================
+  // Folder Scanner Commands
+  // ============================================================================
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("markupai.selectFolder", async () => {
+      const folderUri = await vscode.window.showOpenDialog({
+        canSelectFiles: false,
+        canSelectFolders: true,
+        canSelectMany: false,
+        openLabel: "Select Folder to Scan",
+        title: "Select folder containing documents to check"
+      });
+
+      if (folderUri && folderUri[0]) {
+        folderScannerTreeDataProvider.setRootFolder(folderUri[0]);
+        vscode.window.showInformationMessage(
+          `Folder selected: ${folderUri[0].fsPath}\nSelect files and click "Check Selected Files"`
+        );
+      }
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("markupai.refreshFolderScanner", () => {
+      folderScannerTreeDataProvider.refresh();
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("markupai.openFile", async (uri: vscode.Uri) => {
+      const document = await vscode.workspace.openTextDocument(uri);
+      await vscode.window.showTextDocument(document);
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("markupai.toggleFileSelection", (item: FolderScannerItem) => {
+      folderScannerTreeDataProvider.toggleFileSelection(item);
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("markupai.checkAllFiles", async () => {
+      if (!hasApiToken()) {
+        const action = await vscode.window.showWarningMessage(
+          "MarkupAI: API token required",
+          "Configure Token"
+        );
+        if (action === "Configure Token") {
+          await configureApiToken();
+        }
+        return;
+      }
+
+      const files = await folderScannerTreeDataProvider.getAllFiles();
+      if (files.length === 0) {
+        vscode.window.showInformationMessage("No supported files found in selected folder");
+        return;
+      }
+
+      await checkMultipleFiles(files);
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("markupai.checkSelectedFiles", async () => {
+      if (!hasApiToken()) {
+        const action = await vscode.window.showWarningMessage(
+          "MarkupAI: API token required",
+          "Configure Token"
+        );
+        if (action === "Configure Token") {
+          await configureApiToken();
+        }
+        return;
+      }
+
+      const selectedFiles = folderScannerTreeDataProvider.getSelectedFiles();
+      if (selectedFiles.length === 0) {
+        vscode.window.showInformationMessage(
+          "No files selected. Click on files to select them, then run this command."
+        );
+        return;
+      }
+
+      await checkMultipleFiles(selectedFiles);
     })
   );
 
