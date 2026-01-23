@@ -98,8 +98,17 @@ Issues are highlighted with different colors based on severity:
 
 ## Requirements
 
-- VS Code 1.108.1 or higher
+- VS Code 1.108.1 or higher (Desktop, Web, or Remote)
 - MarkupAI API token (get one at [markup.ai](https://markup.ai))
+
+## Platform Support
+
+This extension works on:
+- ✅ **VS Code Desktop** (Windows, macOS, Linux)
+- ✅ **VS Code for Web** ([vscode.dev](https://vscode.dev))
+- ✅ **GitHub Web Editor** ([github.dev](https://github.dev))
+- ✅ **Remote Development** (SSH, Containers, WSL)
+- ✅ **Virtual Workspaces** (Cloud storage, read-only folders)
 
 ## Support
 

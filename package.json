@@ -21,6 +21,13 @@
     "onStartupFinished"
   ],
   "main": "./out/extension.js",
+  "browser": "./out/extension.js",
+  "capabilities": {
+    "virtualWorkspaces": true,
+    "untrustedWorkspaces": {
+      "supported": true
+    }
+  },
   "contributes": {
     "viewsContainers": {
       "activitybar": [
@@ -375,6 +382,7 @@
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src",
     "test": "vscode-test",
+    "test:web": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. .",
     "package": "mkdir -p dist && vsce package --out dist/",
     "package:pre-release": "mkdir -p dist && vsce package --pre-release --out dist/"
   },
@@ -384,6 +392,7 @@
     "@types/vscode": "^1.108.1",
     "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^2.5.2",
+    "@vscode/test-web": "^0.0.65",
     "@vscode/vsce": "^3.7.1",
     "eslint": "^9.39.2",
     "typescript": "^5.9.3",
