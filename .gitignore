@@ -5,3 +5,5 @@ node_modules
 *.vsix
 docs
 .DS_Store
+coverage
+.vitest

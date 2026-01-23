@@ -110,6 +110,44 @@ This extension works on:
 - ✅ **Remote Development** (SSH, Containers, WSL)
 - ✅ **Virtual Workspaces** (Cloud storage, read-only folders)
 
+## Testing
+
+This extension has comprehensive test coverage using Vitest:
+
+```bash
+# Run tests
+npm test
+
+# Run tests with coverage
+npm run test:coverage
+
+# Interactive test UI
+npm run test:ui
+```
+
+**Coverage**: 90%+ across all modules
+
+See [TESTING.md](TESTING.md) for detailed testing guide.
+
+## Development
+
+```bash
+# Install dependencies
+npm install
+
+# Compile TypeScript
+npm run compile
+
+# Run tests
+npm test
+
+# Run linter
+npm run lint
+
+# Package extension
+npm run package
+```
+
 ## Support
 
 For issues, feature requests, or questions, please visit the [MarkupAI documentation](https://docs.markup.ai) or contact support.
