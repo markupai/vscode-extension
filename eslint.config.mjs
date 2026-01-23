@@ -1,27 +1,24 @@
-import typescriptEslint from "typescript-eslint";
+// @ts-check
 
-export default [{
-    files: ["**/*.ts"],
-}, {
-    plugins: {
-        "@typescript-eslint": typescriptEslint.plugin,
-    },
+import js from "@eslint/js";
+import tseslint from "typescript-eslint";
 
+export default [
+  js.configs.recommended,
+  ...tseslint.configs.strictTypeChecked,
+  {
     languageOptions: {
-        parser: typescriptEslint.parser,
-        ecmaVersion: 2022,
-        sourceType: "module",
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
     },
-
-    rules: {
-        "@typescript-eslint/naming-convention": ["warn", {
-            selector: "import",
-            format: ["camelCase", "PascalCase"],
-        }],
-
-        curly: "warn",
-        eqeqeq: "warn",
-        "no-throw-literal": "warn",
-        semi: "warn",
-    },
-}];
+  },
+  {
+    files: ["eslint.config.mjs", "vitest.config.ts"],
+    ...tseslint.configs.disableTypeChecked,
+  },
+  {
+    ignores: ["out", "dist", "coverage", ".vscode-test", "**/*.d.ts"],
+  },
+];

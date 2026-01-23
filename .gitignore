@@ -1,9 +1,9 @@
-out
-dist
-node_modules
+out/
+dist/
+node_modules/
 .vscode-test/
 *.vsix
-docs
 .DS_Store
-coverage
-.vitest
+coverage/
+.vitest/
+mdDocs/

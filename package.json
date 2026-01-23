@@ -1,75 +1,39 @@
 {
   "name": "vscode-markupai",
   "displayName": "MarkupAI",
-  "description": "Real-time content analysis in VS Code. Ensure your writing is clear, on-brand, and compliant with instant feedback as you type.",
   "version": "0.0.1",
-  "publisher": "markupai",
-  "license": "Apache-2.0",
-  "icon": "assets/Markup AI Icon 128.png",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/markupai/vscode-extension"
-  },
-  "engines": {
-    "vscode": "^1.108.1"
-  },
+  "description": "Real-time content analysis in VS Code. Ensure your writing is clear, on-brand, and compliant with instant feedback as you type.",
   "categories": [
     "Linters",
     "Other"
   ],
-  "activationEvents": [
-    "onStartupFinished"
-  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/markupai/vscode-extension"
+  },
+  "license": "Apache-2.0",
+  "publisher": "markupai",
   "main": "./out/extension.js",
   "browser": "./out/extension.js",
-  "capabilities": {
-    "virtualWorkspaces": true,
-    "untrustedWorkspaces": {
-      "supported": true
-    }
+  "scripts": {
+    "compile": "tsc -p tsconfig.build.json",
+    "format:check": "prettier --check .",
+    "format:fix": "prettier --write .",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "package": "npm run format:fix && mkdir -p dist && vsce package --out dist/",
+    "package:pre-release": "npm run format:fix && mkdir -p dist && vsce package --pre-release --out dist/",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:ui": "vitest --ui",
+    "pretest:vscode": "npm run compile && npm run lint",
+    "test:vscode": "vscode-test",
+    "test:watch": "vitest watch",
+    "test:web": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. .",
+    "vscode:prepublish": "npm run compile",
+    "watch": "tsc -watch -p tsconfig.build.json"
   },
   "contributes": {
-    "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "markupai-sidebar",
-          "title": "MarkupAI",
-          "icon": "assets/markup-icon-activitybar.svg"
-        }
-      ],
-      "panel": [
-        {
-          "id": "markupai-panel",
-          "title": "MarkupAI",
-          "icon": "$(checklist)"
-        }
-      ]
-    },
-    "views": {
-      "markupai-sidebar": [
-        {
-          "id": "markupai.folderScanner",
-          "name": "Folder Scanner",
-          "type": "tree",
-          "contextualTitle": "MarkupAI Folder Scanner"
-        }
-      ],
-      "markupai-panel": [
-        {
-          "id": "markupai.findings",
-          "name": "Findings",
-          "type": "tree",
-          "contextualTitle": "MarkupAI Findings"
-        }
-      ]
-    },
-    "viewsWelcome": [
-      {
-        "view": "markupai.folderScanner",
-        "contents": "No folder open.\n\nOpen a folder to scan documents for writing issues.\n\n[Open Folder](command:vscode.openFolder)\n\nOr select a specific folder:\n[Select Folder](command:markupai.selectFolder)",
-        "when": "workspaceFolderCount == 0"
-      }
-    ],
     "commands": [
       {
         "command": "markupai.checkContent",
@@ -198,6 +162,57 @@
         "category": "MarkupAI"
       }
     ],
+    "configuration": {
+      "title": "MarkupAI",
+      "properties": {
+        "markupai.apiToken": {
+          "type": "string",
+          "default": "",
+          "description": "Your MarkupAI API token. Get one at https://markup.ai",
+          "scope": "application"
+        },
+        "markupai.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable or disable MarkupAI checking"
+        },
+        "markupai.dialect": {
+          "type": "string",
+          "default": "american_english",
+          "enum": [
+            "american_english",
+            "british_english",
+            "canadian_english"
+          ],
+          "enumDescriptions": [
+            "American English",
+            "British English",
+            "Canadian English"
+          ],
+          "description": "The language dialect to use for checking"
+        },
+        "markupai.styleGuide": {
+          "type": "string",
+          "default": "ap",
+          "description": "The style guide to use. Built-in options: 'ap', 'chicago', 'microsoft', or a custom style guide ID"
+        },
+        "markupai.checkOnOpen": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically check content when a file is opened"
+        },
+        "markupai.checkOnChange": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically re-check content when the document changes. Enable this for real-time score updates while editing. Disable to save API calls (recommended)."
+        },
+        "markupai.checkDelay": {
+          "type": "number",
+          "default": 2000,
+          "description": "Delay in milliseconds before checking after a document change"
+        }
+      }
+    },
     "menus": {
       "view/title": [
         {
@@ -323,74 +338,57 @@
         }
       ]
     },
-    "configuration": {
-      "title": "MarkupAI",
-      "properties": {
-        "markupai.apiToken": {
-          "type": "string",
-          "default": "",
-          "description": "Your MarkupAI API token. Get one at https://markup.ai",
-          "scope": "application"
-        },
-        "markupai.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable or disable MarkupAI checking"
-        },
-        "markupai.dialect": {
-          "type": "string",
-          "default": "american_english",
-          "enum": [
-            "american_english",
-            "british_english",
-            "canadian_english"
-          ],
-          "enumDescriptions": [
-            "American English",
-            "British English",
-            "Canadian English"
-          ],
-          "description": "The language dialect to use for checking"
-        },
-        "markupai.styleGuide": {
-          "type": "string",
-          "default": "ap",
-          "description": "The style guide to use. Built-in options: 'ap', 'chicago', 'microsoft', or a custom style guide ID"
-        },
-        "markupai.checkOnOpen": {
-          "type": "boolean",
-          "default": true,
-          "description": "Automatically check content when a file is opened"
-        },
-        "markupai.checkOnChange": {
-          "type": "boolean",
-          "default": false,
-          "description": "Automatically re-check content when the document changes. Enable this for real-time score updates while editing. Disable to save API calls (recommended)."
-        },
-        "markupai.checkDelay": {
-          "type": "number",
-          "default": 2000,
-          "description": "Delay in milliseconds before checking after a document change"
+    "views": {
+      "markupai-sidebar": [
+        {
+          "id": "markupai.folderScanner",
+          "name": "Folder Scanner",
+          "type": "tree",
+          "contextualTitle": "MarkupAI Folder Scanner"
         }
+      ],
+      "markupai-panel": [
+        {
+          "id": "markupai.findings",
+          "name": "Findings",
+          "type": "tree",
+          "contextualTitle": "MarkupAI Findings"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "markupai-sidebar",
+          "title": "MarkupAI",
+          "icon": "assets/markup-icon-activitybar.svg"
+        }
+      ],
+      "panel": [
+        {
+          "id": "markupai-panel",
+          "title": "MarkupAI",
+          "icon": "$(checklist)"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "markupai.folderScanner",
+        "contents": "No folder open.\n\nOpen a folder to scan documents for writing issues.\n\n[Open Folder](command:vscode.openFolder)\n\nOr select a specific folder:\n[Select Folder](command:markupai.selectFolder)",
+        "when": "workspaceFolderCount == 0"
       }
-    }
+    ]
   },
-  "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
-    "lint": "eslint src",
-    "test": "vitest run",
-    "test:watch": "vitest watch",
-    "test:ui": "vitest --ui",
-    "test:coverage": "vitest run --coverage",
-    "test:vscode": "vscode-test",
-    "test:web": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. .",
-    "pretest:vscode": "npm run compile && npm run lint",
-    "package": "mkdir -p dist && vsce package --out dist/",
-    "package:pre-release": "mkdir -p dist && vsce package --pre-release --out dist/"
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "dependencies": {
+    "@markupai/api": "^1.5.0",
+    "diff-match-patch-ts": "^0.8.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.2",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
     "@types/vscode": "^1.108.1",
@@ -401,13 +399,21 @@
     "@vscode/test-web": "^0.0.65",
     "@vscode/vsce": "^3.7.1",
     "eslint": "^9.39.2",
+    "prettier": "^3.4.2",
+    "prettier-plugin-packagejson": "^2.5.6",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.52.0",
     "vite": "^6.0.7",
     "vitest": "^2.1.8"
   },
-  "dependencies": {
-    "@markupai/api": "^1.5.0",
-    "diff-match-patch-ts": "^0.8.0"
+  "engines": {
+    "vscode": "^1.108.1"
+  },
+  "icon": "assets/Markup AI Icon 128.png",
+  "capabilities": {
+    "virtualWorkspaces": true,
+    "untrustedWorkspaces": {
+      "supported": true
+    }
   }
 }

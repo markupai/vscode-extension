@@ -3,13 +3,17 @@
 ## Issue: "Content has been modified" Error
 
 ### Problem
+
 When calling `selectContent()` or `replaceContent()`, you might see:
+
 ```
 Error: Content has been modified. Cannot select the specified text.
 ```
 
 ### Root Cause
+
 The diff-based alignment couldn't find a match, which happens when:
+
 1. **No baseline content**: `lastContentChecked` is null/empty
 2. **Format mismatch**: Comparing HTML vs extracted text
 3. **Content actually changed**: User edited content since check
@@ -20,12 +24,15 @@ The diff-based alignment couldn't find a match, which happens when:
 ## Fix Applied ✅
 
 ### 1. Store TEXT Version (Not Just HTML)
+
 **Before**: Only stored HTML content
+
 ```typescript
 this.lastContentChecked = content; // HTML string
 ```
 
 **After**: Store extracted text version
+
 ```typescript
 const textMapping = this.getTextDomMapping();
 this.lastContentChecked = textMapping.text; // Extracted text
@@ -33,30 +40,38 @@ this.lastContentCheckedHTML = content; // HTML for reference
 ```
 
 ### 2. Use TEXT Format for Comparison
+
 **Before**: Used 'HTML' format
+
 ```typescript
-lookupMatches(this.lastContentChecked, textMapping.text, [match], 'HTML')
+lookupMatches(this.lastContentChecked, textMapping.text, [match], "HTML");
 ```
 
 **After**: Use 'TEXT' format since both are text
+
 ```typescript
-lookupMatches(baselineContent, textMapping.text, [match], 'TEXT')
+lookupMatches(baselineContent, textMapping.text, [match], "TEXT");
 ```
 
 ### 3. Fallback to Current Content
+
 **Before**: Failed if no lastContentChecked
+
 ```typescript
 lookupMatches(this.lastContentChecked || '', ...)
 ```
 
 **After**: Use current content as baseline if none stored
+
 ```typescript
 const baselineContent = this.lastContentChecked || textMapping.text;
 lookupMatches(baselineContent, ...)
 ```
 
 ### 4. Added Debug Logging
+
 Now logs at key points:
+
 - Input parameters (original text, ranges)
 - Content lengths (baseline vs current)
 - Lookup results (match count, aligned ranges)
@@ -93,46 +108,55 @@ Look for these debug messages:
 ### 2. Common Issues & Solutions
 
 #### Issue: `alignedMatchesCount: 0`
+
 **Cause**: Content doesn't match
 **Check**: Compare `baselineLength` vs `currentLength`
+
 - If very different → content was edited
 - If same → might be character encoding issue
 
-**Solution**: 
+**Solution**:
+
 - Call `getContent()` again to refresh baseline
 - Or accept the content difference
 
 #### Issue: `lastContentCheckedLength: 0`
+
 **Cause**: `getContent()` was never called
 **Solution**: Ensure `getContent()` is called before selection/replacement
+
 ```typescript
 await adapter.getContent(); // Store baseline
 await adapter.selectContent(text, index); // Now works
 ```
 
 #### Issue: Match fails with identical lengths
+
 **Cause**: Character encoding or whitespace differences
 **Debug**:
+
 ```typescript
-console.log('Baseline:', baselineContent.substring(0, 100));
-console.log('Current:', textMapping.text.substring(0, 100));
+console.log("Baseline:", baselineContent.substring(0, 100));
+console.log("Current:", textMapping.text.substring(0, 100));
 ```
 
 ### 3. Verify Content Extraction
 
 Check if text extraction is working:
+
 ```typescript
 const editor = getCKEditor();
 const body = editor.document.getBody().$;
 const mapping = extractTextDomMapping(body);
-console.log('Extracted text length:', mapping.text.length);
-console.log('DOM positions:', mapping.domPositions.length);
-console.log('First 200 chars:', mapping.text.substring(0, 200));
+console.log("Extracted text length:", mapping.text.length);
+console.log("DOM positions:", mapping.domPositions.length);
+console.log("First 200 chars:", mapping.text.substring(0, 200));
 ```
 
 ### 4. Test Diff Performance
 
 Check if diff is timing out:
+
 ```typescript
 const startTime = Date.now();
 const alignedMatches = lookupMatches(...);
@@ -183,6 +207,7 @@ User Select/Replace Flow:
 ## Testing Scenarios
 
 ### Test 1: Basic Selection (Should Work ✅)
+
 ```typescript
 // 1. Get content
 await adapter.getContent();
@@ -193,6 +218,7 @@ await adapter.selectContent("Lorem ipsum", 0);
 ```
 
 ### Test 2: Selection After Edit (Should Work ✅)
+
 ```typescript
 // 1. Get content
 await adapter.getContent();
@@ -206,6 +232,7 @@ await adapter.selectContent("Lorem ipsum", 0);
 ```
 
 ### Test 3: Selection of Deleted Text (Should Fail ❌)
+
 ```typescript
 // 1. Get content with "Lorem ipsum"
 await adapter.getContent();
@@ -218,16 +245,17 @@ await adapter.selectContent("Lorem ipsum", 0);
 ```
 
 ### Test 4: Multiple Replacements
+
 ```typescript
 // 1. Get content
 await adapter.getContent();
 
 // 2. Replace first occurrence
-await adapter.replaceContent("old", "new", {start: 10});
+await adapter.replaceContent("old", "new", { start: 10 });
 // lastContentChecked is updated ✅
 
 // 3. Replace second occurrence (using updated baseline)
-await adapter.replaceContent("old", "new", {start: 50});
+await adapter.replaceContent("old", "new", { start: 50 });
 // Expected: Works with updated positions
 ```
 
@@ -236,23 +264,29 @@ await adapter.replaceContent("old", "new", {start: 50});
 ## Configuration
 
 ### Timeout Setting
+
 Current: 3.5 seconds (in `lookup/diff-based.ts`)
+
 ```typescript
 const DIFF_TIMEOUT_SECONDS = 3.5;
 ```
 
 To change:
+
 1. Edit `DIFF_TIMEOUT_SECONDS` constant
 2. Rebuild: `npm run prod`
 
 ### Logging Level
+
 Current: Always logs debug info
 
 To disable:
+
 1. Wrap console.log in environment check:
+
 ```typescript
-if (process.env.NODE_ENV === 'development') {
-  console.log('[selectEditorContent] ...');
+if (process.env.NODE_ENV === "development") {
+  console.log("[selectEditorContent] ...");
 }
 ```
 
@@ -261,18 +295,22 @@ if (process.env.NODE_ENV === 'development') {
 ## Error Messages
 
 ### For Users
+
 ```
-"Content has been modified. Cannot select the specified text. 
+"Content has been modified. Cannot select the specified text.
 The text may have been edited since the check was performed."
 ```
 
 **User Actions:**
+
 1. Click "Check" again to refresh
 2. Try selection again
 3. If still fails, the text was significantly modified
 
 ### For Developers
+
 Check console for detailed logs with:
+
 - Exact text being searched
 - Content lengths
 - First 200 characters of baseline vs current
@@ -288,6 +326,7 @@ Check console for detailed logs with:
 - Range creation: ~1ms (fast)
 
 For large documents (>100KB), consider:
+
 - Chunking content
 - Incremental diff updates
 - Caching text-DOM mappings
@@ -307,6 +346,7 @@ If issues persist:
 ## Support
 
 For issues, check:
+
 - Browser console for detailed error logs
 - Network tab for API responses
 - CKEditor console warnings

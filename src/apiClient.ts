@@ -9,7 +9,6 @@ import { BUILT_IN_STYLE_GUIDES, POLL_INTERVAL_MS, MAX_POLL_ATTEMPTS } from "./co
  */
 export class MarkupAIContentChecker {
   private client: MarkupAIClient;
-  private originalText: string = "";
   private offsetMapper: TextOffsetMapper | null = null;
 
   constructor(apiToken: string) {
@@ -21,41 +20,48 @@ export class MarkupAIContentChecker {
   async fetchStyleGuides(): Promise<StyleGuideOption[]> {
     try {
       const styleGuides = await this.client.styleGuides.listStyleGuides();
-      
+
       // Known built-in style guide names (case-insensitive matching)
       const builtInNames = new Set([
-        "ap style guide", "ap", "associated press",
-        "chicago manual of style", "chicago", "cmos",
-        "microsoft style guide", "microsoft", "microsoft writing style guide"
+        "ap style guide",
+        "ap",
+        "associated press",
+        "chicago manual of style",
+        "chicago",
+        "cmos",
+        "microsoft style guide",
+        "microsoft",
+        "microsoft writing style guide",
       ]);
-      
+
       const customGuides: StyleGuideOption[] = [];
       const builtInGuides: StyleGuideOption[] = [];
-      
+
       for (const guide of styleGuides) {
         const nameLower = guide.name.toLowerCase();
         const idLower = guide.id.toLowerCase();
-        
+
         // Check if this is a built-in style guide by name or ID
-        const isBuiltIn = builtInNames.has(nameLower) || 
-                          builtInNames.has(idLower) ||
-                          nameLower.includes("ap style") ||
-                          nameLower.includes("chicago") ||
-                          nameLower.includes("microsoft");
-        
+        const isBuiltIn =
+          builtInNames.has(nameLower) ||
+          builtInNames.has(idLower) ||
+          nameLower.includes("ap style") ||
+          nameLower.includes("chicago") ||
+          nameLower.includes("microsoft");
+
         const styleGuideOption: StyleGuideOption = {
           id: guide.id,
           name: guide.name,
           isBuiltIn: isBuiltIn,
         };
-        
+
         if (isBuiltIn) {
           builtInGuides.push(styleGuideOption);
         } else {
           customGuides.push(styleGuideOption);
         }
       }
-      
+
       // Custom/server guides at top, built-in guides at bottom
       return [...customGuides, ...builtInGuides];
     } catch (error) {
@@ -67,23 +73,21 @@ export class MarkupAIContentChecker {
   async checkContent(
     text: string,
     dialect: MarkupAI.Dialects,
-    styleGuide: string
+    styleGuide: string,
   ): Promise<CheckResult> {
-    // Store original text and create offset mapper for Unicode handling
-    this.originalText = text;
+    // Create offset mapper for Unicode handling
     this.offsetMapper = new TextOffsetMapper(text);
-    
+
     // Create a Blob from the text content
     const blob = new Blob([text], { type: "text/plain" });
     const file = new File([blob], "content.txt", { type: "text/plain" });
 
     // Create style suggestion request
-    const workflowResponse =
-      await this.client.styleSuggestions.createStyleSuggestion({
-        file_upload: file,
-        dialect: dialect,
-        style_guide: styleGuide,
-      });
+    const workflowResponse = await this.client.styleSuggestions.createStyleSuggestion({
+      file_upload: file,
+      dialect: dialect,
+      style_guide: styleGuide,
+    });
 
     const workflowId = workflowResponse.workflow_id;
 
@@ -131,7 +135,7 @@ export class MarkupAIContentChecker {
       const issueType = this.mapCategoryToType(issue.category);
 
       // Convert API offset to JavaScript string index
-      // The API likely returns Unicode code point offsets, which differ from 
+      // The API likely returns Unicode code point offsets, which differ from
       // JavaScript's UTF-16 code unit indices for emojis and other non-BMP characters
       let startIndex: number;
       let endIndex: number;
@@ -139,17 +143,17 @@ export class MarkupAIContentChecker {
       if (this.offsetMapper) {
         // First, try to convert the code point offset
         const convertedStart = this.offsetMapper.codePointOffsetToStringIndex(
-          issue.position.start_index
+          issue.position.start_index,
         );
-        
+
         // Then, verify by finding the actual text in the document
         // This handles any remaining edge cases and ensures accuracy
         const position = this.offsetMapper.findNearbyText(
           issue.original,
           convertedStart,
-          50 // Search within 50 characters if not exact match
+          50, // Search within 50 characters if not exact match
         );
-        
+
         if (position) {
           startIndex = position.start;
           endIndex = position.end;
@@ -170,8 +174,7 @@ export class MarkupAIContentChecker {
         endIndex: endIndex,
         type: issueType,
         category: issue.category,
-        subcategory:
-          typeof issue.subcategory === "string" ? issue.subcategory : undefined,
+        subcategory: typeof issue.subcategory === "string" ? issue.subcategory : undefined,
         message:
           issue.explanation ||
           `${issue.category}: Replace "${issue.original}" with "${issue.suggestion}"`,
@@ -192,9 +195,7 @@ export class MarkupAIContentChecker {
     return { issues, scores };
   }
 
-  private mapCategoryToType(
-    category?: MarkupAI.IssueCategory
-  ): ContentIssue["type"] {
+  private mapCategoryToType(category?: MarkupAI.IssueCategory): ContentIssue["type"] {
     switch (category) {
       case "grammar":
         return "grammar";

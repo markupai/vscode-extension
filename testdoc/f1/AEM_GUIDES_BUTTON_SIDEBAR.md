@@ -15,6 +15,7 @@ The integration consists of several key components:
 ### 1. Core Components
 
 #### `IAemIntegration` Interface
+
 - **Location**: `ui.frontend/src/main/webpack/components/sidebarContainer/IAemIntegration.ts`
 - **Purpose**: Defines the contract for AEM integrations
 - **Methods**:
@@ -23,6 +24,7 @@ The integration consists of several key components:
   - `getPanelStackSelector()`: Get the panel stack selector for the UI
 
 #### `AEMGuidesIntegration` Class
+
 - **Location**: `ui.frontend/src/main/webpack/components/sidebarContainer/AEMGuidesIntegration.ts`
 - **Purpose**: Implements the integration logic for AEM Guides
 - **Key Features**:
@@ -32,6 +34,7 @@ The integration consists of several key components:
   - Shows/hides sidebar appropriately based on user context
 
 #### `MarkupAiSidePanel` Class
+
 - **Location**: `ui.frontend/src/main/webpack/components/sidebarContainer/sidebarContainer.ts`
 - **Purpose**: Main controller for attaching and managing the sidebar panel
 - **Key Features**:
@@ -41,6 +44,7 @@ The integration consists of several key components:
   - Uses mutation observers to detect panel mounting
 
 #### `SidePanelUtils` Utility Class
+
 - **Location**: `ui.frontend/src/main/webpack/components/utils/sidePanelUtils.ts`
 - **Purpose**: Provides utility functions for sidebar management
 - **Key Functions**:
@@ -54,6 +58,7 @@ The integration consists of several key components:
 ### 2. Integration Points
 
 #### Main Entry Point
+
 - **File**: `ui.frontend/src/main/webpack/site/main.ts`
 - **Changes**:
   - Imports `MarkupAiSidePanel`
@@ -61,6 +66,7 @@ The integration consists of several key components:
   - Attaches sidebar on application startup
 
 #### Styles
+
 - **File**: `ui.frontend/src/main/webpack/site/main.scss`
 - **Key Styles**:
   - `.sidepanel-tab-markupai`: Main sidebar panel container
@@ -71,6 +77,7 @@ The integration consists of several key components:
 ### 3. Visual Assets
 
 #### Logo
+
 - **Source**: `ui.frontend/src/main/webpack/resources/images/markup_Logo Mark Coral.svg`
 - **Deployed To**: `ui.apps/src/main/content/jcr_root/apps/markupai-aem-guides/clientlibs/clientlib-site/resources/images/markup_Logo Mark Coral.svg`
 - **Description**: Coral-colored Markup.ai logo mark used for the sidebar button icon
@@ -82,14 +89,14 @@ The integration consists of several key components:
 1. **Icon**: Uses the Markup.ai logo (coral mark) as the button icon
 2. **Label**: "Markup.ai" text label next to the icon
 3. **Location**: Added to the left panel tab list in AEM Guides
-4. **Behavior**: 
+4. **Behavior**:
    - Clickable to show/hide the sidebar
    - Disabled in source mode (only works in author mode)
 
 ### Sidebar Integration
 
 1. **Content**: Static HTML page with heading "markup.ai sidebar"
-2. **Visibility**: 
+2. **Visibility**:
    - Visible only in author mode
    - Hidden in source mode
 3. **Layout**: Full-height panel in the left sidebar area
@@ -111,6 +118,7 @@ The integration intelligently handles different editor modes:
 ## Type Definitions
 
 Updated `ui.frontend/src/typings/aem.d.ts` to include:
+
 - jQuery (`$`, `jQuery`)
 - CKEDITOR
 - `fmxml` (AEM Guides editor API)
@@ -159,6 +167,7 @@ ui.apps/src/main/content/jcr_root/apps/markupai-aem-guides/clientlibs/clientlib-
 To test the integration:
 
 1. **Build the project**:
+
    ```bash
    cd ui.frontend
    npm run prod
@@ -207,9 +216,9 @@ These can be customized if needed by modifying the respective class files.
 ## Linting
 
 All files pass ESLint checks with one minor warning:
+
 - `main.ts`: Preference for top-level await (warning only, not blocking)
 
 ## Conclusion
 
 The button and sidebar integration has been successfully implemented following best practices from the reference Acrolinx project. The implementation is production-ready and provides a solid foundation for future Markup.ai features in AEM Guides.
-

@@ -57,11 +57,11 @@ Open any text document and MarkupAI will automatically analyze your content!
 
 | Command                           | Description                               |
 | --------------------------------- | ----------------------------------------- |
-| `Markup AI: Check Content`         | Manually trigger a content check          |
-| `Markup AI: Configure API Token`   | Set or update your API token              |
-| `Markup AI: Select Style Guide`    | Choose a style guide for content analysis |
-| `Markup AI: Select Dialect`        | Choose your preferred English dialect     |
-| `Markup AI: Show Content Scores`   | View detailed quality scores              |
+| `Markup AI: Check Content`        | Manually trigger a content check          |
+| `Markup AI: Configure API Token`  | Set or update your API token              |
+| `Markup AI: Select Style Guide`   | Choose a style guide for content analysis |
+| `Markup AI: Select Dialect`       | Choose your preferred English dialect     |
+| `Markup AI: Show Content Scores`  | View detailed quality scores              |
 | `MarkupAI: Toggle Enable/Disable` | Enable or disable the extension           |
 | `MarkupAI: Select Folder to Scan` | Choose a folder to check multiple files   |
 | `MarkupAI: Check All Files`       | Check all files in selected folder        |
@@ -80,8 +80,8 @@ Access settings via `File > Preferences > Settings` and search for "MarkupAI":
 
 | Setting                  | Description                                                            | Default            |
 | ------------------------ | ---------------------------------------------------------------------- | ------------------ |
-| `markupai.apiToken`      | Your Markup AI API token                                                | -                  |
-| `markupai.enabled`       | Enable/disable Markup AI checking                                       | `true`             |
+| `markupai.apiToken`      | Your Markup AI API token                                               | -                  |
+| `markupai.enabled`       | Enable/disable Markup AI checking                                      | `true`             |
 | `markupai.dialect`       | Language dialect (american_english, british_english, canadian_english) | `american_english` |
 | `markupai.styleGuide`    | Style guide to use (ap, chicago, microsoft, or custom ID)              | `ap`               |
 | `markupai.checkOnOpen`   | Automatically check when a file is opened                              | `true`             |
@@ -104,6 +104,7 @@ Issues are highlighted with different colors based on severity:
 ## Platform Support
 
 This extension works on:
+
 - ✅ **VS Code Desktop** (Windows, macOS, Linux)
 - ✅ **VS Code for Web** ([vscode.dev](https://vscode.dev))
 - ✅ **GitHub Web Editor** ([github.dev](https://github.dev))

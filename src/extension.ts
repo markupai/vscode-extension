@@ -10,13 +10,7 @@ interface ContentIssue {
   id: string;
   startIndex: number;
   endIndex: number;
-  type:
-    | "spelling"
-    | "grammar"
-    | "consistency"
-    | "clarity"
-    | "terminology"
-    | "tone";
+  type: "spelling" | "grammar" | "consistency" | "clarity" | "terminology" | "tone";
   category?: string;
   subcategory?: string;
   message: string;
@@ -85,7 +79,7 @@ class OffsetTranslator {
   /**
    * Translate a position from the old text to the corresponding position in the new text.
    * Uses diff_xIndex internally which computes the equivalent location.
-   * 
+   *
    * @param oldPosition - Character index in the old text
    * @returns The corresponding character index in the new text
    */
@@ -95,7 +89,7 @@ class OffsetTranslator {
 
   /**
    * Translate a range (start, end) from old text to new text positions.
-   * 
+   *
    * @param startIndex - Start position in old text
    * @param endIndex - End position in old text
    * @returns Object with translated start and end positions, or null if the range was deleted
@@ -103,21 +97,21 @@ class OffsetTranslator {
   translateRange(startIndex: number, endIndex: number): { start: number; end: number } | null {
     const newStart = this.translatePosition(startIndex);
     const newEnd = this.translatePosition(endIndex);
-    
+
     // If start >= end after translation, the content was deleted
     if (newStart >= newEnd) {
       return null;
     }
-    
+
     return { start: newStart, end: newEnd };
   }
 
   /**
-   * Implementation of diff_xIndex - maps a character position in text1 to 
+   * Implementation of diff_xIndex - maps a character position in text1 to
    * the equivalent position in text2 based on the diff array.
-   * 
+   *
    * This is based on the Google diff-match-patch algorithm.
-   * 
+   *
    * @param diffs - Array of diff tuples
    * @param loc - Location in text1 to translate
    * @returns Location in text2
@@ -164,17 +158,23 @@ class OffsetTranslator {
 
   /**
    * Check if a specific text still exists at the translated position in the new text.
-   * 
+   *
    * @param originalText - The text that should be at the position
    * @param newText - The new document text
    * @param translatedStart - The translated start position
    * @returns true if the text matches at the translated position
    */
-  static verifyTextAtPosition(originalText: string, newText: string, translatedStart: number): boolean {
+  static verifyTextAtPosition(
+    originalText: string,
+    newText: string,
+    translatedStart: number,
+  ): boolean {
     if (translatedStart < 0 || translatedStart + originalText.length > newText.length) {
       return false;
     }
-    return newText.substring(translatedStart, translatedStart + originalText.length) === originalText;
+    return (
+      newText.substring(translatedStart, translatedStart + originalText.length) === originalText
+    );
   }
 }
 
@@ -187,7 +187,7 @@ class OffsetTranslator {
  * - Unicode code points (what many APIs return)
  * - UTF-8 byte offsets (file-based APIs)
  * - UTF-16 code units (JavaScript string indices)
- * 
+ *
  * Emojis and characters outside BMP cause differences:
  * - 😀 (U+1F600): 1 code point, 4 UTF-8 bytes, 2 UTF-16 code units
  */
@@ -221,7 +221,7 @@ class TextOffsetMapper {
       codePointIndex++;
 
       this.codePointToStringIndex.push(stringIndex);
-      
+
       // Fill in byte offsets for each byte
       for (let i = 1; i <= charBytes; i++) {
         this.byteToStringIndex.push(stringIndex);
@@ -234,7 +234,9 @@ class TextOffsetMapper {
    * Use this if the API counts characters as code points.
    */
   codePointOffsetToStringIndex(codePointOffset: number): number {
-    if (codePointOffset < 0) { return 0; }
+    if (codePointOffset < 0) {
+      return 0;
+    }
     if (codePointOffset >= this.codePointToStringIndex.length) {
       return this.text.length;
     }
@@ -246,7 +248,9 @@ class TextOffsetMapper {
    * Use this if the API counts positions as byte offsets.
    */
   byteOffsetToStringIndex(byteOffset: number): number {
-    if (byteOffset < 0) { return 0; }
+    if (byteOffset < 0) {
+      return 0;
+    }
     if (byteOffset >= this.byteToStringIndex.length) {
       return this.text.length;
     }
@@ -257,12 +261,17 @@ class TextOffsetMapper {
    * Find the actual position of text in the string, searching from a start index.
    * Returns the start and end string indices.
    */
-  findTextPosition(searchText: string, startFromIndex: number): { start: number; end: number } | null {
+  findTextPosition(
+    searchText: string,
+    startFromIndex: number,
+  ): { start: number; end: number } | null {
     const foundIndex = this.text.indexOf(searchText, startFromIndex);
-    if (foundIndex === -1) { return null; }
+    if (foundIndex === -1) {
+      return null;
+    }
     return {
       start: foundIndex,
-      end: foundIndex + searchText.length
+      end: foundIndex + searchText.length,
     };
   }
 
@@ -271,7 +280,11 @@ class TextOffsetMapper {
    * This is useful when the offset might be slightly off due to encoding differences
    * or when the document has changed during an async operation.
    */
-  findNearbyText(searchText: string, approximateIndex: number, searchRadius: number = 20): { start: number; end: number } | null {
+  findNearbyText(
+    searchText: string,
+    approximateIndex: number,
+    searchRadius: number = 20,
+  ): { start: number; end: number } | null {
     // Try exact position first
     const exactStart = Math.max(0, approximateIndex);
     if (this.text.substring(exactStart, exactStart + searchText.length) === searchText) {
@@ -280,9 +293,12 @@ class TextOffsetMapper {
 
     // Search nearby with the given radius
     const searchStart = Math.max(0, approximateIndex - searchRadius);
-    const searchEnd = Math.min(this.text.length, approximateIndex + searchRadius + searchText.length);
+    const searchEnd = Math.min(
+      this.text.length,
+      approximateIndex + searchRadius + searchText.length,
+    );
     const searchArea = this.text.substring(searchStart, searchEnd);
-    
+
     const foundInArea = searchArea.indexOf(searchText);
     if (foundInArea !== -1) {
       const actualStart = searchStart + foundInArea;
@@ -306,7 +322,6 @@ class TextOffsetMapper {
 
 class MarkupAIContentChecker {
   private client: MarkupAIClient;
-  private originalText: string = "";
   private offsetMapper: TextOffsetMapper | null = null;
 
   constructor(apiToken: string) {
@@ -318,41 +333,48 @@ class MarkupAIContentChecker {
   async fetchStyleGuides(): Promise<StyleGuideOption[]> {
     try {
       const styleGuides = await this.client.styleGuides.listStyleGuides();
-      
+
       // Known built-in style guide names (case-insensitive matching)
       const builtInNames = new Set([
-        "ap style guide", "ap", "associated press",
-        "chicago manual of style", "chicago", "cmos",
-        "microsoft style guide", "microsoft", "microsoft writing style guide"
+        "ap style guide",
+        "ap",
+        "associated press",
+        "chicago manual of style",
+        "chicago",
+        "cmos",
+        "microsoft style guide",
+        "microsoft",
+        "microsoft writing style guide",
       ]);
-      
+
       const customGuides: StyleGuideOption[] = [];
       const builtInGuides: StyleGuideOption[] = [];
-      
+
       for (const guide of styleGuides) {
         const nameLower = guide.name.toLowerCase();
         const idLower = guide.id.toLowerCase();
-        
+
         // Check if this is a built-in style guide by name or ID
-        const isBuiltIn = builtInNames.has(nameLower) || 
-                          builtInNames.has(idLower) ||
-                          nameLower.includes("ap style") ||
-                          nameLower.includes("chicago") ||
-                          nameLower.includes("microsoft");
-        
+        const isBuiltIn =
+          builtInNames.has(nameLower) ||
+          builtInNames.has(idLower) ||
+          nameLower.includes("ap style") ||
+          nameLower.includes("chicago") ||
+          nameLower.includes("microsoft");
+
         const styleGuideOption: StyleGuideOption = {
           id: guide.id,
           name: guide.name,
           isBuiltIn: isBuiltIn,
         };
-        
+
         if (isBuiltIn) {
           builtInGuides.push(styleGuideOption);
         } else {
           customGuides.push(styleGuideOption);
         }
       }
-      
+
       // Custom/server guides at top, built-in guides at bottom
       return [...customGuides, ...builtInGuides];
     } catch (error) {
@@ -364,23 +386,21 @@ class MarkupAIContentChecker {
   async checkContent(
     text: string,
     dialect: MarkupAI.Dialects,
-    styleGuide: string
+    styleGuide: string,
   ): Promise<CheckResult> {
-    // Store original text and create offset mapper for Unicode handling
-    this.originalText = text;
+    // Create offset mapper for Unicode handling
     this.offsetMapper = new TextOffsetMapper(text);
-    
+
     // Create a Blob from the text content
     const blob = new Blob([text], { type: "text/plain" });
     const file = new File([blob], "content.txt", { type: "text/plain" });
 
     // Create style suggestion request
-    const workflowResponse =
-      await this.client.styleSuggestions.createStyleSuggestion({
-        file_upload: file,
-        dialect: dialect,
-        style_guide: styleGuide,
-      });
+    const workflowResponse = await this.client.styleSuggestions.createStyleSuggestion({
+      file_upload: file,
+      dialect: dialect,
+      style_guide: styleGuide,
+    });
 
     const workflowId = workflowResponse.workflow_id;
 
@@ -428,7 +448,7 @@ class MarkupAIContentChecker {
       const issueType = this.mapCategoryToType(issue.category);
 
       // Convert API offset to JavaScript string index
-      // The API likely returns Unicode code point offsets, which differ from 
+      // The API likely returns Unicode code point offsets, which differ from
       // JavaScript's UTF-16 code unit indices for emojis and other non-BMP characters
       let startIndex: number;
       let endIndex: number;
@@ -436,17 +456,17 @@ class MarkupAIContentChecker {
       if (this.offsetMapper) {
         // First, try to convert the code point offset
         const convertedStart = this.offsetMapper.codePointOffsetToStringIndex(
-          issue.position.start_index
+          issue.position.start_index,
         );
-        
+
         // Then, verify by finding the actual text in the document
         // This handles any remaining edge cases and ensures accuracy
         const position = this.offsetMapper.findNearbyText(
           issue.original,
           convertedStart,
-          50 // Search within 50 characters if not exact match
+          50, // Search within 50 characters if not exact match
         );
-        
+
         if (position) {
           startIndex = position.start;
           endIndex = position.end;
@@ -467,8 +487,7 @@ class MarkupAIContentChecker {
         endIndex: endIndex,
         type: issueType,
         category: issue.category,
-        subcategory:
-          typeof issue.subcategory === "string" ? issue.subcategory : undefined,
+        subcategory: typeof issue.subcategory === "string" ? issue.subcategory : undefined,
         message:
           issue.explanation ||
           `${issue.category}: Replace "${issue.original}" with "${issue.suggestion}"`,
@@ -489,9 +508,7 @@ class MarkupAIContentChecker {
     return { issues, scores };
   }
 
-  private mapCategoryToType(
-    category?: MarkupAI.IssueCategory
-  ): ContentIssue["type"] {
+  private mapCategoryToType(category?: MarkupAI.IssueCategory): ContentIssue["type"] {
     switch (category) {
       case "grammar":
         return "grammar";
@@ -553,10 +570,7 @@ function getStyleGuide(): string {
   return getConfig().get("styleGuide", "ap");
 }
 
-function indexToPosition(
-  document: vscode.TextDocument,
-  index: number
-): vscode.Position {
+function indexToPosition(document: vscode.TextDocument, index: number): vscode.Position {
   return document.positionAt(index);
 }
 
@@ -612,7 +626,7 @@ function getTypeEmoji(type: ContentIssue["type"]): string {
 async function checkDocument(
   document: vscode.TextDocument,
   showProgress: boolean = false,
-  showCompletionNotification: boolean = true
+  showCompletionNotification: boolean = true,
 ): Promise<void> {
   if (!isExtensionEnabled()) {
     clearDiagnostics(document);
@@ -668,12 +682,8 @@ async function checkDocument(
           cancellable: false,
         },
         async () => {
-          return await checker.checkContent(
-            text,
-            getDialect(),
-            getStyleGuide()
-          );
-        }
+          return await checker.checkContent(text, getDialect(), getStyleGuide());
+        },
       );
     } else {
       result = await checker.checkContent(text, getDialect(), getStyleGuide());
@@ -704,15 +714,11 @@ async function checkDocument(
     // Only show error notifications if not in batch mode
     if (showCompletionNotification) {
       if (error?.statusCode === 401) {
-        vscode.window.showErrorMessage(
-          "MarkupAI: Invalid API token. Please check your settings."
-        );
+        vscode.window.showErrorMessage("MarkupAI: Invalid API token. Please check your settings.");
         updateStatusBarNoToken();
       } else {
         vscode.window.showErrorMessage(
-          `MarkupAI: Error checking content - ${
-            error?.message || "Unknown error"
-          }`
+          `MarkupAI: Error checking content - ${error?.message || "Unknown error"}`,
         );
         statusBarItem.text = "⚠️ MarkupAI: Error";
         statusBarItem.show();
@@ -731,21 +737,21 @@ async function checkDocument(
 function updateDiagnostics(
   document: vscode.TextDocument,
   issues: ContentIssue[],
-  originalText?: string
+  originalText?: string,
 ): void {
   const diagnostics: vscode.Diagnostic[] = [];
   const currentText = document.getText();
   const docKey = document.uri.toString();
-  
+
   // Check if document changed during the check
   const documentChanged = originalText !== undefined && originalText !== currentText;
-  
+
   // Create offset translator using diff-match-patch if document changed
   let offsetTranslator: OffsetTranslator | null = null;
   if (documentChanged) {
     offsetTranslator = new OffsetTranslator(originalText, currentText);
   }
-  
+
   // Create a text mapper for fallback text search
   const currentTextMapper = documentChanged ? new TextOffsetMapper(currentText) : null;
 
@@ -765,11 +771,11 @@ function updateDiagnostics(
     if (documentChanged && offsetTranslator) {
       // Use diff-match-patch to translate the positions
       const translatedRange = offsetTranslator.translateRange(issue.startIndex, issue.endIndex);
-      
+
       if (translatedRange) {
         startIndex = translatedRange.start;
         endIndex = translatedRange.end;
-        
+
         // Verify that the original text still exists at the translated position
         if (!OffsetTranslator.verifyTextAtPosition(issue.originalText, currentText, startIndex)) {
           // Text doesn't match at translated position, try fallback text search
@@ -777,9 +783,9 @@ function updateDiagnostics(
             const fallbackPosition = currentTextMapper.findNearbyText(
               issue.originalText,
               startIndex,
-              100
+              100,
             );
-            
+
             if (fallbackPosition) {
               startIndex = fallbackPosition.start;
               endIndex = fallbackPosition.end;
@@ -798,9 +804,9 @@ function updateDiagnostics(
           const fallbackPosition = currentTextMapper.findNearbyText(
             issue.originalText,
             issue.startIndex,
-            200 // Wider search for deleted ranges
+            200, // Wider search for deleted ranges
           );
-          
+
           if (fallbackPosition) {
             startIndex = fallbackPosition.start;
             endIndex = fallbackPosition.end;
@@ -818,7 +824,7 @@ function updateDiagnostics(
     const adjustedIssue: ContentIssue = {
       ...issue,
       startIndex,
-      endIndex
+      endIndex,
     };
     adjustedIssues.push(adjustedIssue);
 
@@ -826,11 +832,7 @@ function updateDiagnostics(
     const endPos = indexToPosition(document, endIndex);
     const range = new vscode.Range(startPos, endPos);
 
-    const diagnostic = new vscode.Diagnostic(
-      range,
-      issue.message,
-      getSeverityForIssue(issue)
-    );
+    const diagnostic = new vscode.Diagnostic(range, issue.message, getSeverityForIssue(issue));
 
     diagnostic.source = "MarkupAI";
 
@@ -889,11 +891,7 @@ async function setMarkupAIEnabled(enabled: boolean): Promise<void> {
   isEnabled = enabled;
 
   // Update the context variable for menu visibility
-  await vscode.commands.executeCommand(
-    "setContext",
-    "markupai.enabled",
-    isEnabled
-  );
+  await vscode.commands.executeCommand("setContext", "markupai.enabled", isEnabled);
 
   // Persist the setting
   const config = getConfig();
@@ -910,8 +908,7 @@ async function setMarkupAIEnabled(enabled: boolean): Promise<void> {
     vscode.window.showInformationMessage("MarkupAI: Issues Disabled");
     clearAllDiagnostics();
     statusBarItem.text = "$(circle-slash) MarkupAI: Disabled";
-    statusBarItem.tooltip =
-      "MarkupAI issues are disabled. Right-click to enable.";
+    statusBarItem.tooltip = "MarkupAI issues are disabled. Right-click to enable.";
     statusBarItem.command = "markupai.enableIssues";
     statusBarItem.backgroundColor = undefined;
     statusBarItem.show();
@@ -936,9 +933,7 @@ function updateStatusBarNoToken(): void {
   statusBarItem.text = "$(key) MarkupAI: Add API Token";
   statusBarItem.tooltip = "Click to configure your MarkupAI API token";
   statusBarItem.command = "markupai.configureApiToken";
-  statusBarItem.backgroundColor = new vscode.ThemeColor(
-    "statusBarItem.warningBackground"
-  );
+  statusBarItem.backgroundColor = new vscode.ThemeColor("statusBarItem.warningBackground");
   statusBarItem.show();
 }
 
@@ -948,10 +943,13 @@ function updateStatusBarChecking(): void {
   statusBarItem.show();
 }
 
-async function showCheckCompleteNotification(scores: ContentScores, issueCount: number): Promise<void> {
+async function showCheckCompleteNotification(
+  scores: ContentScores,
+  issueCount: number,
+): Promise<void> {
   // Build a visually appealing notification message
   const scoreEmoji = getScoreEmoji(scores.overall);
-  
+
   // Determine overall message based on score
   let statusMessage: string;
   if (scores.overall >= 90) {
@@ -964,14 +962,15 @@ async function showCheckCompleteNotification(scores: ContentScores, issueCount: 
     statusMessage = "Needs Attention";
   }
 
-  const message = `${scoreEmoji} MarkupAI Check Complete — ${statusMessage} | ` +
+  const message =
+    `${scoreEmoji} MarkupAI Check Complete — ${statusMessage} | ` +
     `Score: ${scores.overall} | ` +
-    `${issueCount} issue${issueCount !== 1 ? 's' : ''} found`;
+    `${issueCount} issue${issueCount !== 1 ? "s" : ""} found`;
 
   const action = await vscode.window.showInformationMessage(
     message,
     "View Details",
-    "Show Findings"
+    "Show Findings",
   );
 
   if (action === "View Details") {
@@ -1011,7 +1010,7 @@ class MarkupAICodeActionProvider implements vscode.CodeActionProvider {
     document: vscode.TextDocument,
     _range: vscode.Range | vscode.Selection,
     context: vscode.CodeActionContext,
-    _token: vscode.CancellationToken
+    _token: vscode.CancellationToken,
   ): vscode.CodeAction[] {
     const actions: vscode.CodeAction[] = [];
 
@@ -1028,7 +1027,7 @@ class MarkupAICodeActionProvider implements vscode.CodeActionProvider {
         // Create quick fix action using applyFix command to handle overlapping issues
         const action = new vscode.CodeAction(
           `Fix: Replace "${originalText}" with "${suggestion}"`,
-          vscode.CodeActionKind.QuickFix
+          vscode.CodeActionKind.QuickFix,
         );
 
         action.command = {
@@ -1061,7 +1060,7 @@ class MarkupAICodeActionProvider implements vscode.CodeActionProvider {
           const categoryLabel = category.charAt(0).toUpperCase() + category.slice(1);
           const disableCategoryAction = new vscode.CodeAction(
             `Disable ${categoryLabel} Issues`,
-            vscode.CodeActionKind.QuickFix
+            vscode.CodeActionKind.QuickFix,
           );
           disableCategoryAction.command = {
             command: "markupai.disableCategory",
@@ -1085,7 +1084,7 @@ class MarkupAIHoverProvider implements vscode.HoverProvider {
   provideHover(
     document: vscode.TextDocument,
     position: vscode.Position,
-    _token: vscode.CancellationToken
+    _token: vscode.CancellationToken,
   ): vscode.Hover | null {
     const diagnostics = diagnosticCollection.get(document.uri);
     if (!diagnostics) {
@@ -1106,8 +1105,7 @@ class MarkupAIHoverProvider implements vscode.HoverProvider {
 
         // 1. Category on top
         if (category) {
-          const categoryLabel =
-            category.charAt(0).toUpperCase() + category.slice(1);
+          const categoryLabel = category.charAt(0).toUpperCase() + category.slice(1);
           const categoryEmoji = getTypeEmoji(category);
           markdown.appendMarkdown(`### ${categoryEmoji} ${categoryLabel}\n\n`);
         }
@@ -1130,23 +1128,20 @@ class MarkupAIHoverProvider implements vscode.HoverProvider {
                 },
               },
               suggestion: suggestion,
-            })
+            }),
           );
-          markdown.appendMarkdown(
-            `[Apply Fix](command:markupai.applyFix?${args})\n\n`
-          );
+          markdown.appendMarkdown(`[Apply Fix](command:markupai.applyFix?${args})\n\n`);
         }
 
         // 3. Subcategory
         if (subcategory) {
-          const subcategoryLabel =
-            subcategory.charAt(0).toUpperCase() + subcategory.slice(1);
+          const subcategoryLabel = subcategory.charAt(0).toUpperCase() + subcategory.slice(1);
           markdown.appendMarkdown(`**Subcategory:** ${subcategoryLabel}\n\n`);
         }
 
         // 4. Severity (colors match underline: high=red, medium=yellow, low=blue)
         if (severity) {
-          const severityEmoji = severity === 'high' ? '🔴' : severity === 'medium' ? '🟡' : '🔵';
+          const severityEmoji = severity === "high" ? "🔴" : severity === "medium" ? "🟡" : "🔵";
           const severityLabel = severity.charAt(0).toUpperCase() + severity.slice(1);
           markdown.appendMarkdown(`**Severity:** ${severityEmoji} ${severityLabel}\n\n`);
         }
@@ -1174,11 +1169,7 @@ async function configureApiToken(): Promise<void> {
   });
 
   if (token !== undefined) {
-    await getConfig().update(
-      "apiToken",
-      token,
-      vscode.ConfigurationTarget.Global
-    );
+    await getConfig().update("apiToken", token, vscode.ConfigurationTarget.Global);
 
     if (token.trim()) {
       vscode.window.showInformationMessage("MarkupAI: API token saved");
@@ -1216,7 +1207,7 @@ async function selectStyleGuide(): Promise<void> {
   if (!hasApiToken()) {
     const action = await vscode.window.showWarningMessage(
       "MarkupAI: API token required to fetch style guides",
-      "Configure Token"
+      "Configure Token",
     );
     if (action === "Configure Token") {
       await configureApiToken();
@@ -1233,7 +1224,7 @@ async function selectStyleGuide(): Promise<void> {
     },
     async () => {
       await refreshStyleGuides();
-    }
+    },
   );
 
   const currentStyleGuide = getStyleGuide();
@@ -1279,14 +1270,8 @@ async function selectStyleGuide(): Promise<void> {
   });
 
   if (selected && selected.detail) {
-    await getConfig().update(
-      "styleGuide",
-      selected.detail,
-      vscode.ConfigurationTarget.Global
-    );
-    vscode.window.showInformationMessage(
-      `MarkupAI: Style guide set to "${selected.label}"`
-    );
+    await getConfig().update("styleGuide", selected.detail, vscode.ConfigurationTarget.Global);
+    vscode.window.showInformationMessage(`MarkupAI: Style guide set to "${selected.label}"`);
 
     // Re-check active document
     const editor = vscode.window.activeTextEditor;
@@ -1311,14 +1296,8 @@ async function selectDialect(): Promise<void> {
   });
 
   if (selected && selected.detail) {
-    await getConfig().update(
-      "dialect",
-      selected.detail,
-      vscode.ConfigurationTarget.Global
-    );
-    vscode.window.showInformationMessage(
-      `MarkupAI: Dialect set to "${selected.label}"`
-    );
+    await getConfig().update("dialect", selected.detail, vscode.ConfigurationTarget.Global);
+    vscode.window.showInformationMessage(`MarkupAI: Dialect set to "${selected.label}"`);
 
     // Re-check active document
     const editor = vscode.window.activeTextEditor;
@@ -1337,30 +1316,28 @@ async function showScoresDialog(): Promise<void> {
 
   const scores = documentScores.get(editor.document.uri.toString());
   if (!scores) {
-    vscode.window.showInformationMessage(
-      "No scores available. Run a check first."
-    );
+    vscode.window.showInformationMessage("No scores available. Run a check first.");
     return;
   }
 
   const issues = documentIssues.get(editor.document.uri.toString()) || [];
   const grammarCount = issues.filter(
-    (i) => i.type === "grammar" || i.category === "grammar"
+    (i) => i.type === "grammar" || i.category === "grammar",
   ).length;
   const consistencyCount = issues.filter(
-    (i) => i.type === "consistency" || i.category === "consistency"
+    (i) => i.type === "consistency" || i.category === "consistency",
   ).length;
   const terminologyCount = issues.filter(
-    (i) => i.type === "terminology" || i.category === "terminology"
+    (i) => i.type === "terminology" || i.category === "terminology",
   ).length;
-  const otherCount =
-    issues.length - grammarCount - consistencyCount - terminologyCount;
+  const otherCount = issues.length - grammarCount - consistencyCount - terminologyCount;
 
   // Get current settings for display
   const currentStyleGuide = getStyleGuide();
   const currentDialect = getDialect();
-  const dialectLabel = DIALECTS.find(d => d.value === currentDialect)?.label || currentDialect;
-  const styleGuideLabel = cachedStyleGuides.find(g => g.id === currentStyleGuide)?.name || currentStyleGuide;
+  const dialectLabel = DIALECTS.find((d) => d.value === currentDialect)?.label || currentDialect;
+  const styleGuideLabel =
+    cachedStyleGuides.find((g) => g.id === currentStyleGuide)?.name || currentStyleGuide;
 
   const items: vscode.QuickPickItem[] = [
     {
@@ -1406,7 +1383,7 @@ async function showScoresDialog(): Promise<void> {
       label: "$(globe) Dialect",
       description: dialectLabel,
       detail: "Click to change dialect",
-    }
+    },
   );
 
   const selected = await vscode.window.showQuickPick(items, {
@@ -1427,7 +1404,7 @@ async function showScoresDialog(): Promise<void> {
 // ============================================================================
 
 interface FindingTreeItem {
-  type: 'file' | 'issue';
+  type: "file" | "issue";
   uri?: vscode.Uri;
   issue?: ContentIssue;
   label: string;
@@ -1435,9 +1412,9 @@ interface FindingTreeItem {
 }
 
 class FindingsTreeDataProvider implements vscode.TreeDataProvider<FindingTreeItem> {
-  private _onDidChangeTreeData: vscode.EventEmitter<FindingTreeItem | undefined | null | void> = 
+  private _onDidChangeTreeData: vscode.EventEmitter<FindingTreeItem | undefined | null | void> =
     new vscode.EventEmitter<FindingTreeItem | undefined | null | void>();
-  readonly onDidChangeTreeData: vscode.Event<FindingTreeItem | undefined | null | void> = 
+  readonly onDidChangeTreeData: vscode.Event<FindingTreeItem | undefined | null | void> =
     this._onDidChangeTreeData.event;
 
   private severityFilter: string | null = null;
@@ -1466,7 +1443,7 @@ class FindingsTreeDataProvider implements vscode.TreeDataProvider<FindingTreeIte
 
   setShowAllFiles(showAll: boolean): void {
     this.showAllFiles = showAll;
-    vscode.commands.executeCommand('setContext', 'markupai.showAllFiles', showAll);
+    vscode.commands.executeCommand("setContext", "markupai.showAllFiles", showAll);
     this.refresh();
   }
 
@@ -1475,11 +1452,8 @@ class FindingsTreeDataProvider implements vscode.TreeDataProvider<FindingTreeIte
   }
 
   getTreeItem(element: FindingTreeItem): vscode.TreeItem {
-    if (element.type === 'file') {
-      const treeItem = new vscode.TreeItem(
-        element.label,
-        vscode.TreeItemCollapsibleState.Expanded
-      );
+    if (element.type === "file") {
+      const treeItem = new vscode.TreeItem(element.label, vscode.TreeItemCollapsibleState.Expanded);
       treeItem.iconPath = vscode.ThemeIcon.File;
       treeItem.resourceUri = element.uri;
       treeItem.description = `${element.children?.length || 0} issues`;
@@ -1487,32 +1461,29 @@ class FindingsTreeDataProvider implements vscode.TreeDataProvider<FindingTreeIte
     } else {
       // Issue item
       const issue = element.issue!;
-      const treeItem = new vscode.TreeItem(
-        element.label,
-        vscode.TreeItemCollapsibleState.None
-      );
-      
+      const treeItem = new vscode.TreeItem(element.label, vscode.TreeItemCollapsibleState.None);
+
       // Set icon based on severity with colors matching SonarQube style
-      if (issue.severity === 'high') {
+      if (issue.severity === "high") {
         treeItem.iconPath = new vscode.ThemeIcon(
-          'circle-filled',
-          new vscode.ThemeColor('charts.red')
+          "circle-filled",
+          new vscode.ThemeColor("charts.red"),
         );
-      } else if (issue.severity === 'medium') {
+      } else if (issue.severity === "medium") {
         treeItem.iconPath = new vscode.ThemeIcon(
-          'circle-filled',
-          new vscode.ThemeColor('charts.yellow')
+          "circle-filled",
+          new vscode.ThemeColor("charts.yellow"),
         );
       } else {
         treeItem.iconPath = new vscode.ThemeIcon(
-          'circle-filled',
-          new vscode.ThemeColor('charts.blue')
+          "circle-filled",
+          new vscode.ThemeColor("charts.blue"),
         );
       }
-      
+
       // Add description with category
       treeItem.description = issue.category || issue.type;
-      
+
       // Add tooltip
       treeItem.tooltip = new vscode.MarkdownString();
       treeItem.tooltip.appendMarkdown(`**${issue.category || issue.type}**\n\n`);
@@ -1520,14 +1491,14 @@ class FindingsTreeDataProvider implements vscode.TreeDataProvider<FindingTreeIte
       if (issue.suggestion) {
         treeItem.tooltip.appendMarkdown(`**Suggestion:** \`${issue.suggestion}\``);
       }
-      
+
       // Command to navigate to issue
       treeItem.command = {
-        command: 'markupai.goToIssue',
-        title: 'Go to Issue',
-        arguments: [element.uri, issue]
+        command: "markupai.goToIssue",
+        title: "Go to Issue",
+        arguments: [element.uri, issue],
       };
-      
+
       return treeItem;
     }
   }
@@ -1536,7 +1507,7 @@ class FindingsTreeDataProvider implements vscode.TreeDataProvider<FindingTreeIte
     if (!element) {
       // Root level - return files with issues
       return Promise.resolve(this.getFileItems());
-    } else if (element.type === 'file') {
+    } else if (element.type === "file") {
       // Return issues for this file
       return Promise.resolve(element.children || []);
     }
@@ -1546,10 +1517,10 @@ class FindingsTreeDataProvider implements vscode.TreeDataProvider<FindingTreeIte
   private getFileItems(): FindingTreeItem[] {
     const items: FindingTreeItem[] = [];
     const activeEditor = vscode.window.activeTextEditor;
-    
+
     // Get all document URIs that have issues
     const urisToShow: string[] = [];
-    
+
     if (this.showAllFiles) {
       // Show all files with issues
       documentIssues.forEach((_, uriString) => {
@@ -1568,49 +1539,53 @@ class FindingsTreeDataProvider implements vscode.TreeDataProvider<FindingTreeIte
     for (const uriString of urisToShow) {
       const uri = vscode.Uri.parse(uriString);
       let issues = documentIssues.get(uriString) || [];
-      
+
       // Apply filters
       if (this.severityFilter) {
-        issues = issues.filter(i => i.severity === this.severityFilter);
+        issues = issues.filter((i) => i.severity === this.severityFilter);
       }
       if (this.categoryFilter) {
-        issues = issues.filter(i => i.category === this.categoryFilter || i.type === this.categoryFilter);
+        issues = issues.filter(
+          (i) => i.category === this.categoryFilter || i.type === this.categoryFilter,
+        );
       }
-      
-      if (issues.length === 0) { continue; }
+
+      if (issues.length === 0) {
+        continue;
+      }
 
       // Get document to convert indices to line numbers
-      const document = vscode.workspace.textDocuments.find(d => d.uri.toString() === uriString);
-      
-      const issueItems: FindingTreeItem[] = issues.map(issue => {
-        let lineInfo = '';
+      const document = vscode.workspace.textDocuments.find((d) => d.uri.toString() === uriString);
+
+      const issueItems: FindingTreeItem[] = issues.map((issue) => {
+        let lineInfo = "";
         if (document) {
           const position = document.positionAt(issue.startIndex);
           lineInfo = `Ln ${position.line + 1}`;
         }
-        
+
         // Truncate message if too long
         let label = issue.message;
         if (label.length > 80) {
-          label = label.substring(0, 77) + '...';
+          label = label.substring(0, 77) + "...";
         }
-        
+
         return {
-          type: 'issue' as const,
+          type: "issue" as const,
           uri: uri,
           issue: issue,
-          label: `${label} (${lineInfo})`
+          label: `${label} (${lineInfo})`,
         };
       });
 
       // Get just the filename for display
-      const fileName = uri.path.split('/').pop() || uri.path;
-      
+      const fileName = uri.path.split("/").pop() || uri.path;
+
       items.push({
-        type: 'file',
+        type: "file",
         uri: uri,
         label: fileName,
-        children: issueItems
+        children: issueItems,
       });
     }
 
@@ -1619,13 +1594,15 @@ class FindingsTreeDataProvider implements vscode.TreeDataProvider<FindingTreeIte
 
   getTotalIssueCount(): number {
     let count = 0;
-    documentIssues.forEach(issues => {
+    documentIssues.forEach((issues) => {
       let filtered = issues;
       if (this.severityFilter) {
-        filtered = filtered.filter(i => i.severity === this.severityFilter);
+        filtered = filtered.filter((i) => i.severity === this.severityFilter);
       }
       if (this.categoryFilter) {
-        filtered = filtered.filter(i => i.category === this.categoryFilter || i.type === this.categoryFilter);
+        filtered = filtered.filter(
+          (i) => i.category === this.categoryFilter || i.type === this.categoryFilter,
+        );
       }
       count += filtered.length;
     });
@@ -1634,9 +1611,11 @@ class FindingsTreeDataProvider implements vscode.TreeDataProvider<FindingTreeIte
 
   getAvailableCategories(): string[] {
     const categories = new Set<string>();
-    documentIssues.forEach(issues => {
-      issues.forEach(issue => {
-        if (issue.category) { categories.add(issue.category); }
+    documentIssues.forEach((issues) => {
+      issues.forEach((issue) => {
+        if (issue.category) {
+          categories.add(issue.category);
+        }
         categories.add(issue.type);
       });
     });
@@ -1645,8 +1624,8 @@ class FindingsTreeDataProvider implements vscode.TreeDataProvider<FindingTreeIte
 
   getAvailableSeverities(): string[] {
     const severities = new Set<string>();
-    documentIssues.forEach(issues => {
-      issues.forEach(issue => {
+    documentIssues.forEach((issues) => {
+      issues.forEach((issue) => {
         severities.add(issue.severity);
       });
     });
@@ -1661,7 +1640,7 @@ let findingsTreeDataProvider: FindingsTreeDataProvider;
 // ============================================================================
 
 interface FolderScannerItem {
-  type: 'folder' | 'file';
+  type: "folder" | "file";
   uri: vscode.Uri;
   label: string;
   isSelected: boolean;
@@ -1669,14 +1648,14 @@ interface FolderScannerItem {
 }
 
 class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<FolderScannerItem> {
-  private _onDidChangeTreeData: vscode.EventEmitter<FolderScannerItem | undefined | null | void> = 
+  private _onDidChangeTreeData: vscode.EventEmitter<FolderScannerItem | undefined | null | void> =
     new vscode.EventEmitter<FolderScannerItem | undefined | null | void>();
-  readonly onDidChangeTreeData: vscode.Event<FolderScannerItem | undefined | null | void> = 
+  readonly onDidChangeTreeData: vscode.Event<FolderScannerItem | undefined | null | void> =
     this._onDidChangeTreeData.event;
 
   private rootFolder: vscode.Uri | null = null;
   private selectedFiles: Set<string> = new Set();
-  private fileExtensions = ['.md', '.txt', '.dita', '.html', '.htm', '.xml'];
+  private fileExtensions = [".md", ".txt", ".dita", ".html", ".htm", ".xml"];
 
   constructor() {
     // Auto-initialize with workspace folder if available
@@ -1690,7 +1669,7 @@ class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<FolderSca
   initializeFromWorkspace(): boolean {
     const workspaceFolders = vscode.workspace.workspaceFolders;
     console.log("MarkupAI: Workspace folders:", workspaceFolders);
-    
+
     if (workspaceFolders && workspaceFolders.length > 0) {
       // Use the first workspace folder
       this.rootFolder = workspaceFolders[0].uri;
@@ -1698,7 +1677,7 @@ class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<FolderSca
       console.log("MarkupAI: Folder scanner initialized with:", this.rootFolder.fsPath);
       return true;
     }
-    
+
     console.log("MarkupAI: No workspace folder found");
     return false;
   }
@@ -1738,9 +1717,11 @@ class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<FolderSca
   }
 
   selectAll(): void {
-    if (!this.rootFolder) { return; }
-    this.getAllFiles().then(files => {
-      files.forEach(file => this.selectedFiles.add(file.toString()));
+    if (!this.rootFolder) {
+      return;
+    }
+    this.getAllFiles().then((files) => {
+      files.forEach((file) => this.selectedFiles.add(file.toString()));
       this.refresh();
     });
   }
@@ -1751,11 +1732,13 @@ class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<FolderSca
   }
 
   getSelectedFiles(): vscode.Uri[] {
-    return Array.from(this.selectedFiles).map(uriString => vscode.Uri.parse(uriString));
+    return Array.from(this.selectedFiles).map((uriString) => vscode.Uri.parse(uriString));
   }
 
   async getAllFiles(): Promise<vscode.Uri[]> {
-    if (!this.rootFolder) { return []; }
+    if (!this.rootFolder) {
+      return [];
+    }
     const files: vscode.Uri[] = [];
     await this.collectFiles(this.rootFolder, files);
     return files;
@@ -1764,20 +1747,25 @@ class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<FolderSca
   private async collectFiles(folder: vscode.Uri, files: vscode.Uri[]): Promise<void> {
     try {
       const entries = await vscode.workspace.fs.readDirectory(folder);
-      
+
       for (const [name, type] of entries) {
         // Skip hidden files and folders, and common ignore patterns
-        if (name.startsWith('.') || name === 'node_modules' || name === 'dist' || name === 'build') {
+        if (
+          name.startsWith(".") ||
+          name === "node_modules" ||
+          name === "dist" ||
+          name === "build"
+        ) {
           continue;
         }
 
         const uri = vscode.Uri.joinPath(folder, name);
-        
+
         if (type === vscode.FileType.Directory) {
           await this.collectFiles(uri, files);
         } else if (type === vscode.FileType.File) {
           // Check if file has a supported extension
-          if (this.fileExtensions.some(ext => name.endsWith(ext))) {
+          if (this.fileExtensions.some((ext) => name.endsWith(ext))) {
             files.push(uri);
           }
         }
@@ -1790,23 +1778,21 @@ class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<FolderSca
   getTreeItem(element: FolderScannerItem): vscode.TreeItem {
     const treeItem = new vscode.TreeItem(
       element.label,
-      element.type === 'folder' 
-        ? vscode.TreeItemCollapsibleState.Expanded 
-        : vscode.TreeItemCollapsibleState.None
+      element.type === "folder"
+        ? vscode.TreeItemCollapsibleState.Expanded
+        : vscode.TreeItemCollapsibleState.None,
     );
 
-    if (element.type === 'folder') {
+    if (element.type === "folder") {
       treeItem.iconPath = vscode.ThemeIcon.Folder;
-      treeItem.contextValue = 'folder';
+      treeItem.contextValue = "folder";
     } else {
       // File item
       const isSelected = this.selectedFiles.has(element.uri.toString());
-      treeItem.iconPath = new vscode.ThemeIcon(
-        isSelected ? 'check' : 'circle-outline'
-      );
-      treeItem.contextValue = 'file';
+      treeItem.iconPath = new vscode.ThemeIcon(isSelected ? "check" : "circle-outline");
+      treeItem.contextValue = "file";
       treeItem.resourceUri = element.uri;
-      
+
       // Check if file has been checked and show status
       const docKey = element.uri.toString();
       if (documentScores.has(docKey)) {
@@ -1817,9 +1803,9 @@ class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<FolderSca
 
       // Make file clickable to open it
       treeItem.command = {
-        command: 'markupai.openFile',
-        title: 'Open File',
-        arguments: [element.uri]
+        command: "markupai.openFile",
+        title: "Open File",
+        arguments: [element.uri],
       };
     }
 
@@ -1838,60 +1824,65 @@ class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<FolderSca
     if (!element) {
       // Root level - show folder contents
       return this.getFolderContents(this.rootFolder);
-    } else if (element.type === 'folder') {
+    } else if (element.type === "folder") {
       return this.getFolderContents(element.uri);
     }
-    
+
     return [];
   }
 
   private async getFolderContents(folder: vscode.Uri): Promise<FolderScannerItem[]> {
     const items: FolderScannerItem[] = [];
-    
+
     try {
       const entries = await vscode.workspace.fs.readDirectory(folder);
-      
+
       // Sort: folders first, then files
       const folders: [string, vscode.FileType][] = [];
       const files: [string, vscode.FileType][] = [];
-      
+
       for (const entry of entries) {
         const [name] = entry;
         // Skip hidden and ignored items
-        if (name.startsWith('.') || name === 'node_modules' || name === 'dist' || name === 'build') {
+        if (
+          name.startsWith(".") ||
+          name === "node_modules" ||
+          name === "dist" ||
+          name === "build"
+        ) {
           continue;
         }
-        
+
         if (entry[1] === vscode.FileType.Directory) {
           folders.push(entry);
         } else if (entry[1] === vscode.FileType.File) {
           // Only show supported file types
-          if (this.fileExtensions.some(ext => name.endsWith(ext))) {
+          if (this.fileExtensions.some((ext) => name.endsWith(ext))) {
             files.push(entry);
           }
         }
       }
 
       // Add folders
-      for (const [name, type] of folders) {
+      for (const [name] of folders) {
         const uri = vscode.Uri.joinPath(folder, name);
         items.push({
-          type: 'folder',
+          type: "folder",
           uri: uri,
           label: name,
-          isSelected: false
+          isSelected: false,
         });
       }
 
       // Add files
-      for (const [name, type] of files) {
+      for (const [name] of files) {
         const uri = vscode.Uri.joinPath(folder, name);
         const isSelected = this.selectedFiles.has(uri.toString());
         items.push({
-          type: 'file',
+          type: "file",
           uri: uri,
           label: name,
-          isSelected: isSelected
+          isSelected: isSelected,
         });
       }
     } catch (error) {
@@ -1918,14 +1909,14 @@ async function checkMultipleFiles(files: vscode.Uri[]): Promise<void> {
     {
       location: vscode.ProgressLocation.Notification,
       title: `MarkupAI: Checking ${totalFiles} file(s)...`,
-      cancellable: false
+      cancellable: false,
     },
     async (progress) => {
       for (const fileUri of files) {
-        const fileName = fileUri.path.split('/').pop() || fileUri.path;
+        const fileName = fileUri.path.split("/").pop() || fileUri.path;
         progress.report({
           message: `Checking ${fileName} (${completed + 1}/${totalFiles})`,
-          increment: (1 / totalFiles) * 100
+          increment: (1 / totalFiles) * 100,
         });
 
         try {
@@ -1935,16 +1926,16 @@ async function checkMultipleFiles(files: vscode.Uri[]): Promise<void> {
           completed++;
         } catch (error: any) {
           failed++;
-          errors.push(`${fileName}: ${error?.message || 'Unknown error'}`);
+          errors.push(`${fileName}: ${error?.message || "Unknown error"}`);
           console.error(`MarkupAI: Error checking ${fileName}`, error);
         }
       }
-    }
+    },
   );
 
   // Refresh the folder scanner to show updated scores
   folderScannerTreeDataProvider.refresh();
-  
+
   // Refresh findings panel
   if (findingsTreeDataProvider) {
     findingsTreeDataProvider.refresh();
@@ -1957,23 +1948,16 @@ async function checkMultipleFiles(files: vscode.Uri[]): Promise<void> {
   }
 
   if (failed === 0) {
-    const action = await vscode.window.showInformationMessage(
-      message,
-      "View Findings"
-    );
+    const action = await vscode.window.showInformationMessage(message, "View Findings");
     if (action === "View Findings") {
       vscode.commands.executeCommand("markupai.findings.focus");
     }
   } else {
-    const action = await vscode.window.showWarningMessage(
-      message,
-      "View Findings",
-      "Show Errors"
-    );
+    const action = await vscode.window.showWarningMessage(message, "View Findings", "Show Errors");
     if (action === "View Findings") {
       vscode.commands.executeCommand("markupai.findings.focus");
     } else if (action === "Show Errors") {
-      const errorMessage = errors.join('\n');
+      const errorMessage = errors.join("\n");
       vscode.window.showErrorMessage(`Errors:\n${errorMessage}`);
     }
   }
@@ -1987,15 +1971,11 @@ export function activate(context: vscode.ExtensionContext) {
   console.log("MarkupAI extension is now active!");
 
   // Initialize diagnostic collection
-  diagnosticCollection =
-    vscode.languages.createDiagnosticCollection("markupai");
+  diagnosticCollection = vscode.languages.createDiagnosticCollection("markupai");
   context.subscriptions.push(diagnosticCollection);
 
   // Initialize status bar
-  statusBarItem = vscode.window.createStatusBarItem(
-    vscode.StatusBarAlignment.Right,
-    100
-  );
+  statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
   statusBarItem.name = "MarkupAI Score";
   context.subscriptions.push(statusBarItem);
 
@@ -2015,7 +1995,7 @@ export function activate(context: vscode.ExtensionContext) {
   findingsTreeDataProvider = new FindingsTreeDataProvider();
   const findingsTreeView = vscode.window.createTreeView("markupai.findings", {
     treeDataProvider: findingsTreeDataProvider,
-    showCollapseAll: true
+    showCollapseAll: true,
   });
   context.subscriptions.push(findingsTreeView);
 
@@ -2023,7 +2003,7 @@ export function activate(context: vscode.ExtensionContext) {
   folderScannerTreeDataProvider = new FolderScannerTreeDataProvider();
   const folderScannerTreeView = vscode.window.createTreeView("markupai.folderScanner", {
     treeDataProvider: folderScannerTreeDataProvider,
-    showCollapseAll: true
+    showCollapseAll: true,
   });
   context.subscriptions.push(folderScannerTreeView);
 
@@ -2041,7 +2021,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.workspace.onDidChangeWorkspaceFolders(() => {
       folderScannerTreeDataProvider.initializeFromWorkspace();
       folderScannerTreeDataProvider.refresh();
-    })
+    }),
   );
 
   // Update tree view title with issue count
@@ -2058,22 +2038,25 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Register findings panel commands
   context.subscriptions.push(
-    vscode.commands.registerCommand("markupai.goToIssue", async (uri: vscode.Uri, issue: ContentIssue) => {
-      const document = await vscode.workspace.openTextDocument(uri);
-      const editor = await vscode.window.showTextDocument(document);
-      const startPos = document.positionAt(issue.startIndex);
-      const endPos = document.positionAt(issue.endIndex);
-      const range = new vscode.Range(startPos, endPos);
-      editor.selection = new vscode.Selection(range.start, range.end);
-      editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
-    })
+    vscode.commands.registerCommand(
+      "markupai.goToIssue",
+      async (uri: vscode.Uri, issue: ContentIssue) => {
+        const document = await vscode.workspace.openTextDocument(uri);
+        const editor = await vscode.window.showTextDocument(document);
+        const startPos = document.positionAt(issue.startIndex);
+        const endPos = document.positionAt(issue.endIndex);
+        const range = new vscode.Range(startPos, endPos);
+        editor.selection = new vscode.Selection(range.start, range.end);
+        editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
+      },
+    ),
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand("markupai.refreshFindings", () => {
       findingsTreeDataProvider.refresh();
       updateTreeViewTitle();
-    })
+    }),
   );
 
   context.subscriptions.push(
@@ -2083,22 +2066,22 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.window.showInformationMessage("No issues found to filter");
         return;
       }
-      
-      const items = severities.map(s => ({
-        label: s === 'high' ? '🔴 High' : s === 'medium' ? '🟡 Medium' : '🔵 Low',
-        value: s
+
+      const items = severities.map((s) => ({
+        label: s === "high" ? "🔴 High" : s === "medium" ? "🟡 Medium" : "🔵 Low",
+        value: s,
       }));
-      items.unshift({ label: 'All Severities', value: '' });
-      
+      items.unshift({ label: "All Severities", value: "" });
+
       const selected = await vscode.window.showQuickPick(items, {
-        placeHolder: 'Select severity to filter'
+        placeHolder: "Select severity to filter",
       });
-      
+
       if (selected) {
         findingsTreeDataProvider.setSeverityFilter(selected.value || null);
         updateTreeViewTitle();
       }
-    })
+    }),
   );
 
   context.subscriptions.push(
@@ -2108,22 +2091,22 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.window.showInformationMessage("No issues found to filter");
         return;
       }
-      
-      const items = categories.map(c => ({
+
+      const items = categories.map((c) => ({
         label: c.charAt(0).toUpperCase() + c.slice(1),
-        value: c
+        value: c,
       }));
-      items.unshift({ label: 'All Categories', value: '' });
-      
+      items.unshift({ label: "All Categories", value: "" });
+
       const selected = await vscode.window.showQuickPick(items, {
-        placeHolder: 'Select category to filter'
+        placeHolder: "Select category to filter",
       });
-      
+
       if (selected) {
         findingsTreeDataProvider.setCategoryFilter(selected.value || null);
         updateTreeViewTitle();
       }
-    })
+    }),
   );
 
   context.subscriptions.push(
@@ -2131,21 +2114,21 @@ export function activate(context: vscode.ExtensionContext) {
       findingsTreeDataProvider.clearFilters();
       updateTreeViewTitle();
       vscode.window.showInformationMessage("Filters cleared");
-    })
+    }),
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand("markupai.showAllFindings", () => {
       findingsTreeDataProvider.setShowAllFiles(true);
       updateTreeViewTitle();
-    })
+    }),
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand("markupai.showCurrentFileFindings", () => {
       findingsTreeDataProvider.setShowAllFiles(false);
       updateTreeViewTitle();
-    })
+    }),
   );
 
   // ============================================================================
@@ -2155,43 +2138,41 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand("markupai.selectFolder", async () => {
       const currentFolder = folderScannerTreeDataProvider.getRootFolder();
-      
+
       const folderUri = await vscode.window.showOpenDialog({
         canSelectFiles: false,
         canSelectFolders: true,
         canSelectMany: false,
         openLabel: "Select Folder to Scan",
         title: "Select a different folder to scan (current workspace is auto-loaded)",
-        defaultUri: currentFolder || undefined
+        defaultUri: currentFolder || undefined,
       });
 
       if (folderUri && folderUri[0]) {
         folderScannerTreeDataProvider.setRootFolder(folderUri[0]);
-        const folderName = folderUri[0].path.split('/').pop() || folderUri[0].fsPath;
-        vscode.window.showInformationMessage(
-          `MarkupAI: Now scanning "${folderName}"`
-        );
+        const folderName = folderUri[0].path.split("/").pop() || folderUri[0].fsPath;
+        vscode.window.showInformationMessage(`MarkupAI: Now scanning "${folderName}"`);
       }
-    })
+    }),
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand("markupai.refreshFolderScanner", () => {
       folderScannerTreeDataProvider.refresh();
-    })
+    }),
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand("markupai.openFile", async (uri: vscode.Uri) => {
       const document = await vscode.workspace.openTextDocument(uri);
       await vscode.window.showTextDocument(document);
-    })
+    }),
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand("markupai.toggleFileSelection", (item: FolderScannerItem) => {
       folderScannerTreeDataProvider.toggleFileSelection(item);
-    })
+    }),
   );
 
   context.subscriptions.push(
@@ -2199,7 +2180,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (!hasApiToken()) {
         const action = await vscode.window.showWarningMessage(
           "MarkupAI: API token required",
-          "Configure Token"
+          "Configure Token",
         );
         if (action === "Configure Token") {
           await configureApiToken();
@@ -2214,7 +2195,7 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
       await checkMultipleFiles(files);
-    })
+    }),
   );
 
   context.subscriptions.push(
@@ -2222,7 +2203,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (!hasApiToken()) {
         const action = await vscode.window.showWarningMessage(
           "MarkupAI: API token required",
-          "Configure Token"
+          "Configure Token",
         );
         if (action === "Configure Token") {
           await configureApiToken();
@@ -2233,13 +2214,13 @@ export function activate(context: vscode.ExtensionContext) {
       const selectedFiles = folderScannerTreeDataProvider.getSelectedFiles();
       if (selectedFiles.length === 0) {
         vscode.window.showInformationMessage(
-          "No files selected. Click on files to select them, then run this command."
+          "No files selected. Click on files to select them, then run this command.",
         );
         return;
       }
 
       await checkMultipleFiles(selectedFiles);
-    })
+    }),
   );
 
   // Register Code Actions Provider (for quick fixes)
@@ -2248,18 +2229,14 @@ export function activate(context: vscode.ExtensionContext) {
       { scheme: "file" },
       new MarkupAICodeActionProvider(),
       {
-        providedCodeActionKinds:
-          MarkupAICodeActionProvider.providedCodeActionKinds,
-      }
-    )
+        providedCodeActionKinds: MarkupAICodeActionProvider.providedCodeActionKinds,
+      },
+    ),
   );
 
   // Register Hover Provider
   context.subscriptions.push(
-    vscode.languages.registerHoverProvider(
-      { scheme: "file" },
-      new MarkupAIHoverProvider()
-    )
+    vscode.languages.registerHoverProvider({ scheme: "file" }, new MarkupAIHoverProvider()),
   );
 
   // Register Commands
@@ -2269,25 +2246,25 @@ export function activate(context: vscode.ExtensionContext) {
       if (editor) {
         checkDocument(editor.document, true);
       }
-    })
+    }),
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand("markupai.toggleEnabled", async () => {
       await setMarkupAIEnabled(!isEnabled);
-    })
+    }),
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand("markupai.enableIssues", async () => {
       await setMarkupAIEnabled(true);
-    })
+    }),
   );
 
   context.subscriptions.push(
     vscode.commands.registerCommand("markupai.disableIssues", async () => {
       await setMarkupAIEnabled(false);
-    })
+    }),
   );
 
   // Command to disable a specific category
@@ -2296,15 +2273,17 @@ export function activate(context: vscode.ExtensionContext) {
       if (!category) {
         return;
       }
-      
+
       disabledCategories.add(category.toLowerCase());
       const categoryLabel = category.charAt(0).toUpperCase() + category.slice(1);
-      vscode.window.showInformationMessage(`MarkupAI: ${categoryLabel} issues are now hidden. Use "MarkupAI: Enable Category" to show them again.`);
-      
+      vscode.window.showInformationMessage(
+        `MarkupAI: ${categoryLabel} issues are now hidden. Use "MarkupAI: Enable Category" to show them again.`,
+      );
+
       // Remove diagnostics for this category from all documents
       filterDiagnosticsByDisabledCategories();
       findingsTreeDataProvider?.refresh();
-    })
+    }),
   );
 
   // Command to enable a specific category
@@ -2315,53 +2294,49 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      const categories = Array.from(disabledCategories).map(cat => ({
+      const categories = Array.from(disabledCategories).map((cat) => ({
         label: cat.charAt(0).toUpperCase() + cat.slice(1),
-        value: cat
+        value: cat,
       }));
 
       const selected = await vscode.window.showQuickPick(
-        categories.map(c => c.label),
+        categories.map((c) => c.label),
         {
           placeHolder: "Select a category to enable",
-          canPickMany: true
-        }
+          canPickMany: true,
+        },
       );
 
       if (selected && selected.length > 0) {
         for (const label of selected) {
-          const cat = categories.find(c => c.label === label);
+          const cat = categories.find((c) => c.label === label);
           if (cat) {
             disabledCategories.delete(cat.value);
           }
         }
-        
-        vscode.window.showInformationMessage(`MarkupAI: Enabled ${selected.join(", ")} issues. Run "MarkupAI - Check Content" to see them.`);
+
+        vscode.window.showInformationMessage(
+          `MarkupAI: Enabled ${selected.join(", ")} issues. Run "MarkupAI - Check Content" to see them.`,
+        );
         findingsTreeDataProvider?.refresh();
       }
-    })
+    }),
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("markupai.showScores", showScoresDialog)
+    vscode.commands.registerCommand("markupai.showScores", showScoresDialog),
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand(
-      "markupai.configureApiToken",
-      configureApiToken
-    )
+    vscode.commands.registerCommand("markupai.configureApiToken", configureApiToken),
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand(
-      "markupai.selectStyleGuide",
-      selectStyleGuide
-    )
+    vscode.commands.registerCommand("markupai.selectStyleGuide", selectStyleGuide),
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("markupai.selectDialect", selectDialect)
+    vscode.commands.registerCommand("markupai.selectDialect", selectDialect),
   );
 
   context.subscriptions.push(
@@ -2373,14 +2348,8 @@ export function activate(context: vscode.ExtensionContext) {
       const parsedArgs = typeof args === "string" ? JSON.parse(args) : args;
       const uri = vscode.Uri.parse(parsedArgs.uri);
       const range = new vscode.Range(
-        new vscode.Position(
-          parsedArgs.range.start.line,
-          parsedArgs.range.start.character
-        ),
-        new vscode.Position(
-          parsedArgs.range.end.line,
-          parsedArgs.range.end.character
-        )
+        new vscode.Position(parsedArgs.range.start.line, parsedArgs.range.start.character),
+        new vscode.Position(parsedArgs.range.end.line, parsedArgs.range.end.character),
       );
 
       // Remove the diagnostic and any overlapping diagnostics before applying the fix
@@ -2390,8 +2359,7 @@ export function activate(context: vscode.ExtensionContext) {
           // Check if ranges overlap: two ranges overlap if one starts before the other ends
           // and ends after the other starts
           const rangesOverlap =
-            d.range.start.isBefore(range.end) &&
-            d.range.end.isAfter(range.start);
+            d.range.start.isBefore(range.end) && d.range.end.isAfter(range.start);
           const rangesEqual = d.range.isEqual(range);
           // Remove if overlapping or equal
           return !rangesOverlap && !rangesEqual;
@@ -2401,16 +2369,16 @@ export function activate(context: vscode.ExtensionContext) {
 
       // Set flag to prevent re-checking when applying fix
       isApplyingFix = true;
-      
+
       const edit = new vscode.WorkspaceEdit();
       edit.replace(uri, range, parsedArgs.suggestion);
       await vscode.workspace.applyEdit(edit);
-      
+
       // Reset flag after a short delay to allow the document change event to fire
       setTimeout(() => {
         isApplyingFix = false;
       }, 100);
-    })
+    }),
   );
 
   // Document Events
@@ -2419,7 +2387,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (getConfig().get("checkOnOpen", true)) {
         checkDocument(document);
       }
-    })
+    }),
   );
 
   context.subscriptions.push(
@@ -2429,12 +2397,12 @@ export function activate(context: vscode.ExtensionContext) {
       if (isApplyingFix) {
         return;
       }
-      
+
       // Only auto-check on change if the setting is enabled (default: false)
       if (getConfig().get("checkOnChange", false)) {
         scheduleCheck(event.document);
       }
-    })
+    }),
   );
 
   context.subscriptions.push(
@@ -2445,7 +2413,7 @@ export function activate(context: vscode.ExtensionContext) {
         clearTimeout(timer);
         checkDebounceTimers.delete(document.uri.toString());
       }
-    })
+    }),
   );
 
   context.subscriptions.push(
@@ -2462,7 +2430,7 @@ export function activate(context: vscode.ExtensionContext) {
       } else {
         statusBarItem.hide();
       }
-    })
+    }),
   );
 
   // Configuration change listener
@@ -2471,17 +2439,12 @@ export function activate(context: vscode.ExtensionContext) {
       if (event.affectsConfiguration("markupai.enabled")) {
         isEnabled = getConfig().get("enabled", true);
         // Update context for menu visibility
-        vscode.commands.executeCommand(
-          "setContext",
-          "markupai.enabled",
-          isEnabled
-        );
+        vscode.commands.executeCommand("setContext", "markupai.enabled", isEnabled);
 
         if (!isEnabled) {
           clearAllDiagnostics();
           statusBarItem.text = "$(circle-slash) MarkupAI: Disabled";
-          statusBarItem.tooltip =
-            "MarkupAI issues are disabled. Right-click to enable.";
+          statusBarItem.tooltip = "MarkupAI issues are disabled. Right-click to enable.";
           statusBarItem.command = "markupai.enableIssues";
           statusBarItem.backgroundColor = undefined;
           statusBarItem.show();
@@ -2496,7 +2459,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (event.affectsConfiguration("markupai.apiToken")) {
         refreshStyleGuides();
       }
-    })
+    }),
   );
 
   // Initial setup

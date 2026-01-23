@@ -19,42 +19,42 @@
 
 ### Markup.ai CSS Classes
 
-| Class Name | Purpose | Defined In |
-|------------|---------|------------|
-| `.sidepanel-tab-markupai` | Main sidebar panel container | main.scss |
-| `.sidepanel-tab-title` | Tab title (scoped within `.sidepanel-tab-markupai`) | main.scss |
-| `.markupaiSidebarTab` | Spectrum UI tab styling | main.scss |
-| `.markupaiSidebarPanel` | Spectrum UI panel styling | main.scss |
-| `.markupai-panel-tab` | Adobe Guides panel tab | main.scss |
-| `.markup-icon-container` | Icon wrapper | main.scss |
-| `.icon--markupai` | Icon styling | main.scss |
-| `.markupai-enabled` | Body class when enabled | main.scss |
-| `.markupai` | Namespace parent | main.scss |
-| `.markupai-container` | Future container | main.scss |
-| `.markupai-button` | Future button | main.scss |
-| `.markupai-panel` | Future panel | main.scss |
-| `.markupai-hidden` | Utility - hide element | main.scss |
-| `.markupai-visible` | Utility - show element | main.scss |
+| Class Name                | Purpose                                             | Defined In |
+| ------------------------- | --------------------------------------------------- | ---------- |
+| `.sidepanel-tab-markupai` | Main sidebar panel container                        | main.scss  |
+| `.sidepanel-tab-title`    | Tab title (scoped within `.sidepanel-tab-markupai`) | main.scss  |
+| `.markupaiSidebarTab`     | Spectrum UI tab styling                             | main.scss  |
+| `.markupaiSidebarPanel`   | Spectrum UI panel styling                           | main.scss  |
+| `.markupai-panel-tab`     | Adobe Guides panel tab                              | main.scss  |
+| `.markup-icon-container`  | Icon wrapper                                        | main.scss  |
+| `.icon--markupai`         | Icon styling                                        | main.scss  |
+| `.markupai-enabled`       | Body class when enabled                             | main.scss  |
+| `.markupai`               | Namespace parent                                    | main.scss  |
+| `.markupai-container`     | Future container                                    | main.scss  |
+| `.markupai-button`        | Future button                                       | main.scss  |
+| `.markupai-panel`         | Future panel                                        | main.scss  |
+| `.markupai-hidden`        | Utility - hide element                              | main.scss  |
+| `.markupai-visible`       | Utility - show element                              | main.scss  |
 
 ### Acrolinx CSS Classes
 
-| Class Name | Purpose | Defined In |
-|------------|---------|------------|
+| Class Name                | Purpose                      | Defined In            |
+| ------------------------- | ---------------------------- | --------------------- |
 | `.sidepanel-tab-acrolinx` | Main sidebar panel container | sidebarContainer.scss |
-| `.icon--acrolinx` | Icon styling | sidebarContainer.scss |
-| `.acrolinxSidebarTab` | Spectrum UI tab styling | (JavaScript) |
-| `.acrolinxSidebarPanel` | Spectrum UI panel styling | (JavaScript) |
-| `.acrolinx-panel-tab` | Adobe Guides panel tab | (JavaScript) |
+| `.icon--acrolinx`         | Icon styling                 | sidebarContainer.scss |
+| `.acrolinxSidebarTab`     | Spectrum UI tab styling      | (JavaScript)          |
+| `.acrolinxSidebarPanel`   | Spectrum UI panel styling    | (JavaScript)          |
+| `.acrolinx-panel-tab`     | Adobe Guides panel tab       | (JavaScript)          |
 
 ### Conflict Analysis
 
-| Category | Status | Details |
-|----------|--------|---------|
+| Category           | Status         | Details                                                |
+| ------------------ | -------------- | ------------------------------------------------------ |
 | **Main container** | ✅ No conflict | `.sidepanel-tab-markupai` vs `.sidepanel-tab-acrolinx` |
-| **Icon classes** | ✅ No conflict | `.icon--markupai` vs `.icon--acrolinx` |
-| **Tab classes** | ✅ No conflict | `.markupaiSidebarTab` vs `.acrolinxSidebarTab` |
-| **Panel classes** | ✅ No conflict | `.markupaiSidebarPanel` vs `.acrolinxSidebarPanel` |
-| **Tab styling** | ✅ No conflict | `.markupai-panel-tab` vs `.acrolinx-panel-tab` |
+| **Icon classes**   | ✅ No conflict | `.icon--markupai` vs `.icon--acrolinx`                 |
+| **Tab classes**    | ✅ No conflict | `.markupaiSidebarTab` vs `.acrolinxSidebarTab`         |
+| **Panel classes**  | ✅ No conflict | `.markupaiSidebarPanel` vs `.acrolinxSidebarPanel`     |
+| **Tab styling**    | ✅ No conflict | `.markupai-panel-tab` vs `.acrolinx-panel-tab`         |
 
 ---
 
@@ -64,48 +64,61 @@
 
 ```scss
 .sidepanel-tab-markupai {
-  .sidepanel-tab-title { }  // Scoped within markupai panel
-  #sidebarContainer { }     // Scoped within markupai panel
+  .sidepanel-tab-title {
+  } // Scoped within markupai panel
+  #sidebarContainer {
+  } // Scoped within markupai panel
 }
 
 .markupaiSidebarTab {
-  .icon--markupai { }       // Scoped within markupai tab
-  .spectrum-Tabs-itemLabel { }  // ⚠️ Shared Spectrum class
+  .icon--markupai {
+  } // Scoped within markupai tab
+  .spectrum-Tabs-itemLabel {
+  } // ⚠️ Shared Spectrum class
 }
 
 .markup-icon-container {
-  img { }                   // Generic, but scoped
+  img {
+  } // Generic, but scoped
 }
 
 .markupai {
-  &-container { }           // Future use
-  &-button { }              // Future use
-  &-panel { }               // Future use
+  &-container {
+  } // Future use
+  &-button {
+  } // Future use
+  &-panel {
+  } // Future use
 }
 ```
 
 ### Acrolinx Nested Selectors
 
 ```scss
-.sidepanel-tab-acrolinx { }  // No nested selectors
+.sidepanel-tab-acrolinx {
+} // No nested selectors
 
-.icon--acrolinx { }  // No nested selectors
+.icon--acrolinx {
+} // No nested selectors
 
-coral-tab[aria-selected="false"] .icon--acrolinx { }
-coral-tab[aria-selected="true"] .icon--acrolinx { }
-coral-tab[aria-selected="true"]:focus .icon--acrolinx { }
+coral-tab[aria-selected="false"] .icon--acrolinx {
+}
+coral-tab[aria-selected="true"] .icon--acrolinx {
+}
+coral-tab[aria-selected="true"]:focus .icon--acrolinx {
+}
 ```
 
 ### Shared Spectrum Classes (Non-Conflicting)
 
 Both addons style Spectrum UI components:
 
-| Class | Used By | Conflict? |
-|-------|---------|-----------|
-| `.spectrum-Tabs-itemLabel` | Both | ✅ No - scoped within parent |
-| `.spectrum-Icon` | Both | ✅ No - applied to different elements |
-| `.spectrum-ActionButton` | Both | ✅ No - read-only selector |
-| `.spectrum-ButtonGroup-item` | Both | ✅ No - read-only selector |
+| Class                        | Used By | Conflict?                             |
+| ---------------------------- | ------- | ------------------------------------- |
+| `.spectrum-Tabs-itemLabel`   | Both    | ✅ No - scoped within parent          |
+| `.spectrum-Icon`             | Both    | ✅ No - applied to different elements |
+| `.spectrum-ActionButton`     | Both    | ✅ No - read-only selector            |
+| `.spectrum-ButtonGroup-item` | Both    | ✅ No - read-only selector            |
 
 **Analysis:** These are AEM Spectrum UI framework classes. Both addons style them within their own scopes, so no conflicts.
 
@@ -116,14 +129,15 @@ Both addons style Spectrum UI components:
 ### Data Attributes
 
 #### Markup.ai:
+
 ```html
 <img data-name="markupai" ... />
 ```
 
 #### Acrolinx:
+
 ```html
-<svg data-name="acrolinx" ... />
-<svg data-name="fileTemplate" ... />
+<svg data-name="acrolinx" ... /> <svg data-name="fileTemplate" ... />
 ```
 
 **Status:** ✅ No conflict - different values
@@ -132,13 +146,13 @@ Both addons style Spectrum UI components:
 
 Both addons use standard ARIA attributes for accessibility:
 
-| Attribute | Used By | Purpose | Conflict? |
-|-----------|---------|---------|-----------|
-| `aria-selected` | Both | Tab selection state | ✅ No - standard attribute |
-| `aria-hidden` | Both | Hide from screen readers | ✅ No - standard attribute |
-| `role="tab"` | Both | Define tab role | ✅ No - standard attribute |
-| `role="radio"` | Both | Radio button role | ✅ No - standard attribute |
-| `role="img"` | Both | Image role | ✅ No - standard attribute |
+| Attribute       | Used By | Purpose                  | Conflict?                  |
+| --------------- | ------- | ------------------------ | -------------------------- |
+| `aria-selected` | Both    | Tab selection state      | ✅ No - standard attribute |
+| `aria-hidden`   | Both    | Hide from screen readers | ✅ No - standard attribute |
+| `role="tab"`    | Both    | Define tab role          | ✅ No - standard attribute |
+| `role="radio"`  | Both    | Radio button role        | ✅ No - standard attribute |
+| `role="img"`    | Both    | Image role               | ✅ No - standard attribute |
 
 **Status:** ✅ No conflict - all standard ARIA attributes used correctly
 
@@ -152,21 +166,21 @@ Used in dynamic element creation:
 
 ```typescript
 // Icon container
-style="width: 18px; height: 18px; display: inline-block;"
+style = "width: 18px; height: 18px; display: inline-block;";
 
 // Logo image
-style="width: 100%; height: 100%; object-fit: contain;"
+style = "width: 100%; height: 100%; object-fit: contain;";
 
 // Visibility control
-style="display: none;"
-style=""  // Reset to default
+style = "display: none;";
+style = ""; // Reset to default
 ```
 
 ### Acrolinx Inline Styles
 
 ```typescript
 // Sidebar icon
-style="width: 100%; height: 100%; background-size: contain; ..."
+style = "width: 100%; height: 100%; background-size: contain; ...";
 
 // Visibility control (similar to Markup.ai)
 ```
@@ -179,20 +193,20 @@ style="width: 100%; height: 100%; background-size: contain; ..."
 
 ### Markup.ai Specificity
 
-| Selector | Specificity | Risk |
-|----------|-------------|------|
-| `.sidepanel-tab-markupai` | 0,0,1,0 | Low |
-| `.markupaiSidebarTab .icon--markupai` | 0,0,2,0 | Low |
-| `.markupai-hidden` | 0,0,1,0 + !important | High priority (intentional) |
-| `.markupai-visible` | 0,0,1,0 + !important | High priority (intentional) |
+| Selector                              | Specificity          | Risk                        |
+| ------------------------------------- | -------------------- | --------------------------- |
+| `.sidepanel-tab-markupai`             | 0,0,1,0              | Low                         |
+| `.markupaiSidebarTab .icon--markupai` | 0,0,2,0              | Low                         |
+| `.markupai-hidden`                    | 0,0,1,0 + !important | High priority (intentional) |
+| `.markupai-visible`                   | 0,0,1,0 + !important | High priority (intentional) |
 
 ### Acrolinx Specificity
 
-| Selector | Specificity | Risk |
-|----------|-------------|------|
-| `.sidepanel-tab-acrolinx` | 0,0,1,0 | Low |
-| `coral-tab[aria-selected="true"] .icon--acrolinx` | 0,1,1,1 | Medium |
-| `.icon--acrolinx` | 0,0,1,0 | Low |
+| Selector                                          | Specificity | Risk   |
+| ------------------------------------------------- | ----------- | ------ |
+| `.sidepanel-tab-acrolinx`                         | 0,0,1,0     | Low    |
+| `coral-tab[aria-selected="true"] .icon--acrolinx` | 0,1,1,1     | Medium |
+| `.icon--acrolinx`                                 | 0,0,1,0     | Low    |
 
 ### Potential Conflicts
 
@@ -205,9 +219,9 @@ style="width: 100%; height: 100%; background-size: contain; ..."
 ### Markup.ai
 
 ```typescript
-DOMHelpers.addClass(element, 'is-selected')
-DOMHelpers.removeClass(element, 'is-selected')
-DOMHelpers.addClass(element, 'markup-icon-container')
+DOMHelpers.addClass(element, "is-selected");
+DOMHelpers.removeClass(element, "is-selected");
+DOMHelpers.addClass(element, "markup-icon-container");
 ```
 
 ### Acrolinx
@@ -226,16 +240,16 @@ window.jQuery('.acrolinxSidebarTab').css(...)
 
 Both addons **read** but don't modify these system classes:
 
-| Class | Purpose | Modified? |
-|-------|---------|-----------|
-| `.left-wrapper` | Container reference | No - read only |
-| `.left-panel-container` | Container reference | No - read only |
-| `.editor-views` | Editor view container | No - read only |
-| `.spectrum-ActionButton` | Spectrum button | No - selector only |
-| `.spectrum-ButtonGroup-item` | Button group item | No - selector only |
-| `.spectrum-Tabs-itemLabel` | Tab label | Yes - styled within scope |
-| `.spectrum-Icon` | Icon class | Yes - applied to own elements |
-| `.is-selected` | Selected state | Yes - added/removed on own elements |
+| Class                        | Purpose               | Modified?                           |
+| ---------------------------- | --------------------- | ----------------------------------- |
+| `.left-wrapper`              | Container reference   | No - read only                      |
+| `.left-panel-container`      | Container reference   | No - read only                      |
+| `.editor-views`              | Editor view container | No - read only                      |
+| `.spectrum-ActionButton`     | Spectrum button       | No - selector only                  |
+| `.spectrum-ButtonGroup-item` | Button group item     | No - selector only                  |
+| `.spectrum-Tabs-itemLabel`   | Tab label             | Yes - styled within scope           |
+| `.spectrum-Icon`             | Icon class            | Yes - applied to own elements       |
+| `.is-selected`               | Selected state        | Yes - added/removed on own elements |
 
 **Status:** ✅ Safe - all modifications are scoped or on addon-owned elements
 
@@ -246,13 +260,17 @@ Both addons **read** but don't modify these system classes:
 ### Markup.ai Utilities
 
 ```scss
-.markupai-hidden { display: none !important; }
-.markupai-visible { display: block !important; }
+.markupai-hidden {
+  display: none !important;
+}
+.markupai-visible {
+  display: block !important;
+}
 ```
 
 ### Acrolinx Utilities
 
-*No utility classes defined*
+_No utility classes defined_
 
 **Status:** ✅ No conflict - Markup.ai only
 
@@ -261,10 +279,12 @@ Both addons **read** but don't modify these system classes:
 ## 9. CSS Animation/Transition Classes
 
 ### Markup.ai
-*No animation classes defined yet*
+
+_No animation classes defined yet_
 
 ### Acrolinx
-*No animation classes in audit scope*
+
+_No animation classes in audit scope_
 
 **Status:** ✅ N/A
 
@@ -276,41 +296,41 @@ Both addons **read** but don't modify these system classes:
 
 ```typescript
 // ID-based
-'#markupaiSidebar'
-'#markupaiSidebarTitle'
-'#sidebarContainer'
+"#markupaiSidebar";
+"#markupaiSidebarTitle";
+"#sidebarContainer";
 
 // Class-based
-'.markupaiSidebarTab'
-'.markupaiSidebarPanel'
-'.markup-icon-container'
+".markupaiSidebarTab";
+".markupaiSidebarPanel";
+".markup-icon-container";
 
 // Attribute-based
-'button[value="source"]'
-'button[role="radio"]'
+'button[value="source"]';
+'button[role="radio"]';
 
 // Compound
-'.editor-views button[role="radio"]'
+'.editor-views button[role="radio"]';
 ```
 
 ### Acrolinx Patterns
 
 ```typescript
 // ID-based
-'#acrolinxSidebar'
-'#acrolinxSidebarTitle'
-'#sidebarContainer'
+"#acrolinxSidebar";
+"#acrolinxSidebarTitle";
+"#sidebarContainer";
 
 // Class-based
-'.acrolinxSidebarTab'
-'.icon--acrolinx'
+".acrolinxSidebarTab";
+".icon--acrolinx";
 
 // Attribute-based
-'coral-tab[title="Acrolinx"]'
-'coral-tab[aria-selected="true"]'
+'coral-tab[title="Acrolinx"]';
+'coral-tab[aria-selected="true"]';
 
 // Compound
-'coral-tab[aria-selected="false"] .icon--acrolinx'
+'coral-tab[aria-selected="false"] .icon--acrolinx';
 ```
 
 **Status:** ✅ No conflicts - different IDs and class names
@@ -322,6 +342,7 @@ Both addons **read** but don't modify these system classes:
 ### Issue 1: Both Style `.spectrum-Tabs-itemLabel`
 
 **Code:**
+
 ```scss
 // Markup.ai
 .markupaiSidebarTab {
@@ -335,6 +356,7 @@ Both addons **read** but don't modify these system classes:
 ```
 
 **Why it's OK:**
+
 - Scoped within parent selector (`.markupaiSidebarTab`)
 - Only affects labels within Markup.ai tab
 - CSS specificity ensures proper isolation
@@ -344,12 +366,14 @@ Both addons **read** but don't modify these system classes:
 ### Issue 2: Both Use `.is-selected` Class
 
 **Code:**
+
 ```typescript
 // Both addons
-DOMHelpers.addClass(element, 'is-selected')
+DOMHelpers.addClass(element, "is-selected");
 ```
 
 **Why it's OK:**
+
 - Standard AEM class for selection state
 - Applied to different elements (own tabs)
 - Not a custom class, part of AEM framework
@@ -359,6 +383,7 @@ DOMHelpers.addClass(element, 'is-selected')
 ### Issue 3: `!important` in Utility Classes
 
 **Code:**
+
 ```scss
 .markupai-hidden {
   display: none !important;
@@ -368,6 +393,7 @@ DOMHelpers.addClass(element, 'is-selected')
 **Risk:** Could override other styles
 
 **Why it's OK:**
+
 - Only applied via Markup.ai code to Markup.ai elements
 - Intentional override for visibility control
 - Acrolinx doesn't have conflicting utilities
@@ -381,6 +407,7 @@ DOMHelpers.addClass(element, 'is-selected')
 ### Current State: ✅ EXCELLENT
 
 The CSS class structure is:
+
 1. ✅ Well-namespaced with `markupai*` prefix
 2. ✅ No conflicts with Acrolinx (`acrolinx*` prefix)
 3. ✅ Properly scoped nested selectors
@@ -393,7 +420,7 @@ The CSS class structure is:
 ✅ **Scope nested selectors** - Done  
 ✅ **Use BEM-like naming** - Done (markupai-component-element)  
 ✅ **Avoid global modifications** - Done  
-✅ **Document shared classes** - Done  
+✅ **Document shared classes** - Done
 
 ### Future Considerations
 
@@ -439,6 +466,7 @@ The CSS class structure is:
 All CSS classes and custom attributes use proper namespacing with zero conflicts between Markup.ai and Acrolinx addons.
 
 **Key Findings:**
+
 - 14 unique Markup.ai classes (all prefixed)
 - 5 unique Acrolinx classes (all prefixed)
 - 0 conflicts
@@ -452,6 +480,7 @@ All CSS classes and custom attributes use proper namespacing with zero conflicts
 ## Appendix: Complete Class List
 
 ### Markup.ai Classes (14)
+
 ```
 .sidepanel-tab-markupai
 .sidepanel-tab-title (nested)
@@ -470,6 +499,7 @@ All CSS classes and custom attributes use proper namespacing with zero conflicts
 ```
 
 ### Acrolinx Classes (5)
+
 ```
 .sidepanel-tab-acrolinx
 .icon--acrolinx
@@ -479,6 +509,7 @@ All CSS classes and custom attributes use proper namespacing with zero conflicts
 ```
 
 ### Shared Framework Classes (Read-only or Scoped)
+
 ```
 .spectrum-Tabs-itemLabel (styled within scope)
 .spectrum-Icon (applied to own elements)
@@ -491,4 +522,3 @@ All CSS classes and custom attributes use proper namespacing with zero conflicts
 ```
 
 **Total Conflict Count:** 0 ✅
-

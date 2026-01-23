@@ -24,6 +24,7 @@ This guide will help you set up your development environment from scratch, even 
 Node.js is the runtime that powers this extension's development tools.
 
 **For macOS:**
+
 1. Open your web browser and go to [https://nodejs.org](https://nodejs.org)
 2. Download the **LTS (Long Term Support)** version (the green button)
 3. Open the downloaded `.pkg` file
@@ -31,6 +32,7 @@ Node.js is the runtime that powers this extension's development tools.
 5. Click "Install" and enter your Mac password if asked
 
 **For Windows:**
+
 1. Open your web browser and go to [https://nodejs.org](https://nodejs.org)
 2. Download the **LTS (Long Term Support)** version (the green button)
 3. Open the downloaded `.msi` file
@@ -38,6 +40,7 @@ Node.js is the runtime that powers this extension's development tools.
 5. Keep the default settings and click "Next" until installation completes
 
 **Verify Installation:**
+
 1. Open Terminal (macOS) or Command Prompt (Windows)
    - **macOS**: Press `Cmd + Space`, type "Terminal", press Enter
    - **Windows**: Press `Win + R`, type "cmd", press Enter
@@ -85,19 +88,23 @@ Dependencies are additional code packages that the project needs to work.
    - **Windows**: Press `Win + R`, type "cmd", press Enter
 
 2. Navigate to the project folder. For example, if you extracted it to your Documents folder:
-   
+
    **macOS:**
+
    ```bash
    cd ~/Documents/vscode-markupai
    ```
-   
+
    **Windows:**
+
    ```bash
    cd C:\Users\YourUsername\Documents\vscode-markupai
    ```
+
    > Replace `YourUsername` with your actual Windows username
 
 3. Run the following command:
+
    ```bash
    npm install
    ```
@@ -139,6 +146,7 @@ Before running, we need to compile (convert) the TypeScript code to JavaScript:
    - Or press `` Ctrl + ` `` (backtick key)
 
 2. In the terminal, type:
+
    ```bash
    npm run compile
    ```
@@ -186,10 +194,13 @@ The extension needs an API token to communicate with MarkupAI servers.
 1. **Edit the code** in `src/extension.ts`
 
 2. **Compile your changes**:
+
    ```bash
    npm run compile
    ```
+
    Or use watch mode to auto-compile on save:
+
    ```bash
    npm run watch
    ```
@@ -200,11 +211,11 @@ The extension needs an API token to communicate with MarkupAI servers.
 
 ### Key Files
 
-| File | Purpose |
-|------|---------|
-| `src/extension.ts` | Main extension logic - all features are here |
-| `package.json` | Extension metadata, commands, settings definitions |
-| `README.md` | User-facing documentation |
+| File               | Purpose                                            |
+| ------------------ | -------------------------------------------------- |
+| `src/extension.ts` | Main extension logic - all features are here       |
+| `package.json`     | Extension metadata, commands, settings definitions |
+| `README.md`        | User-facing documentation                          |
 
 ---
 
@@ -233,6 +244,7 @@ Run `npm install` again to ensure all dependencies are installed.
 ### TypeScript errors during compile
 
 Read the error message carefully. Common issues:
+
 - Missing semicolons or brackets
 - Typos in variable names
 - Using a variable before defining it
@@ -241,13 +253,13 @@ Read the error message carefully. Common issues:
 
 ## Quick Reference Commands
 
-| Command | What it does |
-|---------|--------------|
-| `npm install` | Install all project dependencies |
-| `npm run compile` | Compile TypeScript to JavaScript |
-| `npm run watch` | Auto-compile when files change |
-| `F5` | Launch extension in debug mode |
-| `Cmd/Ctrl + R` | Reload extension in development host |
+| Command           | What it does                         |
+| ----------------- | ------------------------------------ |
+| `npm install`     | Install all project dependencies     |
+| `npm run compile` | Compile TypeScript to JavaScript     |
+| `npm run watch`   | Auto-compile when files change       |
+| `F5`              | Launch extension in debug mode       |
+| `Cmd/Ctrl + R`    | Reload extension in development host |
 
 ---
 

@@ -23,7 +23,7 @@ export class OffsetTranslator {
   /**
    * Translate a position from the old text to the corresponding position in the new text.
    * Uses diff_xIndex internally which computes the equivalent location.
-   * 
+   *
    * @param oldPosition - Character index in the old text
    * @returns The corresponding character index in the new text
    */
@@ -33,7 +33,7 @@ export class OffsetTranslator {
 
   /**
    * Translate a range (start, end) from old text to new text positions.
-   * 
+   *
    * @param startIndex - Start position in old text
    * @param endIndex - End position in old text
    * @returns Object with translated start and end positions, or null if the range was deleted
@@ -41,21 +41,21 @@ export class OffsetTranslator {
   translateRange(startIndex: number, endIndex: number): { start: number; end: number } | null {
     const newStart = this.translatePosition(startIndex);
     const newEnd = this.translatePosition(endIndex);
-    
+
     // If start >= end after translation, the content was deleted
     if (newStart >= newEnd) {
       return null;
     }
-    
+
     return { start: newStart, end: newEnd };
   }
 
   /**
-   * Implementation of diff_xIndex - maps a character position in text1 to 
+   * Implementation of diff_xIndex - maps a character position in text1 to
    * the equivalent position in text2 based on the diff array.
-   * 
+   *
    * This is based on the Google diff-match-patch algorithm.
-   * 
+   *
    * @param diffs - Array of diff tuples
    * @param loc - Location in text1 to translate
    * @returns Location in text2
@@ -102,17 +102,23 @@ export class OffsetTranslator {
 
   /**
    * Check if a specific text still exists at the translated position in the new text.
-   * 
+   *
    * @param originalText - The text that should be at the position
    * @param newText - The new document text
    * @param translatedStart - The translated start position
    * @returns true if the text matches at the translated position
    */
-  static verifyTextAtPosition(originalText: string, newText: string, translatedStart: number): boolean {
+  static verifyTextAtPosition(
+    originalText: string,
+    newText: string,
+    translatedStart: number,
+  ): boolean {
     if (translatedStart < 0 || translatedStart + originalText.length > newText.length) {
       return false;
     }
-    return newText.substring(translatedStart, translatedStart + originalText.length) === originalText;
+    return (
+      newText.substring(translatedStart, translatedStart + originalText.length) === originalText
+    );
   }
 }
 
@@ -125,7 +131,7 @@ export class OffsetTranslator {
  * - Unicode code points (what many APIs return)
  * - UTF-8 byte offsets (file-based APIs)
  * - UTF-16 code units (JavaScript string indices)
- * 
+ *
  * Emojis and characters outside BMP cause differences:
  * - 😀 (U+1F600): 1 code point, 4 UTF-8 bytes, 2 UTF-16 code units
  */
@@ -159,7 +165,7 @@ export class TextOffsetMapper {
       codePointIndex++;
 
       this.codePointToStringIndex.push(stringIndex);
-      
+
       // Fill in byte offsets for each byte
       for (let i = 1; i <= charBytes; i++) {
         this.byteToStringIndex.push(stringIndex);
@@ -172,7 +178,9 @@ export class TextOffsetMapper {
    * Use this if the API counts characters as code points.
    */
   codePointOffsetToStringIndex(codePointOffset: number): number {
-    if (codePointOffset < 0) { return 0; }
+    if (codePointOffset < 0) {
+      return 0;
+    }
     if (codePointOffset >= this.codePointToStringIndex.length) {
       return this.text.length;
     }
@@ -184,7 +192,9 @@ export class TextOffsetMapper {
    * Use this if the API counts positions as byte offsets.
    */
   byteOffsetToStringIndex(byteOffset: number): number {
-    if (byteOffset < 0) { return 0; }
+    if (byteOffset < 0) {
+      return 0;
+    }
     if (byteOffset >= this.byteToStringIndex.length) {
       return this.text.length;
     }
@@ -195,12 +205,17 @@ export class TextOffsetMapper {
    * Find the actual position of text in the string, searching from a start index.
    * Returns the start and end string indices.
    */
-  findTextPosition(searchText: string, startFromIndex: number): { start: number; end: number } | null {
+  findTextPosition(
+    searchText: string,
+    startFromIndex: number,
+  ): { start: number; end: number } | null {
     const foundIndex = this.text.indexOf(searchText, startFromIndex);
-    if (foundIndex === -1) { return null; }
+    if (foundIndex === -1) {
+      return null;
+    }
     return {
       start: foundIndex,
-      end: foundIndex + searchText.length
+      end: foundIndex + searchText.length,
     };
   }
 
@@ -209,7 +224,11 @@ export class TextOffsetMapper {
    * This is useful when the offset might be slightly off due to encoding differences
    * or when the document has changed during an async operation.
    */
-  findNearbyText(searchText: string, approximateIndex: number, searchRadius: number = 20): { start: number; end: number } | null {
+  findNearbyText(
+    searchText: string,
+    approximateIndex: number,
+    searchRadius: number = 20,
+  ): { start: number; end: number } | null {
     // Try exact position first
     const exactStart = Math.max(0, approximateIndex);
     if (this.text.substring(exactStart, exactStart + searchText.length) === searchText) {
@@ -218,9 +237,12 @@ export class TextOffsetMapper {
 
     // Search nearby with the given radius
     const searchStart = Math.max(0, approximateIndex - searchRadius);
-    const searchEnd = Math.min(this.text.length, approximateIndex + searchRadius + searchText.length);
+    const searchEnd = Math.min(
+      this.text.length,
+      approximateIndex + searchRadius + searchText.length,
+    );
     const searchArea = this.text.substring(searchStart, searchEnd);
-    
+
     const foundInArea = searchArea.indexOf(searchText);
     if (foundInArea !== -1) {
       const actualStart = searchStart + foundInArea;

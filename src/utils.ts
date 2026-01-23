@@ -40,10 +40,7 @@ export function getStyleGuide(): string {
 /**
  * Convert a character index to a VS Code Position
  */
-export function indexToPosition(
-  document: vscode.TextDocument,
-  index: number
-): vscode.Position {
+export function indexToPosition(document: vscode.TextDocument, index: number): vscode.Position {
   return document.positionAt(index);
 }
 

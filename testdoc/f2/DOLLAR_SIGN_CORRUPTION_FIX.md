@@ -1,6 +1,7 @@
 # Dollar Sign ($) Corruption Issue - Final Fix v3
 
 ## Issue Report
+
 **Branch:** `adapter-inclusion`  
 **Date:** December 30, 2025  
 **Severity:** CRITICAL - Breaking AEM's basic functionality (e.g., saving documents)
@@ -17,11 +18,13 @@ The code in the `adapter-inclusion` branch is **completely overwriting the globa
 CKEditor uses `$` as a property name to expose native DOM elements. When we access this property (e.g., `ckEditorBody.$` or `ckElement.$`), **the act of reading this property overwrites the global `$` variable**, corrupting jQuery.
 
 This happens because:
+
 1. **Property accessor side effects**: CKEditor's `$` property getter has side effects that modify global scope
 2. **Scope pollution**: The getter for `.$` property accidentally assigns to `globalThis.$` instead of just returning a value
 3. **Even reading the property corrupts `$`**: Simply accessing `element.$` is enough to break jQuery
 
 ### Files Affected
+
 - `ui.frontend/src/components/adapter/AEMGuidesPluginAdapter.ts`
 
 ### Original Problematic Code
@@ -30,7 +33,7 @@ This happens because:
 // Line 337 - Creating text nodes
 const textNode = editor.document.$.createTextNode(suggestion);
 
-// Line 691 - Getting editor body  
+// Line 691 - Getting editor body
 const editorBody = editor.document.getBody().$;
 
 // Line 762 - Getting raw element
@@ -42,6 +45,7 @@ const nativeElement = ckElement.$;
 After trying multiple approaches, the solution is to **save and restore the global `$` variable** around any CKEditor property access:
 
 ### Strategy
+
 1. **Save `globalThis.$` before accessing CKEditor's `.$` property**
 2. **Access the property (which corrupts `$`)**
 3. **Immediately restore the saved value in a `finally` block**
@@ -49,6 +53,7 @@ After trying multiple approaches, the solution is to **save and restore the glob
 This ensures that even if an error occurs, the global `$` is always restored.
 
 ### Fix 1: Text Node Creation (Line 337)
+
 ```typescript
 // Use globalThis.document directly - no CKEditor document needed
 const nativeDocument = globalThis.document;
@@ -58,6 +63,7 @@ const textNode = nativeDocument.createTextNode(suggestion);
 **Rationale**: For creating text nodes, we don't need CKEditor's document at all. Using `globalThis.document` completely avoids the problematic `.$` property.
 
 ### Fix 2: Getting Editor Body (Line 691)
+
 ```typescript
 // CRITICAL: Save global $ before accessing CKEditor properties
 const globalWithJQuery = globalThis as unknown as GlobalThisWithJQuery;
@@ -67,7 +73,7 @@ try {
   const ckEditorBody = editor.document.getBody() as unknown as CKEditorDomElement;
   // Try getNative() first, fallback to .$ if needed
   const nativeEditorBody = ckEditorBody.getNative?.() || ckEditorBody.$;
-  
+
   return extractTextDomMapping(nativeEditorBody);
 } finally {
   // CRITICAL: Restore global $ immediately
@@ -80,6 +86,7 @@ try {
 **Rationale**: We save jQuery before accessing CKEditor properties, then restore it in a `finally` block to guarantee restoration even if an error occurs.
 
 ### Fix 3: Getting Native Element (Line 762)
+
 ```typescript
 // CRITICAL: Save global $ before accessing CKEditor properties
 const globalWithJQuery = globalThis as unknown as GlobalThisWithJQuery;
@@ -133,7 +140,7 @@ After applying this fix and rebuilding, test the following:
 
 1. ✅ **jQuery Availability**: Open console and type `$.ajax` - should show `function`
 2. ✅ **Document Saving**: Verify documents can be saved successfully
-3. ✅ **Content Editing**: Ensure text replacement works correctly  
+3. ✅ **Content Editing**: Ensure text replacement works correctly
 4. ✅ **Content Selection**: Verify content selection functionality
 5. ✅ **No Console Errors**: Check for `$ is not defined` or `$.ajax is not a function` errors
 6. ✅ **AEM Operations**: Test all AEM Guides operations that depend on jQuery
@@ -172,26 +179,32 @@ cd ..
 ## Why Previous Fixes Didn't Work
 
 ### Fix v1 - Intermediate Variables
+
 ```typescript
-const nativeDocument = editor.document.$;  // Still corrupts $
+const nativeDocument = editor.document.$; // Still corrupts $
 ```
+
 **Failed because**: Simply reading the property corrupts `$`, even when stored in a variable.
 
 ### Fix v2 - getNative() Method
+
 ```typescript
-const nativeElement = ckElement.getNative?.() || ckElement.$;  // Still corrupts $ on fallback
+const nativeElement = ckElement.getNative?.() || ckElement.$; // Still corrupts $ on fallback
 ```
+
 **Failed because**: When `getNative()` doesn't exist, we fall back to `.$` which still corrupts `$`.
 
 ### Fix v3 - Save & Restore (WORKS!)
+
 ```typescript
 const saved$ = globalThis.$;
 try {
-  const native = ckElement.$;  // Corrupts $, but we restore it below
+  const native = ckElement.$; // Corrupts $, but we restore it below
 } finally {
-  globalThis.$ = saved$;  // ✅ Restored!
+  globalThis.$ = saved$; // ✅ Restored!
 }
 ```
+
 **Succeeds because**: We accept that accessing `.$` corrupts `$`, but we immediately restore it.
 
 ## Prevention

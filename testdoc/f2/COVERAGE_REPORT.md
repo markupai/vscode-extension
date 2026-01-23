@@ -6,12 +6,12 @@
 
 ### Overall Coverage
 
-| Metric | Coverage | Status | Threshold |
-|--------|----------|--------|-----------|
-| **Statements** | **97.77%** | ✅ **PASS** | 90% |
-| **Branches** | **92.5%** | ✅ **PASS** | 90% |
-| **Functions** | **100%** | ✅ **PASS** | 90% |
-| **Lines** | **98.86%** | ✅ **PASS** | 90% |
+| Metric         | Coverage   | Status      | Threshold |
+| -------------- | ---------- | ----------- | --------- |
+| **Statements** | **97.77%** | ✅ **PASS** | 90%       |
+| **Branches**   | **92.5%**  | ✅ **PASS** | 90%       |
+| **Functions**  | **100%**   | ✅ **PASS** | 90%       |
+| **Lines**      | **98.86%** | ✅ **PASS** | 90%       |
 
 ### Test Summary
 
@@ -25,32 +25,36 @@
 ## 📈 Coverage by Module
 
 ### components/ (100%)
-| File | Statements | Branches | Functions | Lines |
-|------|------------|----------|-----------|-------|
-| `config.ts` | 100% | 100% | 100% | 100% |
+
+| File        | Statements | Branches | Functions | Lines |
+| ----------- | ---------- | -------- | --------- | ----- |
+| `config.ts` | 100%       | 100%     | 100%      | 100%  |
 
 **Status**: ✅ Perfect coverage
 
 ### components/adapter/ (96.77%)
-| File | Statements | Branches | Functions | Lines | Uncovered |
-|------|------------|----------|-----------|-------|-----------|
-| `aemAdapter.ts` | 96.77% | 94.44% | 100% | 100% | Line 56 |
+
+| File            | Statements | Branches | Functions | Lines | Uncovered |
+| --------------- | ---------- | -------- | --------- | ----- | --------- |
+| `aemAdapter.ts` | 96.77%     | 94.44%   | 100%      | 100%  | Line 56   |
 
 **Status**: ✅ Above threshold  
 **Note**: Line 56 is a defensive check in iframe detection
 
 ### components/utils/ (100%)
-| File | Statements | Branches | Functions | Lines | Uncovered |
-|------|------------|----------|-----------|-------|-----------|
-| `helpers.ts` | 100% | 94.44% | 100% | 100% | Line 80 |
+
+| File         | Statements | Branches | Functions | Lines | Uncovered |
+| ------------ | ---------- | -------- | --------- | ----- | --------- |
+| `helpers.ts` | 100%       | 94.44%   | 100%      | 100%  | Line 80   |
 
 **Status**: ✅ Perfect coverage  
 **Note**: Line 80 is an edge case in waitForElement timeout
 
 ### site/ (90%)
-| File | Statements | Branches | Functions | Lines | Uncovered |
-|------|------------|----------|-----------|-------|-----------|
-| `main.ts` | 90% | 50% | 100% | 90% | Line 30 |
+
+| File      | Statements | Branches | Functions | Lines | Uncovered |
+| --------- | ---------- | -------- | --------- | ----- | --------- |
+| `main.ts` | 90%        | 50%      | 100%      | 90%   | Line 30   |
 
 **Status**: ✅ Meets threshold  
 **Note**: Line 30 is the error catch path - challenging to test
@@ -62,6 +66,7 @@
 ### Required Minimums
 
 All code must meet these thresholds:
+
 - ✅ Statements: 90%+
 - ✅ Branches: 90%+
 - ✅ Functions: 90%+
@@ -72,11 +77,13 @@ All code must meet these thresholds:
 Coverage is enforced at multiple levels:
 
 1. **Local Development**
+
    ```bash
    npm run test:coverage  # Enforces 90%
    ```
 
 2. **Pre-commit**
+
    ```bash
    npm run validate  # Runs linting + coverage
    ```
@@ -92,20 +99,20 @@ Coverage is enforced at multiple levels:
 
 ### By Type
 
-| Category | Count | Coverage |
-|----------|-------|----------|
-| Unit Tests | 67 | 97.77% |
-| Integration Tests | 0 | N/A |
-| E2E Tests | 0 | N/A |
+| Category          | Count | Coverage |
+| ----------------- | ----- | -------- |
+| Unit Tests        | 67    | 97.77%   |
+| Integration Tests | 0     | N/A      |
+| E2E Tests         | 0     | N/A      |
 
 ### By Component
 
-| Component | Tests | Lines Tested |
-|-----------|-------|--------------|
-| Configuration | 23 | 100% |
-| AEM Adapter | 15 | 96.77% |
-| Utilities | 23 | 100% |
-| Main Entry | 6 | 90% |
+| Component     | Tests | Lines Tested |
+| ------------- | ----- | ------------ |
+| Configuration | 23    | 100%         |
+| AEM Adapter   | 15    | 96.77%       |
+| Utilities     | 23    | 100%         |
+| Main Entry    | 6     | 90%          |
 
 ---
 
@@ -114,12 +121,14 @@ Coverage is enforced at multiple levels:
 ### What's Well Tested
 
 ✅ **Configuration Management** (100%)
+
 - Default config loading
 - Config updates and merging
 - Config reset functionality
 - AEM config loading
 
 ✅ **AEM Adapter** (96.77%)
+
 - Author/publish mode detection
 - Path extraction
 - Context initialization
@@ -127,6 +136,7 @@ Coverage is enforced at multiple levels:
 - Editor ready callbacks
 
 ✅ **Utility Functions** (100%)
+
 - Query parameter parsing
 - Debounce functionality
 - Viewport detection
@@ -134,6 +144,7 @@ Coverage is enforced at multiple levels:
 - Author mode detection
 
 ✅ **Main Entry Point** (90%)
+
 - Initialization flow
 - DOM ready handling
 - Error handling
@@ -152,10 +163,10 @@ Coverage is enforced at multiple levels:
 
 ## 📊 Coverage Trends
 
-| Date | Statements | Branches | Functions | Lines |
-|------|------------|----------|-----------|-------|
-| 2025-11-14 | 97.77% | 92.5% | 100% | 98.86% |
-| Initial | 54% | 52.5% | 54.16% | 54.54% |
+| Date       | Statements | Branches | Functions | Lines  |
+| ---------- | ---------- | -------- | --------- | ------ |
+| 2025-11-14 | 97.77%     | 92.5%    | 100%      | 98.86% |
+| Initial    | 54%        | 52.5%    | 54.16%    | 54.54% |
 
 **Improvement**: +43.77% statements, +40% branches, +45.84% functions, +44.32% lines
 
@@ -166,17 +177,19 @@ Coverage is enforced at multiple levels:
 ### For New Code
 
 1. **Write tests first** (TDD approach)
+
    ```bash
    # Create test file
    touch myFeature.test.ts
-   
+
    # Write failing tests
    npm run test:watch
-   
+
    # Implement code to pass tests
    ```
 
 2. **Check coverage locally**
+
    ```bash
    npm run test:coverage
    ```
@@ -208,12 +221,14 @@ Coverage is enforced at multiple levels:
 ## 🎯 Coverage Goals
 
 ### Short Term (Current Sprint)
+
 - [x] Achieve 90%+ coverage
 - [x] Configure Jest thresholds
 - [x] Set up CI/CD coverage checks
 - [x] Document testing guidelines
 
 ### Long Term (Next Quarter)
+
 - [ ] Reach 100% coverage
 - [ ] Add integration tests
 - [ ] Add E2E tests
@@ -254,4 +269,3 @@ This project maintains high quality standards through:
 **Status**: ✅ **ALL COVERAGE TARGETS MET**
 
 **Next Review**: After each major feature addition
-

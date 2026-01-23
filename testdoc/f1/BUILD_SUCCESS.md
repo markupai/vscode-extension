@@ -11,7 +11,7 @@
 
 ```
 [INFO] Reactor Summary for Markup AI for AEM Guides 1.0.0-SNAPSHOT:
-[INFO] 
+[INFO]
 [INFO] Markup AI for AEM Guides ........................... SUCCESS [  0.063 s]
 [INFO] Markup AI for AEM Guides - UI Apps ................. SUCCESS [  0.297 s]
 [INFO] Markup AI for AEM Guides - UI Frontend ............. SUCCESS [  2.596 s]
@@ -26,9 +26,11 @@
 ## 🔧 Issues Fixed
 
 ### Issue 1: FileVault Package Validation Error
+
 **Problem**: Could not load resource 'core.cnd' - node type validator failure
 
 **Solution**: Disabled strict node type validation for skeleton project
+
 ```xml
 <validatorsSettings>
     <jackrabbit-nodetypes>
@@ -38,17 +40,21 @@
 ```
 
 ### Issue 2: aemsync Version Compatibility
+
 **Problem**: aemsync@5.2.2 required Node >= 22.18.0
 
-**Solution**: 
+**Solution**:
+
 - Updated Node version to v22.12.0
 - Downgraded aemsync to v5.1.8 (more compatible)
 - Relaxed Node engine requirement to >=18
 
-### Issue 3: Sass Importer Incompatibility  
+### Issue 3: Sass Importer Incompatibility
+
 **Problem**: sass-glob-importer incompatible with modern Sass compiler API
 
-**Solution**: 
+**Solution**:
+
 - Removed sass-glob-importer dependency
 - Configured Sass with modern-compiler API
 - Simplified SCSS preprocessor configuration
@@ -60,25 +66,32 @@
 ### 1. AEM Packages
 
 **ui.apps Package**: `6.6 KB`
+
 ```
 ui.apps/target/markupai-aem-guides.ui.apps-1.0.0-SNAPSHOT.zip
 ```
+
 Contains:
+
 - ClientLib configurations
 - JCR content structure
 - Compiled JavaScript and CSS
 
 **ui.frontend Package**: `1.7 KB`
+
 ```
 ui.frontend/target/markupai-aem-guides.ui.frontend-1.0.0-SNAPSHOT.zip
 ```
+
 Contains:
+
 - Distribution files
 - Build artifacts
 
 ### 2. ClientLibs Generated
 
 **clientlib-dependencies**
+
 ```
 ├── .content.xml (category: markupai-aem-guides.dependencies)
 ├── js.txt
@@ -87,6 +100,7 @@ Contains:
 ```
 
 **clientlib-site**
+
 ```
 ├── .content.xml (categories: cq.authoring.dialog.all, apps.fmdita.xml_editor.page_overrides, fmdita.ckeditor.init)
 ├── js.txt
@@ -98,12 +112,14 @@ Contains:
 ### 3. Build Outputs
 
 **Frontend Build** (Vite):
+
 - ✅ 3 modules transformed
 - ✅ Production-optimized bundles
 - ✅ Gzip compression applied
 - ✅ Built in 120ms
 
 **Dependencies**:
+
 - ✅ 575 packages installed
 - ✅ Linting passed (ESLint)
 - ✅ 2 moderate vulnerabilities (non-critical)
@@ -126,6 +142,7 @@ Contains:
 ### 1. Verify the Build
 
 Check the generated files:
+
 ```bash
 cd /Users/pareshdeshmukh/git/github/aem-guides
 
@@ -139,6 +156,7 @@ ls -lh ui.apps/target/*.zip ui.frontend/target/*.zip
 ### 2. Frontend Development
 
 Start Vite dev server:
+
 ```bash
 cd ui.frontend
 npm start
@@ -156,6 +174,7 @@ npm test
 ### 4. Deploy to AEM
 
 Deploy to local AEM instance (requires AEM running on localhost:4502):
+
 ```bash
 cd ..
 mvn clean install -PautoInstallPackage
@@ -166,16 +185,19 @@ mvn clean install -PautoInstallPackage
 Begin implementing your Markup AI integration:
 
 **Main entry point**:
+
 ```
 ui.frontend/src/main/webpack/site/main.ts
 ```
 
 **Add components**:
+
 ```
 ui.frontend/src/main/webpack/components/
 ```
 
 **Add styles**:
+
 ```
 ui.frontend/src/main/webpack/site/main.scss
 ```
@@ -184,16 +206,16 @@ ui.frontend/src/main/webpack/site/main.scss
 
 ## 📊 Build Statistics
 
-| Metric | Value |
-|--------|-------|
-| Total Build Time | 3.484s |
-| Modules Built | 3 |
-| Packages Generated | 2 |
-| ClientLibs Created | 2 |
+| Metric                | Value                     |
+| --------------------- | ------------------------- |
+| Total Build Time      | 3.484s                    |
+| Modules Built         | 3                         |
+| Packages Generated    | 2                         |
+| ClientLibs Created    | 2                         |
 | JS Bundle Size (site) | 0.34 KB (0.22 KB gzipped) |
-| CSS Bundle Size | 0.08 KB (0.08 KB gzipped) |
-| npm Packages | 575 |
-| Build Status | ✅ SUCCESS |
+| CSS Bundle Size       | 0.08 KB (0.08 KB gzipped) |
+| npm Packages          | 575                       |
+| Build Status          | ✅ SUCCESS                |
 
 ---
 
@@ -244,7 +266,7 @@ mvn clean install -PautoInstallPackage
 ✅ AEM packages created  
 ✅ Frontend bundling works  
 ✅ TypeScript compiles  
-✅ Vite configuration valid  
+✅ Vite configuration valid
 
 ---
 
@@ -266,4 +288,3 @@ Your AEM project with Vite-based frontend is fully functional and ready for deve
 4. ✅ Sass importer incompatibility - **FIXED**
 
 All systems operational. Ready for deployment.
-

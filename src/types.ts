@@ -8,13 +8,7 @@ export interface ContentIssue {
   id: string;
   startIndex: number;
   endIndex: number;
-  type:
-    | "spelling"
-    | "grammar"
-    | "consistency"
-    | "clarity"
-    | "terminology"
-    | "tone";
+  type: "spelling" | "grammar" | "consistency" | "clarity" | "terminology" | "tone";
   category?: string;
   subcategory?: string;
   message: string;
@@ -50,7 +44,7 @@ export interface StyleGuideOption {
 // ============================================================================
 
 export interface FindingTreeItem {
-  type: 'file' | 'issue';
+  type: "file" | "issue";
   uri?: vscode.Uri;
   issue?: ContentIssue;
   label: string;
@@ -58,7 +52,7 @@ export interface FindingTreeItem {
 }
 
 export interface FolderScannerItem {
-  type: 'folder' | 'file';
+  type: "folder" | "file";
   uri: vscode.Uri;
   label: string;
   isSelected: boolean;

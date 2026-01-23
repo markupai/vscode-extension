@@ -32,11 +32,4 @@ export const MAX_POLL_ATTEMPTS = 60; // 2 minutes max
 // Supported File Extensions
 // ============================================================================
 
-export const SUPPORTED_FILE_EXTENSIONS = [
-  '.md',
-  '.txt',
-  '.dita',
-  '.html',
-  '.htm',
-  '.xml'
-];
+export const SUPPORTED_FILE_EXTENSIONS = [".md", ".txt", ".dita", ".html", ".htm", ".xml"];

@@ -1,47 +1,39 @@
-import { defineConfig } from 'vitest/config';
-import path from 'path';
+import { defineConfig } from "vitest/config";
+import path from "path";
 
 export default defineConfig({
   test: {
     globals: true,
-    environment: 'node',
-    include: ['src/**/*.{test,spec}.ts'],
-    exclude: ['node_modules', 'out', 'dist', '.vscode-test'],
-    pool: 'forks',
+    environment: "node",
+    include: ["test/**/*.{test,spec}.ts"],
+    exclude: ["node_modules", "out", "dist", ".vscode-test"],
+    pool: "forks",
     poolOptions: {
       forks: {
-        singleFork: true
-      }
+        singleFork: true,
+      },
     },
     testTimeout: 5000,
     hookTimeout: 5000,
     coverage: {
-      provider: 'v8',
-      reporter: ['text', 'json', 'html', 'lcov'],
-      include: ['src/**/*.ts'],
-      exclude: [
-        'src/**/*.{test,spec}.ts',
-        'src/test/**',
-        'src/__mocks__/**',
-        '**/*.d.ts',
-        '**/node_modules/**',
-        '**/out/**',
-        '**/dist/**'
-      ],
+      provider: "v8",
+      reporter: ["text", "json", "html", "lcov"],
+      include: ["src/**/*.ts"],
+      exclude: ["src/test/**", "**/*.d.ts", "**/node_modules/**", "**/out/**", "**/dist/**"],
       thresholds: {
         lines: 80,
         functions: 80,
         branches: 75,
-        statements: 80
-      }
+        statements: 80,
+      },
     },
     mockReset: true,
     clearMocks: true,
-    restoreMocks: true
+    restoreMocks: true,
   },
   resolve: {
     alias: {
-      vscode: path.resolve(__dirname, './src/__mocks__/vscode.ts')
-    }
-  }
+      vscode: path.resolve(__dirname, "./test/mocks/vscode.ts"),
+    },
+  },
 });

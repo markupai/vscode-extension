@@ -1,6 +1,7 @@
 # ClientLib Load Order Fix - Root Cause Analysis
 
 ## Issue Report
+
 **Date:** December 30, 2025  
 **Severity:** CRITICAL - jQuery corruption breaking AEM functionality
 **Error:** `$.ajax is undefined` immediately when plugin loads
@@ -43,7 +44,7 @@ Time 50ms:   fmdita.ckeditor.init category loads
              └─ Both trying to touch $ at the same time
              ↓
 Time 100ms:  CKEditor manipulates $ during setup
-             Our code tries to access $ 
+             Our code tries to access $
              ↓
 Time 150ms:  $ is corrupted - ajax is undefined
              ↓
@@ -56,6 +57,7 @@ Time 200ms:  AEM tries to use $.ajax
 ### Change ClientLib Configuration
 
 **Before:**
+
 ```javascript
 categories: [
   "cq.authoring.dialog.all",
@@ -66,6 +68,7 @@ dependencies: ["cq.jquery", "fmdita", "markupai-aem-guides.dependencies"],
 ```
 
 **After:**
+
 ```javascript
 categories: [
   "cq.authoring.dialog.all",
@@ -73,8 +76,8 @@ categories: [
   // Removed from fmdita.ckeditor.init category
 ],
 dependencies: [
-  "cq.jquery", 
-  "fmdita", 
+  "cq.jquery",
+  "fmdita",
   "fmdita.ckeditor.init",  // ✅ Now a DEPENDENCY - loads AFTER CKEditor
   "markupai-aem-guides.dependencies"
 ],
@@ -118,8 +121,8 @@ categories: [
   // Removed: "fmdita.ckeditor.init",
 ],
 dependencies: [
-  "cq.jquery", 
-  "fmdita", 
+  "cq.jquery",
+  "fmdita",
   "fmdita.ckeditor.init",  // Added as dependency
   "markupai-aem-guides.dependencies"
 ],
@@ -133,21 +136,25 @@ The clientlib generator automatically updates:
 ## Why Previous Fixes Didn't Work
 
 ### Fix Attempt 1: Intermediate Variables
+
 - **What we did**: Stored `ckElement.$` in variables
 - **Why it failed**: The module was still loading during CKEditor init
 - **Result**: Still corrupted
 
 ### Fix Attempt 2: Save & Restore Pattern
+
 - **What we did**: Saved `$` before accessing CKEditor, restored after
 - **Why it failed**: The corruption happens at MODULE LOAD TIME, not during adapter operations
 - **Result**: By the time we try to save `$`, it's already corrupted
 
 ### Fix Attempt 3: Protect Both `$` and `jQuery`
+
 - **What we did**: Saved and restored both variables
 - **Why it failed**: Same as above - corruption happens too early
 - **Result**: Still broken on load
 
 ### Fix Attempt 4: ClientLib Load Order (THIS ONE WORKS!)
+
 - **What we did**: Changed WHEN our code loads
 - **Why it works**: We're not loading during CKEditor initialization anymore
 - **Result**: ✅ jQuery is stable when we load
@@ -155,32 +162,37 @@ The clientlib generator automatically updates:
 ## Testing Instructions
 
 ### 1. Deploy to AEM
+
 ```bash
 cd /Users/pareshdeshmukh/git/github/aem-guides
 ./quick-start.sh
 ```
 
 ### 2. Clear Browser Cache
+
 - Hard refresh: `Cmd+Shift+R` (Mac) or `Ctrl+Shift+R` (Windows)
 - Or completely clear cache in DevTools
 
 ### 3. Test jQuery
+
 Open browser console:
+
 ```javascript
-console.log('Type of $:', typeof $);
+console.log("Type of $:", typeof $);
 // Expected: "function"
 
-console.log('Type of jQuery:', typeof jQuery);
+console.log("Type of jQuery:", typeof jQuery);
 // Expected: "function"
 
-console.log('Type of $.ajax:', typeof $.ajax);
+console.log("Type of $.ajax:", typeof $.ajax);
 // Expected: "function"  ✅ NOT "undefined"!
 
-console.log('$.ajax:', $.ajax);
+console.log("$.ajax:", $.ajax);
 // Expected: ƒ ajax(url, settings) { ... }
 ```
 
 ### 4. Test AEM Operations
+
 - ✅ Open a document
 - ✅ Edit content
 - ✅ Save document
@@ -189,16 +201,20 @@ console.log('$.ajax:', $.ajax);
 ## Key Learnings
 
 ### 1. Load Order Matters
+
 Clientlib categories determine **WHEN** code runs, not just if it loads. Loading during another library's initialization can cause conflicts.
 
 ### 2. Dependencies vs Categories
+
 - **Categories**: "I am part of this loading phase"
 - **Dependencies**: "I need this to load BEFORE me"
 
 ### 3. CKEditor's Initialization
+
 CKEditor does something during initialization that affects global `$`. By not being present during that phase, we avoid the corruption.
 
 ### 4. The Save/Restore Pattern is Still Useful
+
 While it didn't fix the root cause, the save/restore pattern is still good defensive programming for when we DO access CKEditor properties.
 
 ## Prevention
@@ -235,4 +251,3 @@ dependencies: ["library.init"]
 ✅ **Build**: Successful  
 ⏳ **Deploy**: Ready for deployment  
 ⏳ **Testing**: Awaiting verification
-
