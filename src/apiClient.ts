@@ -80,8 +80,8 @@ export class MarkupAIContentChecker {
     this.offsetMapper = new TextOffsetMapper(text);
 
     // Determine file extension and MIME type
-    const fileExtension = filename ? filename.split('.').pop()?.toLowerCase() : 'txt';
-    const mimeType = this.getMimeType(fileExtension || 'txt');
+    const fileExtension = filename ? filename.split(".").pop()?.toLowerCase() : "txt";
+    const mimeType = this.getMimeType(fileExtension || "txt");
     const fileName = filename || `content.${fileExtension}`;
 
     // Create a Blob from the text content
@@ -220,15 +220,15 @@ export class MarkupAIContentChecker {
 
   private getMimeType(extension: string): string {
     const mimeTypes: { [key: string]: string } = {
-      'txt': 'text/plain',
-      'md': 'text/markdown',
-      'markdown': 'text/markdown',
-      'html': 'text/html',
-      'htm': 'text/html',
-      'xml': 'text/xml',
-      'dita': 'application/xml',
-      'json': 'application/json',
+      txt: "text/plain",
+      md: "text/markdown",
+      markdown: "text/markdown",
+      html: "text/html",
+      htm: "text/html",
+      xml: "text/xml",
+      dita: "application/xml",
+      json: "application/json",
     };
-    return mimeTypes[extension] || 'text/plain';
+    return mimeTypes[extension] || "text/plain";
   }
 }

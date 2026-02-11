@@ -8,12 +8,12 @@ This is another sample markdown file for testing purposes. it has been created w
 
 ### Tables
 
-| Feature | Description | Status |
-|---------|-------------|--------|
-| Markdown | Lightweight markup | ✓ |
-| HTML | Web standard | ✓ |
-| CSS | Styling | ✓ |
-| JavaScript | Programming langauge | maybe |
+| Feature    | Description          | Status |
+| ---------- | -------------------- | ------ |
+| Markdown   | Lightweight markup   | ✓      |
+| HTML       | Web standard         | ✓      |
+| CSS        | Styling              | ✓      |
+| JavaScript | Programming langauge | maybe  |
 
 ### Task List
 
@@ -47,8 +47,8 @@ The code above is very simpel but it demonstrate how to make function in python.
 1. Always write clean code
 2. Comment you're code properly
 3. Test everything before deploy
-4.dont forget to commit changes
-5. Use version control system like git
+   4.dont forget to commit changes
+4. Use version control system like git
 
 ### Configuration Settings
 
@@ -72,12 +72,14 @@ To configure the system you needs to update following settings:
 
 Their is several ways too improve performance of you're application:
 
-* Use caching where ever possible
-* Optimize database querys
-* Minimize HTTP requests
-* Compress images and assets
-- Load javascript files asynchronusly
-+ Implement lazy loading for images
+- Use caching where ever possible
+- Optimize database querys
+- Minimize HTTP requests
+- Compress images and assets
+
+* Load javascript files asynchronusly
+
+- Implement lazy loading for images
 
 ## Summary
 

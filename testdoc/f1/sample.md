@@ -7,7 +7,7 @@ This is a sample markdown file demonstrating basic markdown syntax. it dont have
 ## Features
 
 - **Bold text** for emphasis
-- *Italic text* for subtle emphasis
+- _Italic text_ for subtle emphasis
 - `Code snippets` for inline code
 - this feature are very importent
 
@@ -15,7 +15,7 @@ This is a sample markdown file demonstrating basic markdown syntax. it dont have
 
 ```javascript
 function greet(name) {
-    return `Hello, ${name}!`;
+  return `Hello, ${name}!`;
 }
 ```
 
@@ -27,7 +27,7 @@ The above code its working fine and dont need no changes at all. we was testing 
 2. Second item
 3. Third item
 4. fourth item (notice lowercase)
-5.Missing space here
+   5.Missing space here
 
 ### Links and Images
 
@@ -43,11 +43,13 @@ The system dont work properly when you doesnt configure it correct. Make sure yo
 
 ## Common Issues
 
-* Sometimes the code brake
-* Their might be some bugs
-* Its not always working as expected
-- Mixing bullet styles is ok
-+ Plus sign also work
+- Sometimes the code brake
+- Their might be some bugs
+- Its not always working as expected
+
+* Mixing bullet styles is ok
+
+- Plus sign also work
 
 ## Conclusion
 
