@@ -6,7 +6,7 @@ vi.mock("@markupai/api", () => ({
   MarkupAI: {},
 }));
 
-import { MarkupAIContentChecker } from "./apiClient";
+import { MarkupAIContentChecker } from "../src/apiClient";
 import { MarkupAIClient } from "@markupai/api";
 import type { MarkupAI } from "@markupai/api";
 

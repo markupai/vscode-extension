@@ -5,7 +5,7 @@ import {
   POLL_INTERVAL_MS,
   MAX_POLL_ATTEMPTS,
   SUPPORTED_FILE_EXTENSIONS,
-} from "./constants";
+} from "../src/constants";
 
 describe("constants", () => {
   describe("DIALECTS", () => {

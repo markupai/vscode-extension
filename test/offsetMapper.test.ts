@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { OffsetTranslator, TextOffsetMapper } from "./offsetMapper";
+import { OffsetTranslator, TextOffsetMapper } from "../src/offsetMapper";
 
 describe("OffsetTranslator", () => {
   describe("translatePosition", () => {

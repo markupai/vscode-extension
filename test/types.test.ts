@@ -6,7 +6,7 @@ import type {
   StyleGuideOption,
   FindingTreeItem,
   FolderScannerItem,
-} from "./types";
+} from "../src/types";
 import * as vscode from "vscode";
 
 describe("types", () => {

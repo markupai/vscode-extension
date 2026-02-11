@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import * as vscode from "vscode";
-import * as utils from "./utils";
-import { ContentIssue } from "./types";
+import * as utils from "../src/utils";
+import { ContentIssue } from "../src/types";
 
 describe("utils", () => {
   beforeEach(() => {
