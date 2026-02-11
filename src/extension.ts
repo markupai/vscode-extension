@@ -1,58 +1,26 @@
 import * as vscode from "vscode";
-import { MarkupAI } from "@markupai/api";
 import { OffsetTranslator, TextOffsetMapper } from "./offsetMapper";
 import { MarkupAIContentChecker } from "./apiClient";
-
-// ============================================================================
-// Types and Interfaces
-// ============================================================================
-
-interface ContentIssue {
-  id: string;
-  startIndex: number;
-  endIndex: number;
-  type: "spelling" | "grammar" | "consistency" | "clarity" | "terminology" | "tone";
-  category?: string;
-  subcategory?: string;
-  message: string;
-  suggestion: string;
-  originalText: string;
-  severity: "high" | "medium" | "low";
-}
-
-interface ContentScores {
-  overall: number;
-  grammar: number;
-  consistency: number;
-  terminology: number;
-}
-
-interface CheckResult {
-  issues: ContentIssue[];
-  scores: ContentScores;
-}
-
-interface StyleGuideOption {
-  id: string;
-  name: string;
-  isBuiltIn: boolean;
-}
-
-// ============================================================================
-// Constants
-// ============================================================================
-
-const DIALECTS: { value: MarkupAI.Dialects; label: string }[] = [
-  { value: "american_english", label: "American English" },
-  { value: "british_english", label: "British English" },
-  { value: "canadian_english", label: "Canadian English" },
-];
-
-const BUILT_IN_STYLE_GUIDES: StyleGuideOption[] = [
-  { id: "ap", name: "AP Style Guide", isBuiltIn: true },
-  { id: "chicago", name: "Chicago Manual of Style", isBuiltIn: true },
-  { id: "microsoft", name: "Microsoft Style Guide", isBuiltIn: true },
-];
+import {
+  ContentIssue,
+  ContentScores,
+  CheckResult,
+  StyleGuideOption,
+  FindingTreeItem,
+  FolderScannerItem,
+} from "./types";
+import { DIALECTS, BUILT_IN_STYLE_GUIDES } from "./constants";
+import {
+  getConfig,
+  getApiToken,
+  hasApiToken,
+  getDialect,
+  getStyleGuide,
+  indexToPosition,
+  getSeverityForIssue,
+  getScoreEmoji,
+  getTypeEmoji,
+} from "./utils";
 
 // ============================================================================
 // Extension State
@@ -71,80 +39,11 @@ let disabledCategories: Set<string> = new Set(); // Categories that are disabled
 let documentTextAtCheckStart: Map<string, string> = new Map(); // Store text when check started
 
 // ============================================================================
-// Utility Functions
+// Extension-specific Utility Functions
 // ============================================================================
-
-function getConfig(): vscode.WorkspaceConfiguration {
-  return vscode.workspace.getConfiguration("markupai");
-}
-
-function getApiToken(): string {
-  return getConfig().get("apiToken", "");
-}
-
-function hasApiToken(): boolean {
-  return getApiToken().trim().length > 0;
-}
 
 function isExtensionEnabled(): boolean {
   return isEnabled && getConfig().get("enabled", true);
-}
-
-function getDialect(): MarkupAI.Dialects {
-  return getConfig().get("dialect", "american_english") as MarkupAI.Dialects;
-}
-
-function getStyleGuide(): string {
-  return getConfig().get("styleGuide", "ap");
-}
-
-function indexToPosition(document: vscode.TextDocument, index: number): vscode.Position {
-  return document.positionAt(index);
-}
-
-function getSeverityForIssue(issue: ContentIssue): vscode.DiagnosticSeverity {
-  switch (issue.severity) {
-    case "high":
-      return vscode.DiagnosticSeverity.Error;
-    case "medium":
-      return vscode.DiagnosticSeverity.Warning;
-    case "low":
-      return vscode.DiagnosticSeverity.Information;
-    default:
-      return vscode.DiagnosticSeverity.Warning;
-  }
-}
-
-function getScoreEmoji(score: number): string {
-  if (score >= 90) {
-    return "🟢";
-  }
-  if (score >= 70) {
-    return "🟡";
-  }
-  if (score >= 50) {
-    return "🟠";
-  }
-  return "🔴";
-}
-
-function getTypeEmoji(type: ContentIssue["type"]): string {
-  switch (type) {
-    case "grammar":
-      return "📖";
-    case "spelling":
-      return "📝";
-    case "consistency":
-      return "🔄";
-    case "clarity":
-      return "💡";
-    case "terminology":
-      return "📚";
-    case "tone":
-      return "🎭";
-    default:
-      return "📝";
-  }
 }
 
 // ============================================================================
@@ -931,14 +830,6 @@ async function showScoresDialog(): Promise<void> {
 // Findings Panel - TreeView for Issues
 // ============================================================================
 
-interface FindingTreeItem {
-  type: "file" | "issue";
-  uri?: vscode.Uri;
-  issue?: ContentIssue;
-  label: string;
-  children?: FindingTreeItem[];
-}
-
 class FindingsTreeDataProvider implements vscode.TreeDataProvider<FindingTreeItem> {
   private _onDidChangeTreeData: vscode.EventEmitter<FindingTreeItem | undefined | null | void> =
     new vscode.EventEmitter<FindingTreeItem | undefined | null | void>();
@@ -1166,14 +1057,6 @@ let findingsTreeDataProvider: FindingsTreeDataProvider;
 // ============================================================================
 // Folder Scanner - TreeView for Bulk Checking
 // ============================================================================
-
-interface FolderScannerItem {
-  type: "folder" | "file";
-  uri: vscode.Uri;
-  label: string;
-  isSelected: boolean;
-  children?: FolderScannerItem[];
-}
 
 class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<FolderScannerItem> {
   private _onDidChangeTreeData: vscode.EventEmitter<FolderScannerItem | undefined | null | void> =
@@ -1919,10 +1802,7 @@ export function activate(context: vscode.ExtensionContext) {
 
           if (translatedRange) {
             // Verify the text still exists at the new position
-            const textAtPosition = newText.substring(
-              translatedRange.start,
-              translatedRange.end,
-            );
+            const textAtPosition = newText.substring(translatedRange.start, translatedRange.end);
 
             // Only keep the issue if the original text still matches
             if (textAtPosition === issue.originalText) {
