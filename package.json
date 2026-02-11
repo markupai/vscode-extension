@@ -19,7 +19,7 @@
     "compile": "tsc -p tsconfig.build.json",
     "format:check": "prettier --check .",
     "format:fix": "prettier --write .",
-    "lint": "eslint .",
+    "lint:check": "eslint .",
     "lint:fix": "eslint . --fix",
     "package": "npm run format:fix && mkdir -p dist && vsce package --out dist/",
     "package:pre-release": "npm run format:fix && mkdir -p dist && vsce package --pre-release --out dist/",

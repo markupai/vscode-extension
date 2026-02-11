@@ -28,15 +28,15 @@ import {
 
 let diagnosticCollection: vscode.DiagnosticCollection;
 let statusBarItem: vscode.StatusBarItem;
-let documentIssues: Map<string, ContentIssue[]> = new Map();
-let documentScores: Map<string, ContentScores> = new Map();
-let checkDebounceTimers: Map<string, NodeJS.Timeout> = new Map();
+const documentIssues: Map<string, ContentIssue[]> = new Map();
+const documentScores: Map<string, ContentScores> = new Map();
+const checkDebounceTimers: Map<string, NodeJS.Timeout> = new Map();
 let isEnabled = true;
 let cachedStyleGuides: StyleGuideOption[] = [...BUILT_IN_STYLE_GUIDES];
-let isCheckingDocument: Map<string, boolean> = new Map();
+const isCheckingDocument: Map<string, boolean> = new Map();
 let isApplyingFix = false; // Flag to prevent re-checking when applying fixes
-let disabledCategories: Set<string> = new Set(); // Categories that are disabled by user
-let documentTextAtCheckStart: Map<string, string> = new Map(); // Store text when check started
+const disabledCategories: Set<string> = new Set(); // Categories that are disabled by user
+const documentTextAtCheckStart: Map<string, string> = new Map(); // Store text when check started
 
 // ============================================================================
 // Extension-specific Utility Functions

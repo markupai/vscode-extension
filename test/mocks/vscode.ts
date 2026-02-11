@@ -184,12 +184,12 @@ export class MarkdownString {
     }
   }
 
-  appendMarkdown(value: string): MarkdownString {
+  appendMarkdown(value: string): this {
     this.value += value;
     return this;
   }
 
-  appendCodeblock(value: string, language?: string): MarkdownString {
+  appendCodeblock(value: string, language?: string): this {
     this.value += `\`\`\`${language || ""}\n${value}\n\`\`\``;
     return this;
   }
