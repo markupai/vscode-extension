@@ -1880,27 +1880,72 @@ export function activate(context: vscode.ExtensionContext) {
         new vscode.Position(parsedArgs.range.end.line, parsedArgs.range.end.character),
       );
 
-      // Remove the diagnostic and any overlapping diagnostics before applying the fix
-      const currentDiagnostics = diagnosticCollection.get(uri);
-      if (currentDiagnostics) {
-        const updatedDiagnostics = currentDiagnostics.filter((d) => {
-          // Check if ranges overlap: two ranges overlap if one starts before the other ends
-          // and ends after the other starts
-          const rangesOverlap =
-            d.range.start.isBefore(range.end) && d.range.end.isAfter(range.start);
-          const rangesEqual = d.range.isEqual(range);
-          // Remove if overlapping or equal
-          return !rangesOverlap && !rangesEqual;
-        });
-        diagnosticCollection.set(uri, updatedDiagnostics);
-      }
+      // Get the document to access text
+      const document = await vscode.workspace.openTextDocument(uri);
+      const oldText = document.getText();
+      const startOffset = document.offsetAt(range.start);
+      const endOffset = document.offsetAt(range.end);
 
       // Set flag to prevent re-checking when applying fix
       isApplyingFix = true;
 
+      // Apply the edit
       const edit = new vscode.WorkspaceEdit();
       edit.replace(uri, range, parsedArgs.suggestion);
       await vscode.workspace.applyEdit(edit);
+
+      // Get the new text after the edit
+      const newText = document.getText();
+
+      // Translate all remaining issue positions using OffsetTranslator
+      const translator = new OffsetTranslator(oldText, newText);
+      const docKey = uri.toString();
+      const existingIssues = documentIssues.get(docKey);
+
+      if (existingIssues) {
+        const updatedIssues: ContentIssue[] = [];
+
+        for (const issue of existingIssues) {
+          // Skip the issue that was just fixed (overlapping with the applied range)
+          if (
+            (issue.startIndex >= startOffset && issue.startIndex < endOffset) ||
+            (issue.endIndex > startOffset && issue.endIndex <= endOffset)
+          ) {
+            continue; // This issue was fixed, don't keep it
+          }
+
+          // Translate the issue position to the new text
+          const translatedRange = translator.translateRange(issue.startIndex, issue.endIndex);
+
+          if (translatedRange) {
+            // Verify the text still exists at the new position
+            const textAtPosition = newText.substring(
+              translatedRange.start,
+              translatedRange.end,
+            );
+
+            // Only keep the issue if the original text still matches
+            if (textAtPosition === issue.originalText) {
+              updatedIssues.push({
+                ...issue,
+                startIndex: translatedRange.start,
+                endIndex: translatedRange.end,
+              });
+            }
+          }
+        }
+
+        // Update the stored issues with new positions
+        documentIssues.set(docKey, updatedIssues);
+
+        // Update diagnostics with new positions
+        updateDiagnostics(document, updatedIssues);
+
+        // Refresh the findings panel
+        if (findingsTreeDataProvider) {
+          findingsTreeDataProvider.refresh();
+        }
+      }
 
       // Reset flag after a short delay to allow the document change event to fire
       setTimeout(() => {
