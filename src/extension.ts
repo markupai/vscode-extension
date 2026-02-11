@@ -387,13 +387,19 @@ class MarkupAIContentChecker {
     text: string,
     dialect: MarkupAI.Dialects,
     styleGuide: string,
+    filename?: string,
   ): Promise<CheckResult> {
     // Create offset mapper for Unicode handling
     this.offsetMapper = new TextOffsetMapper(text);
 
+    // Determine file extension and MIME type
+    const fileExtension = filename ? filename.split('.').pop()?.toLowerCase() : 'txt';
+    const mimeType = this.getMimeType(fileExtension || 'txt');
+    const fileName = filename || `content.${fileExtension}`;
+
     // Create a Blob from the text content
-    const blob = new Blob([text], { type: "text/plain" });
-    const file = new File([blob], "content.txt", { type: "text/plain" });
+    const blob = new Blob([text], { type: mimeType });
+    const file = new File([blob], fileName, { type: mimeType });
 
     // Create style suggestion request
     const workflowResponse = await this.client.styleSuggestions.createStyleSuggestion({
@@ -523,6 +529,20 @@ class MarkupAIContentChecker {
       default:
         return "grammar";
     }
+  }
+
+  private getMimeType(extension: string): string {
+    const mimeTypes: { [key: string]: string } = {
+      'txt': 'text/plain',
+      'md': 'text/markdown',
+      'markdown': 'text/markdown',
+      'html': 'text/html',
+      'htm': 'text/html',
+      'xml': 'text/xml',
+      'dita': 'application/xml',
+      'json': 'application/json',
+    };
+    return mimeTypes[extension] || 'text/plain';
   }
 }
 
@@ -682,11 +702,11 @@ async function checkDocument(
           cancellable: false,
         },
         async () => {
-          return await checker.checkContent(text, getDialect(), getStyleGuide());
+          return await checker.checkContent(text, getDialect(), getStyleGuide(), document.fileName);
         },
       );
     } else {
-      result = await checker.checkContent(text, getDialect(), getStyleGuide());
+      result = await checker.checkContent(text, getDialect(), getStyleGuide(), document.fileName);
     }
 
     // Store issues and scores for this document
