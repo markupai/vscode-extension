@@ -24,6 +24,19 @@ import {
 } from "./utils";
 
 // ============================================================================
+// Internal Types
+// ============================================================================
+
+interface ApplyFixArgs {
+  uri: string;
+  range: {
+    start: { line: number; character: number };
+    end: { line: number; character: number };
+  };
+  suggestion: string;
+}
+
+// ============================================================================
 // Extension State
 // ============================================================================
 
@@ -839,9 +852,9 @@ async function showScoresDialog(): Promise<void> {
 // ============================================================================
 
 class FindingsTreeDataProvider implements vscode.TreeDataProvider<FindingTreeItem> {
-  private _onDidChangeTreeData: vscode.EventEmitter<FindingTreeItem | undefined | null | void> =
-    new vscode.EventEmitter<FindingTreeItem | undefined | null | void>();
-  readonly onDidChangeTreeData: vscode.Event<FindingTreeItem | undefined | null | void> =
+  private _onDidChangeTreeData: vscode.EventEmitter<FindingTreeItem | undefined | null> =
+    new vscode.EventEmitter<FindingTreeItem | undefined | null>();
+  readonly onDidChangeTreeData: vscode.Event<FindingTreeItem | undefined | null> =
     this._onDidChangeTreeData.event;
 
   private severityFilter: string | null = null;
@@ -1071,9 +1084,9 @@ let findingsTreeDataProvider: FindingsTreeDataProvider;
 // ============================================================================
 
 class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<FolderScannerItem> {
-  private _onDidChangeTreeData: vscode.EventEmitter<FolderScannerItem | undefined | null | void> =
-    new vscode.EventEmitter<FolderScannerItem | undefined | null | void>();
-  readonly onDidChangeTreeData: vscode.Event<FolderScannerItem | undefined | null | void> =
+  private _onDidChangeTreeData: vscode.EventEmitter<FolderScannerItem | undefined | null> =
+    new vscode.EventEmitter<FolderScannerItem | undefined | null>();
+  readonly onDidChangeTreeData: vscode.Event<FolderScannerItem | undefined | null> =
     this._onDidChangeTreeData.event;
 
   private rootFolder: vscode.Uri | null = null;
@@ -1414,7 +1427,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Fetch style guides from server on startup (async, don't block activation)
   if (hasApiToken()) {
-    refreshStyleGuides().catch((error) => {
+    refreshStyleGuides().catch((error: unknown) => {
       console.error("MarkupAI: Failed to fetch style guides on startup", error);
     });
   }
@@ -1697,7 +1710,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Command to disable a specific category
   context.subscriptions.push(
-    vscode.commands.registerCommand("markupai.disableCategory", async (category: string) => {
+    vscode.commands.registerCommand("markupai.disableCategory", (category: string) => {
       if (!category) {
         return;
       }
@@ -1710,7 +1723,7 @@ export function activate(context: vscode.ExtensionContext) {
 
       // Remove diagnostics for this category from all documents
       filterDiagnosticsByDisabledCategories();
-      findingsTreeDataProvider?.refresh();
+      findingsTreeDataProvider.refresh();
     }),
   );
 
@@ -1746,7 +1759,7 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.window.showInformationMessage(
           `MarkupAI: Enabled ${selected.join(", ")} issues. Run "MarkupAI - Check Content" to see them.`,
         );
-        findingsTreeDataProvider?.refresh();
+        findingsTreeDataProvider.refresh();
       }
     }),
   );
@@ -1768,19 +1781,21 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("markupai.applyFix", async (args: any) => {
-      if (!args) {
-        return;
-      }
+    vscode.commands.registerCommand(
+      "markupai.applyFix",
+      async (args: string | ApplyFixArgs) => {
+        if (!args) {
+          return;
+        }
 
-      const parsedArgs = typeof args === "string" ? JSON.parse(args) : args;
-      const uri = vscode.Uri.parse(parsedArgs.uri);
-      const range = new vscode.Range(
-        new vscode.Position(parsedArgs.range.start.line, parsedArgs.range.start.character),
-        new vscode.Position(parsedArgs.range.end.line, parsedArgs.range.end.character),
-      );
+        const parsedArgs: ApplyFixArgs = typeof args === "string" ? JSON.parse(args) as ApplyFixArgs : args;
+        const uri = vscode.Uri.parse(parsedArgs.uri);
+        const range = new vscode.Range(
+          new vscode.Position(parsedArgs.range.start.line, parsedArgs.range.start.character),
+          new vscode.Position(parsedArgs.range.end.line, parsedArgs.range.end.character),
+        );
 
-      // Get the document to access text
+        // Get the document to access text
       const document = await vscode.workspace.openTextDocument(uri);
       const oldText = document.getText();
       const startOffset = document.offsetAt(range.start);
