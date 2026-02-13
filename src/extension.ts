@@ -443,7 +443,7 @@ class MarkupAICodeActionProvider implements vscode.CodeActionProvider {
     document: vscode.TextDocument,
     _range: vscode.Range | vscode.Selection,
     context: vscode.CodeActionContext,
-    _: vscode.CancellationToken,
+    _cancellationToken: vscode.CancellationToken,
   ): vscode.CodeAction[] {
     const actions: vscode.CodeAction[] = [];
 
@@ -518,7 +518,7 @@ class MarkupAIHoverProvider implements vscode.HoverProvider {
   provideHover(
     document: vscode.TextDocument,
     position: vscode.Position,
-    _: vscode.CancellationToken,
+    _cancellationToken: vscode.CancellationToken,
   ): vscode.Hover | null {
     const diagnostics = diagnosticCollection.get(document.uri);
     if (!diagnostics) {

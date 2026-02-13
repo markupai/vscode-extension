@@ -19,6 +19,6 @@ export default [
     ...tseslint.configs.disableTypeChecked,
   },
   {
-    ignores: ["out", "dist", "coverage", ".vscode-test", "**/*.d.ts"],
+    ignores: ["out", "dist", "coverage", ".vscode-test", "**/*.d.ts", "vitest.config.js"],
   },
 ];
