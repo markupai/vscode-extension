@@ -153,7 +153,10 @@ async function checkDocument(
     // Only show error notifications if not in batch mode
     if (showCompletionNotification) {
       const isUnauthorized =
-        typeof error === "object" && error !== null && "statusCode" in error && error.statusCode === 401;
+        typeof error === "object" &&
+        error !== null &&
+        "statusCode" in error &&
+        error.statusCode === 401;
       const errorMessage =
         error &&
         typeof error === "object" &&
@@ -166,9 +169,7 @@ async function checkDocument(
         vscode.window.showErrorMessage("MarkupAI: Invalid API token. Please check your settings.");
         updateStatusBarNoToken();
       } else {
-        vscode.window.showErrorMessage(
-          `MarkupAI: Error checking content - ${errorMessage}`,
-        );
+        vscode.window.showErrorMessage(`MarkupAI: Error checking content - ${errorMessage}`);
         statusBarItem.text = "⚠️ MarkupAI: Error";
         statusBarItem.show();
       }
@@ -281,7 +282,11 @@ function updateDiagnostics(
     const endPos = indexToPosition(document, endIndex);
     const range = new vscode.Range(startPos, endPos);
 
-    const diagnostic = new vscode.Diagnostic(range, issue.message, getSeverityForIssue(issue)) as MarkupAIDiagnostic;
+    const diagnostic = new vscode.Diagnostic(
+      range,
+      issue.message,
+      getSeverityForIssue(issue),
+    ) as MarkupAIDiagnostic;
 
     diagnostic.source = "MarkupAI";
 
@@ -1781,21 +1786,20 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand(
-      "markupai.applyFix",
-      async (args: string | ApplyFixArgs) => {
-        if (!args) {
-          return;
-        }
+    vscode.commands.registerCommand("markupai.applyFix", async (args: string | ApplyFixArgs) => {
+      if (!args) {
+        return;
+      }
 
-        const parsedArgs: ApplyFixArgs = typeof args === "string" ? JSON.parse(args) as ApplyFixArgs : args;
-        const uri = vscode.Uri.parse(parsedArgs.uri);
-        const range = new vscode.Range(
-          new vscode.Position(parsedArgs.range.start.line, parsedArgs.range.start.character),
-          new vscode.Position(parsedArgs.range.end.line, parsedArgs.range.end.character),
-        );
+      const parsedArgs: ApplyFixArgs =
+        typeof args === "string" ? (JSON.parse(args) as ApplyFixArgs) : args;
+      const uri = vscode.Uri.parse(parsedArgs.uri);
+      const range = new vscode.Range(
+        new vscode.Position(parsedArgs.range.start.line, parsedArgs.range.start.character),
+        new vscode.Position(parsedArgs.range.end.line, parsedArgs.range.end.character),
+      );
 
-        // Get the document to access text
+      // Get the document to access text
       const document = await vscode.workspace.openTextDocument(uri);
       const oldText = document.getText();
       const startOffset = document.offsetAt(range.start);
