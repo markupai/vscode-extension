@@ -883,7 +883,11 @@ class FindingsTreeDataProvider implements vscode.TreeDataProvider<FindingTreeIte
       return treeItem;
     } else {
       // Issue item
-      const issue = element.issue!;
+      if (!element.issue) {
+        // Fallback for malformed item
+        return new vscode.TreeItem(element.label, vscode.TreeItemCollapsibleState.None);
+      }
+      const issue = element.issue;
       const treeItem = new vscode.TreeItem(element.label, vscode.TreeItemCollapsibleState.None);
 
       // Set icon based on severity with colors matching SonarQube style
@@ -1210,8 +1214,8 @@ class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<FolderSca
 
       // Check if file has been checked and show status
       const docKey = element.uri.toString();
-      if (documentScores.has(docKey)) {
-        const score = documentScores.get(docKey)!;
+      const score = documentScores.get(docKey);
+      if (score) {
         const emoji = getScoreEmoji(score.overall);
         treeItem.description = `${emoji} ${String(score.overall)}`;
       }
