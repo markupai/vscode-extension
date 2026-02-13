@@ -127,9 +127,7 @@ async function checkDocument(
     updateStatusBar(result.scores);
 
     // Refresh findings panel
-    if (findingsTreeDataProvider) {
-      findingsTreeDataProvider.refresh();
-    }
+    findingsTreeDataProvider.refresh();
 
     // Show completion notification (unless suppressed for batch operations)
     if (showCompletionNotification) {
@@ -300,18 +298,14 @@ function clearDiagnostics(document: vscode.TextDocument): void {
   diagnosticCollection.delete(document.uri);
   documentIssues.delete(document.uri.toString());
   documentScores.delete(document.uri.toString());
-  if (findingsTreeDataProvider) {
-    findingsTreeDataProvider.refresh();
-  }
+  findingsTreeDataProvider.refresh();
 }
 
 function clearAllDiagnostics(): void {
   diagnosticCollection.clear();
   documentIssues.clear();
   documentScores.clear();
-  if (findingsTreeDataProvider) {
-    findingsTreeDataProvider.refresh();
-  }
+  findingsTreeDataProvider.refresh();
 }
 
 async function setMarkupAIEnabled(enabled: boolean): Promise<void> {
@@ -349,8 +343,8 @@ function updateStatusBar(scores: ContentScores | null): void {
   }
 
   const emoji = getScoreEmoji(scores.overall);
-  statusBarItem.text = `${emoji} MarkupAI: ${scores.overall}`;
-  statusBarItem.tooltip = `Click to see detailed scores\n\nGrammar: ${scores.grammar}\nConsistency: ${scores.consistency}\nTerminology: ${scores.terminology}`;
+  statusBarItem.text = `${emoji} MarkupAI: ${String(scores.overall)}`;
+  statusBarItem.tooltip = `Click to see detailed scores\n\nGrammar: ${String(scores.grammar)}\nConsistency: ${String(scores.consistency)}\nTerminology: ${String(scores.terminology)}`;
   statusBarItem.command = "markupai.showScores";
   statusBarItem.backgroundColor = undefined;
   statusBarItem.show();
@@ -391,8 +385,8 @@ async function showCheckCompleteNotification(
 
   const message =
     `${scoreEmoji} MarkupAI Check Complete — ${statusMessage} | ` +
-    `Score: ${scores.overall} | ` +
-    `${issueCount} issue${issueCount !== 1 ? "s" : ""} found`;
+    `Score: ${String(scores.overall)} | ` +
+    `${String(issueCount)} issue${issueCount !== 1 ? "s" : ""} found`;
 
   const action = await vscode.window.showInformationMessage(
     message,
@@ -437,7 +431,7 @@ class MarkupAICodeActionProvider implements vscode.CodeActionProvider {
     document: vscode.TextDocument,
     _range: vscode.Range | vscode.Selection,
     context: vscode.CodeActionContext,
-    _token: vscode.CancellationToken,
+    _: vscode.CancellationToken,
   ): vscode.CodeAction[] {
     const actions: vscode.CodeAction[] = [];
 
@@ -511,7 +505,7 @@ class MarkupAIHoverProvider implements vscode.HoverProvider {
   provideHover(
     document: vscode.TextDocument,
     position: vscode.Position,
-    _token: vscode.CancellationToken,
+    _: vscode.CancellationToken,
   ): vscode.Hover | null {
     const diagnostics = diagnosticCollection.get(document.uri);
     if (!diagnostics) {
@@ -772,26 +766,26 @@ async function showScoresDialog(): Promise<void> {
       kind: vscode.QuickPickItemKind.Separator,
     },
     {
-      label: `${getScoreEmoji(scores.overall)} Overall: ${scores.overall}`,
-      description: `${issues.length} issues`,
+      label: `${getScoreEmoji(scores.overall)} Overall: ${String(scores.overall)}`,
+      description: `${String(issues.length)} issues`,
     },
     {
-      label: `${getScoreEmoji(scores.grammar)} Grammar: ${scores.grammar}`,
-      description: `${grammarCount} issues`,
+      label: `${getScoreEmoji(scores.grammar)} Grammar: ${String(scores.grammar)}`,
+      description: `${String(grammarCount)} issues`,
     },
     {
-      label: `${getScoreEmoji(scores.consistency)} Consistency: ${scores.consistency}`,
-      description: `${consistencyCount} issues`,
+      label: `${getScoreEmoji(scores.consistency)} Consistency: ${String(scores.consistency)}`,
+      description: `${String(consistencyCount)} issues`,
     },
     {
-      label: `${getScoreEmoji(scores.terminology)} Terminology: ${scores.terminology}`,
-      description: `${terminologyCount} issues`,
+      label: `${getScoreEmoji(scores.terminology)} Terminology: ${String(scores.terminology)}`,
+      description: `${String(terminologyCount)} issues`,
     },
   ];
 
   if (otherCount > 0) {
     items.push({
-      label: `📋 Other: ${otherCount} issues`,
+      label: `📋 Other: ${String(otherCount)} issues`,
     });
   }
 
@@ -875,7 +869,7 @@ class FindingsTreeDataProvider implements vscode.TreeDataProvider<FindingTreeIte
       const treeItem = new vscode.TreeItem(element.label, vscode.TreeItemCollapsibleState.Expanded);
       treeItem.iconPath = vscode.ThemeIcon.File;
       treeItem.resourceUri = element.uri;
-      treeItem.description = `${element.children?.length || 0} issues`;
+      treeItem.description = `${String(element.children?.length || 0)} issues`;
       return treeItem;
     } else {
       // Issue item
@@ -980,7 +974,7 @@ class FindingsTreeDataProvider implements vscode.TreeDataProvider<FindingTreeIte
         let lineInfo = "";
         if (document) {
           const position = document.positionAt(issue.startIndex);
-          lineInfo = `Ln ${position.line + 1}`;
+          lineInfo = `Ln ${String(position.line + 1)}`;
         }
 
         // Truncate message if too long
@@ -1209,7 +1203,7 @@ class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<FolderSca
       if (documentScores.has(docKey)) {
         const score = documentScores.get(docKey)!;
         const emoji = getScoreEmoji(score.overall);
-        treeItem.description = `${emoji} ${score.overall}`;
+        treeItem.description = `${emoji} ${String(score.overall)}`;
       }
 
       // Make file clickable to open it
@@ -1319,14 +1313,14 @@ async function checkMultipleFiles(files: vscode.Uri[]): Promise<void> {
   await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
-      title: `MarkupAI: Checking ${totalFiles} file(s)...`,
+      title: `MarkupAI: Checking ${String(totalFiles)} file(s)...`,
       cancellable: false,
     },
     async (progress) => {
       for (const fileUri of files) {
         const fileName = fileUri.path.split("/").pop() || fileUri.path;
         progress.report({
-          message: `Checking ${fileName} (${completed + 1}/${totalFiles})`,
+          message: `Checking ${fileName} (${String(completed + 1)}/${String(totalFiles)})`,
           increment: (1 / totalFiles) * 100,
         });
 
@@ -1335,9 +1329,16 @@ async function checkMultipleFiles(files: vscode.Uri[]): Promise<void> {
           // Pass false for showProgress and showCompletionNotification during batch operations
           await checkDocument(document, false, false);
           completed++;
-        } catch (error: any) {
+        } catch (error: unknown) {
           failed++;
-          errors.push(`${fileName}: ${error?.message || "Unknown error"}`);
+          const errorMessage =
+            error &&
+            typeof error === "object" &&
+            "message" in error &&
+            typeof error.message === "string"
+              ? error.message
+              : "Unknown error";
+          errors.push(`${fileName}: ${errorMessage}`);
           console.error(`MarkupAI: Error checking ${fileName}`, error);
         }
       }
@@ -1348,14 +1349,12 @@ async function checkMultipleFiles(files: vscode.Uri[]): Promise<void> {
   folderScannerTreeDataProvider.refresh();
 
   // Refresh findings panel
-  if (findingsTreeDataProvider) {
-    findingsTreeDataProvider.refresh();
-  }
+  findingsTreeDataProvider.refresh();
 
   // Show completion summary
-  let message = `MarkupAI: Checked ${completed} file(s)`;
+  let message = `MarkupAI: Checked ${String(completed)} file(s)`;
   if (failed > 0) {
-    message += `, ${failed} failed`;
+    message += `, ${String(failed)} failed`;
   }
 
   if (failed === 0) {
@@ -1439,7 +1438,7 @@ export function activate(context: vscode.ExtensionContext) {
   const updateTreeViewTitle = () => {
     const count = findingsTreeDataProvider.getTotalIssueCount();
     const filters = findingsTreeDataProvider.getFilters();
-    let title = `Findings (${count})`;
+    let title = `Findings (${String(count)})`;
     if (filters.severity || filters.category) {
       const activeFilters = [filters.severity, filters.category].filter(Boolean).join(", ");
       title += ` - Filtered: ${activeFilters}`;
@@ -1822,9 +1821,7 @@ export function activate(context: vscode.ExtensionContext) {
         updateDiagnostics(document, updatedIssues);
 
         // Refresh the findings panel
-        if (findingsTreeDataProvider) {
-          findingsTreeDataProvider.refresh();
-        }
+        findingsTreeDataProvider.refresh();
       }
 
       // Reset flag after a short delay to allow the document change event to fire

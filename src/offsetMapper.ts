@@ -91,7 +91,7 @@ export class OffsetTranslator {
     // Otherwise, add the remaining characters
     if (diffs.length > 0) {
       const lastDiff = diffs[diffs.length - 1];
-      if (lastDiff && chars1 === loc && lastDiff[0] === DiffOp.Delete) {
+      if (chars1 === loc && lastDiff[0] === DiffOp.Delete) {
         // The location is at a deletion point
         return lastChars2;
       }
@@ -148,8 +148,6 @@ export class TextOffsetMapper {
   private buildMappings(): void {
     const encoder = new TextEncoder();
     let stringIndex = 0;
-    let byteOffset = 0;
-    let codePointIndex = 0;
 
     // Build code point to string index mapping
     this.codePointToStringIndex.push(0);
@@ -161,8 +159,6 @@ export class TextOffsetMapper {
       const charBytes = encoder.encode(char).length;
 
       stringIndex += charLength;
-      byteOffset += charBytes;
-      codePointIndex++;
 
       this.codePointToStringIndex.push(stringIndex);
 

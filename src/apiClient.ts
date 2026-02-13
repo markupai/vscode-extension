@@ -82,7 +82,7 @@ export class MarkupAIContentChecker {
     // Determine file extension and MIME type
     const fileExtension = filename ? filename.split(".").pop()?.toLowerCase() : "txt";
     const mimeType = this.getMimeType(fileExtension || "txt");
-    const fileName = filename || `content.${fileExtension}`;
+    const fileName = filename || `content.${fileExtension ?? "txt"}`;
 
     // Create a Blob from the text content
     const blob = new Blob([text], { type: mimeType });
@@ -112,7 +112,7 @@ export class MarkupAIContentChecker {
       try {
         const suggestionResponse =
           await this.client.styleSuggestions.getStyleSuggestion(workflowId);
-        const status = suggestionResponse.workflow?.status;
+        const status = suggestionResponse.workflow.status;
 
         if (status === "completed") {
           return this.parseResponse(suggestionResponse);
@@ -120,8 +120,13 @@ export class MarkupAIContentChecker {
           throw new Error("MarkupAI: Content check failed");
         }
         // If still running, continue polling
-      } catch (error: any) {
-        if (error?.statusCode === 404) {
+      } catch (error: unknown) {
+        if (
+          typeof error === "object" &&
+          error !== null &&
+          "statusCode" in error &&
+          error.statusCode === 404
+        ) {
           // Workflow not found yet, continue polling
           continue;
         }
@@ -175,7 +180,7 @@ export class MarkupAIContentChecker {
       }
 
       issues.push({
-        id: `issue-${i}`,
+        id: `issue-${String(i)}`,
         startIndex: startIndex,
         endIndex: endIndex,
         type: issueType,
@@ -183,7 +188,7 @@ export class MarkupAIContentChecker {
         subcategory: typeof issue.subcategory === "string" ? issue.subcategory : undefined,
         message:
           issue.explanation ||
-          `${issue.category}: Replace "${issue.original}" with "${issue.suggestion}"`,
+          `${issue.category ?? "Issue"}: Replace "${issue.original}" with "${issue.suggestion}"`,
         suggestion: issue.suggestion,
         originalText: issue.original,
         severity: issue.severity,
