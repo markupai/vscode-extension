@@ -8,6 +8,7 @@ import {
   StyleGuideOption,
   FindingTreeItem,
   FolderScannerItem,
+  MarkupAIDiagnostic,
 } from "./types";
 import { DIALECTS, BUILT_IN_STYLE_GUIDES } from "./constants";
 import {
@@ -267,17 +268,17 @@ function updateDiagnostics(
     const endPos = indexToPosition(document, endIndex);
     const range = new vscode.Range(startPos, endPos);
 
-    const diagnostic = new vscode.Diagnostic(range, issue.message, getSeverityForIssue(issue));
+    const diagnostic = new vscode.Diagnostic(range, issue.message, getSeverityForIssue(issue)) as MarkupAIDiagnostic;
 
     diagnostic.source = "MarkupAI";
 
     // Store additional data in the diagnostic
-    (diagnostic as any).markupaiSuggestion = issue.suggestion;
-    (diagnostic as any).markupaiOriginalText = issue.originalText;
-    (diagnostic as any).markupaiIssueType = issue.type;
-    (diagnostic as any).markupaiCategory = issue.category;
-    (diagnostic as any).markupaiSubcategory = issue.subcategory;
-    (diagnostic as any).markupaiSeverity = issue.severity;
+    diagnostic.markupaiSuggestion = issue.suggestion;
+    diagnostic.markupaiOriginalText = issue.originalText;
+    diagnostic.markupaiIssueType = issue.type;
+    diagnostic.markupaiCategory = issue.category;
+    diagnostic.markupaiSubcategory = issue.subcategory;
+    diagnostic.markupaiSeverity = issue.severity;
 
     diagnostics.push(diagnostic);
   }
@@ -294,7 +295,8 @@ function updateDiagnostics(
 function filterDiagnosticsByDisabledCategories(): void {
   diagnosticCollection.forEach((uri, diagnostics) => {
     const filteredDiagnostics = diagnostics.filter((diagnostic) => {
-      const category = (diagnostic as any).markupaiCategory;
+      const markupDiagnostic = diagnostic as MarkupAIDiagnostic;
+      const category = markupDiagnostic.markupaiCategory;
       if (category && disabledCategories.has(category.toLowerCase())) {
         return false;
       }
@@ -450,9 +452,10 @@ class MarkupAICodeActionProvider implements vscode.CodeActionProvider {
         continue;
       }
 
-      const suggestion = (diagnostic as any).markupaiSuggestion;
-      const originalText = (diagnostic as any).markupaiOriginalText;
-      const category = (diagnostic as any).markupaiCategory;
+      const markupDiagnostic = diagnostic as MarkupAIDiagnostic;
+      const suggestion = markupDiagnostic.markupaiSuggestion;
+      const originalText = markupDiagnostic.markupaiOriginalText;
+      const category = markupDiagnostic.markupaiCategory;
 
       if (suggestion && suggestion !== originalText) {
         // Create quick fix action using applyFix command to handle overlapping issues
@@ -524,11 +527,12 @@ class MarkupAIHoverProvider implements vscode.HoverProvider {
 
     for (const diagnostic of diagnostics) {
       if (diagnostic.range.contains(position)) {
-        const suggestion = (diagnostic as any).markupaiSuggestion;
-        const originalText = (diagnostic as any).markupaiOriginalText;
-        const category = (diagnostic as any).markupaiCategory;
-        const subcategory = (diagnostic as any).markupaiSubcategory;
-        const severity = (diagnostic as any).markupaiSeverity;
+        const markupDiagnostic = diagnostic as MarkupAIDiagnostic;
+        const suggestion = markupDiagnostic.markupaiSuggestion;
+        const originalText = markupDiagnostic.markupaiOriginalText;
+        const category = markupDiagnostic.markupaiCategory;
+        const subcategory = markupDiagnostic.markupaiSubcategory;
+        const severity = markupDiagnostic.markupaiSeverity;
 
         const markdown = new vscode.MarkdownString();
         markdown.isTrusted = true;

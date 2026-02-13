@@ -58,3 +58,17 @@ export interface FolderScannerItem {
   isSelected: boolean;
   children?: FolderScannerItem[];
 }
+
+// ============================================================================
+// Diagnostic Extension Types
+// ============================================================================
+
+// Extended diagnostic interface for MarkupAI-specific properties
+export interface MarkupAIDiagnostic extends vscode.Diagnostic {
+  markupaiSuggestion: string;
+  markupaiOriginalText: string;
+  markupaiIssueType: string;
+  markupaiCategory: string;
+  markupaiSubcategory?: string;
+  markupaiSeverity: string;
+}
