@@ -15,7 +15,7 @@ export default [
     },
   },
   {
-    files: ["eslint.config.mjs", "vitest.config.ts"],
+    files: ["eslint.config.mjs", "vitest.config.ts", "vitest.config.js", ".vscode-test.mjs"],
     ...tseslint.configs.disableTypeChecked,
   },
   {
