@@ -254,7 +254,9 @@ describe("types", () => {
       };
 
       expect(fileItem.children).toHaveLength(1);
-      expect(fileItem.children![0].type).toBe("issue");
+      if (fileItem.children) {
+        expect(fileItem.children[0].type).toBe("issue");
+      }
     });
   });
 
@@ -305,7 +307,9 @@ describe("types", () => {
       };
 
       expect(folderItem.children).toHaveLength(1);
-      expect(folderItem.children![0].type).toBe("file");
+      if (folderItem.children) {
+        expect(folderItem.children[0].type).toBe("file");
+      }
     });
 
     it("should allow toggling selection state", () => {

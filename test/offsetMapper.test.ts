@@ -64,7 +64,9 @@ describe("OffsetTranslator", () => {
 
       const result = translator.translateRange(6, 11);
       expect(result).toBeDefined();
-      expect(result!.start).toBe(16);
+      if (result) {
+        expect(result.start).toBe(16);
+      }
     });
 
     it("should translate deleted range", () => {
