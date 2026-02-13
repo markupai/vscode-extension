@@ -131,19 +131,29 @@ async function checkDocument(
 
     // Show completion notification (unless suppressed for batch operations)
     if (showCompletionNotification) {
-      showCheckCompleteNotification(result.scores, result.issues.length);
+      void showCheckCompleteNotification(result.scores, result.issues.length);
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("MarkupAI: Error checking content", error);
 
     // Only show error notifications if not in batch mode
     if (showCompletionNotification) {
-      if (error?.statusCode === 401) {
+      const isUnauthorized =
+        typeof error === "object" && error !== null && "statusCode" in error && error.statusCode === 401;
+      const errorMessage =
+        error &&
+        typeof error === "object" &&
+        "message" in error &&
+        typeof error.message === "string"
+          ? error.message
+          : "Unknown error";
+
+      if (isUnauthorized) {
         vscode.window.showErrorMessage("MarkupAI: Invalid API token. Please check your settings.");
         updateStatusBarNoToken();
       } else {
         vscode.window.showErrorMessage(
-          `MarkupAI: Error checking content - ${error?.message || "Unknown error"}`,
+          `MarkupAI: Error checking content - ${errorMessage}`,
         );
         statusBarItem.text = "⚠️ MarkupAI: Error";
         statusBarItem.show();
@@ -323,7 +333,7 @@ async function setMarkupAIEnabled(enabled: boolean): Promise<void> {
     // Re-check the active document
     const editor = vscode.window.activeTextEditor;
     if (editor) {
-      checkDocument(editor.document, true);
+      void checkDocument(editor.document, true);
     }
   } else {
     vscode.window.showInformationMessage("MarkupAI: Issues Disabled");
@@ -413,7 +423,7 @@ function scheduleCheck(document: vscode.TextDocument): void {
   // Schedule new check
   const delay = getConfig().get("checkDelay", 2000);
   const timer = setTimeout(() => {
-    checkDocument(document);
+    void checkDocument(document);
     checkDebounceTimers.delete(uri);
   }, delay);
 
@@ -601,7 +611,7 @@ async function configureApiToken(): Promise<void> {
       // Re-check active document
       const editor = vscode.window.activeTextEditor;
       if (editor) {
-        checkDocument(editor.document, true);
+        void checkDocument(editor.document, true);
       }
     } else {
       updateStatusBarNoToken();
@@ -697,7 +707,7 @@ async function selectStyleGuide(): Promise<void> {
     // Re-check active document
     const editor = vscode.window.activeTextEditor;
     if (editor) {
-      checkDocument(editor.document, true);
+      void checkDocument(editor.document, true);
     }
   }
 }
@@ -723,7 +733,7 @@ async function selectDialect(): Promise<void> {
     // Re-check active document
     const editor = vscode.window.activeTextEditor;
     if (editor) {
-      checkDocument(editor.document, true);
+      void checkDocument(editor.document, true);
     }
   }
 }
@@ -1125,7 +1135,7 @@ class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<FolderSca
     if (!this.rootFolder) {
       return;
     }
-    this.getAllFiles().then((files) => {
+    void this.getAllFiles().then((files) => {
       files.forEach((file) => this.selectedFiles.add(file.toString()));
       this.refresh();
     });
@@ -1654,7 +1664,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("markupai.checkContent", () => {
       const editor = vscode.window.activeTextEditor;
       if (editor) {
-        checkDocument(editor.document, true);
+        void checkDocument(editor.document, true);
       }
     }),
   );
@@ -1835,7 +1845,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.workspace.onDidOpenTextDocument((document) => {
       if (getConfig().get("checkOnOpen", true)) {
-        checkDocument(document);
+        void checkDocument(document);
       }
     }),
   );
@@ -1875,7 +1885,7 @@ export function activate(context: vscode.ExtensionContext) {
         } else if (!hasApiToken()) {
           updateStatusBarNoToken();
         } else {
-          checkDocument(editor.document);
+          void checkDocument(editor.document);
         }
       } else {
         statusBarItem.hide();
@@ -1901,26 +1911,26 @@ export function activate(context: vscode.ExtensionContext) {
         } else {
           const editor = vscode.window.activeTextEditor;
           if (editor) {
-            checkDocument(editor.document);
+            void checkDocument(editor.document);
           }
         }
       }
 
       if (event.affectsConfiguration("markupai.apiToken")) {
-        refreshStyleGuides();
+        void refreshStyleGuides();
       }
     }),
   );
 
   // Initial setup
   if (hasApiToken()) {
-    refreshStyleGuides();
+    void refreshStyleGuides();
   }
 
   // Check currently open document on activation
   if (vscode.window.activeTextEditor) {
     if (hasApiToken()) {
-      checkDocument(vscode.window.activeTextEditor.document);
+      void checkDocument(vscode.window.activeTextEditor.document);
     } else {
       updateStatusBarNoToken();
     }
