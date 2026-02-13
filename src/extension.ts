@@ -294,7 +294,7 @@ function updateDiagnostics(
     diagnostic.markupaiSuggestion = issue.suggestion;
     diagnostic.markupaiOriginalText = issue.originalText;
     diagnostic.markupaiIssueType = issue.type;
-    diagnostic.markupaiCategory = issue.category;
+    diagnostic.markupaiCategory = issue.category ?? "";
     diagnostic.markupaiSubcategory = issue.subcategory;
     diagnostic.markupaiSeverity = issue.severity;
 
@@ -559,7 +559,7 @@ class MarkupAIHoverProvider implements vscode.HoverProvider {
         // 1. Category on top
         if (category) {
           const categoryLabel = category.charAt(0).toUpperCase() + category.slice(1);
-          const categoryEmoji = getTypeEmoji(category);
+          const categoryEmoji = getTypeEmoji(category as ContentIssue["type"]);
           markdown.appendMarkdown(`### ${categoryEmoji} ${categoryLabel}\n\n`);
         }
 
@@ -867,7 +867,7 @@ class FindingsTreeDataProvider implements vscode.TreeDataProvider<FindingTreeIte
   private showAllFiles: boolean = true;
 
   refresh(): void {
-    this._onDidChangeTreeData.fire();
+    this._onDidChangeTreeData.fire(undefined);
   }
 
   setSeverityFilter(severity: string | null): void {
@@ -1138,7 +1138,7 @@ class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<FolderSca
   }
 
   refresh(): void {
-    this._onDidChangeTreeData.fire();
+    this._onDidChangeTreeData.fire(undefined);
   }
 
   setRootFolder(folder: vscode.Uri): void {
