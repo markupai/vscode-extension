@@ -1256,15 +1256,16 @@ class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<FolderSca
   async getChildren(element?: FolderScannerItem): Promise<FolderScannerItem[]> {
     if (!this.rootFolder) {
       // No workspace folder - try to initialize again in case workspace changed
-      this.initializeFromWorkspace();
-      if (!this.rootFolder) {
+      const initialized = this.initializeFromWorkspace();
+      if (!initialized) {
         return [];
       }
     }
 
     if (!element) {
       // Root level - show folder contents
-      return this.getFolderContents(this.rootFolder);
+      // rootFolder is guaranteed non-null here due to the check above
+      return this.getFolderContents(this.rootFolder!);
     } else if (element.type === "folder") {
       return this.getFolderContents(element.uri);
     }
