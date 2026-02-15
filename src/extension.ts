@@ -1265,7 +1265,7 @@ class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<FolderSca
     if (!element) {
       // Root level - show folder contents
       // rootFolder is guaranteed non-null here due to the check above
-      return this.getFolderContents(this.rootFolder);
+      return this.getFolderContents(this.rootFolder!);
     } else if (element.type === "folder") {
       return this.getFolderContents(element.uri);
     }
