@@ -1872,6 +1872,8 @@ export function activate(context: vscode.ExtensionContext) {
   // Document Events
   context.subscriptions.push(
     vscode.workspace.onDidOpenTextDocument((document) => {
+      // Runtime check - user can change this setting
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       if (getConfig().get("checkOnOpen", true)) {
         void checkDocument(document);
       }
@@ -1887,6 +1889,8 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
       // Only auto-check on change if the setting is enabled (default: false)
+      // Runtime check - user can change this setting
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       if (getConfig().get("checkOnChange", false)) {
         scheduleCheck(event.document);
       }
@@ -1929,6 +1933,8 @@ export function activate(context: vscode.ExtensionContext) {
         // Update context for menu visibility
         vscode.commands.executeCommand("setContext", "markupai.enabled", isEnabled);
 
+        // Runtime check - user can change this setting
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (!isEnabled) {
           clearAllDiagnostics();
           statusBarItem.text = "$(circle-slash) MarkupAI: Disabled";
