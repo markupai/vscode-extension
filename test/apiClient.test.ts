@@ -39,7 +39,9 @@ describe("MarkupAIContentChecker", () => {
     };
 
     // Make MarkupAIClient constructor return our mock instance
-    vi.mocked(MarkupAIClient).mockImplementation(() => mockClientInstance as unknown as MarkupAIClient);
+    vi.mocked(MarkupAIClient).mockImplementation(
+      () => mockClientInstance as unknown as MarkupAIClient,
+    );
 
     checker = new MarkupAIContentChecker("test-api-token");
   });
@@ -186,7 +188,11 @@ describe("MarkupAIContentChecker", () => {
         },
       });
 
-      const result = await checker.checkContent("test content", "american_english" as MarkupAI.Dialects, "ap");
+      const result = await checker.checkContent(
+        "test content",
+        "american_english" as MarkupAI.Dialects,
+        "ap",
+      );
 
       expect(result.issues).toHaveLength(1);
       expect(result.issues[0].type).toBe("grammar");
@@ -203,9 +209,9 @@ describe("MarkupAIContentChecker", () => {
         workflow: { status: "failed" },
       });
 
-      await expect(checker.checkContent("test", "american_english" as MarkupAI.Dialects, "ap")).rejects.toThrow(
-        "Content check failed",
-      );
+      await expect(
+        checker.checkContent("test", "american_english" as MarkupAI.Dialects, "ap"),
+      ).rejects.toThrow("Content check failed");
     });
 
     // Note: Timeout test removed to avoid test suite hanging
@@ -239,7 +245,11 @@ describe("MarkupAIContentChecker", () => {
         });
       });
 
-      const result = await checker.checkContent("test", "american_english" as MarkupAI.Dialects, "ap");
+      const result = await checker.checkContent(
+        "test",
+        "american_english" as MarkupAI.Dialects,
+        "ap",
+      );
       expect(result).toBeDefined();
       expect(result.scores.overall).toBe(100);
     });
@@ -272,7 +282,11 @@ describe("MarkupAIContentChecker", () => {
         },
       });
 
-      const result = await checker.checkContent("test", "american_english" as MarkupAI.Dialects, "ap");
+      const result = await checker.checkContent(
+        "test",
+        "american_english" as MarkupAI.Dialects,
+        "ap",
+      );
       expect(result.issues[0].type).toBe("grammar");
       expect(result.issues[0].category).toBe("grammar");
     });
@@ -305,7 +319,11 @@ describe("MarkupAIContentChecker", () => {
         },
       });
 
-      const result = await checker.checkContent("test", "american_english" as MarkupAI.Dialects, "ap");
+      const result = await checker.checkContent(
+        "test",
+        "american_english" as MarkupAI.Dialects,
+        "ap",
+      );
       expect(result.issues[0].type).toBe("clarity");
     });
 
@@ -322,7 +340,11 @@ describe("MarkupAIContentChecker", () => {
         },
       });
 
-      const result = await checker.checkContent("test", "american_english" as MarkupAI.Dialects, "ap");
+      const result = await checker.checkContent(
+        "test",
+        "american_english" as MarkupAI.Dialects,
+        "ap",
+      );
 
       expect(result.scores.overall).toBe(100);
       expect(result.scores.grammar).toBe(100);

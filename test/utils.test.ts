@@ -30,9 +30,7 @@ describe("utils", () => {
   describe("getApiToken", () => {
     it("should return API token from configuration", () => {
       vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(
-        createMockConfig((key, defaultValue) =>
-          key === "apiToken" ? "test-token" : defaultValue,
-        ),
+        createMockConfig((key, defaultValue) => (key === "apiToken" ? "test-token" : defaultValue)),
       );
 
       const token = utils.getApiToken();
@@ -59,17 +57,13 @@ describe("utils", () => {
     });
 
     it("should return false when token is empty", () => {
-      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(
-        createMockConfig(() => ""),
-      );
+      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(createMockConfig(() => ""));
 
       expect(utils.hasApiToken()).toBe(false);
     });
 
     it("should return false when token is only whitespace", () => {
-      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(
-        createMockConfig(() => "   "),
-      );
+      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(createMockConfig(() => "   "));
 
       expect(utils.hasApiToken()).toBe(false);
     });
@@ -98,9 +92,7 @@ describe("utils", () => {
   describe("getStyleGuide", () => {
     it("should return configured style guide", () => {
       vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(
-        createMockConfig((key, defaultValue) =>
-          key === "styleGuide" ? "chicago" : defaultValue,
-        ),
+        createMockConfig((key, defaultValue) => (key === "styleGuide" ? "chicago" : defaultValue)),
       );
 
       expect(utils.getStyleGuide()).toBe("chicago");

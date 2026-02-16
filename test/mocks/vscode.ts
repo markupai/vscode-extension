@@ -247,7 +247,9 @@ export class EventEmitter<T> {
   }
 
   fire(data: T): void {
-    this.listeners.forEach((listener) => { listener(data); });
+    this.listeners.forEach((listener) => {
+      listener(data);
+    });
   }
 
   dispose(): void {
@@ -327,9 +329,11 @@ export const window = {
     dispose: vi.fn(),
   })),
 
-  withProgress: vi.fn((_options: unknown, task: (progress: { report: ReturnType<typeof vi.fn> }) => unknown) => {
-    return task({ report: vi.fn() });
-  }),
+  withProgress: vi.fn(
+    (_options: unknown, task: (progress: { report: ReturnType<typeof vi.fn> }) => unknown) => {
+      return task({ report: vi.fn() });
+    },
+  ),
 
   activeTextEditor: undefined,
 

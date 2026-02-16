@@ -1094,7 +1094,7 @@ class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<FolderSca
   readonly onDidChangeTreeData: vscode.Event<FolderScannerItem | undefined | null> =
     this._onDidChangeTreeData.event;
 
-  private rootFolder: vscode.Uri | undefined = undefined;
+  private rootFolder: vscode.Uri | null = null;
   private selectedFiles: Set<string> = new Set();
   private fileExtensions = [".md", ".txt", ".dita", ".html", ".htm", ".xml"];
 
@@ -1127,13 +1127,13 @@ class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<FolderSca
    * Check if a folder is loaded
    */
   hasFolder(): boolean {
-    return this.rootFolder !== undefined;
+    return this.rootFolder !== null;
   }
 
   /**
    * Get the current root folder
    */
-  getRootFolder(): vscode.Uri | undefined {
+  getRootFolder(): vscode.Uri | null {
     return this.rootFolder;
   }
 
@@ -1265,7 +1265,7 @@ class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<FolderSca
     if (!element) {
       // Root level - show folder contents
       // rootFolder is guaranteed non-null here due to the check above
-      return this.getFolderContents(this.rootFolder!);
+      return this.getFolderContents(this.rootFolder);
     } else if (element.type === "folder") {
       return this.getFolderContents(element.uri);
     }
@@ -1273,7 +1273,10 @@ class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<FolderSca
     return [];
   }
 
-  private async getFolderContents(folder: vscode.Uri): Promise<FolderScannerItem[]> {
+  private async getFolderContents(folder: vscode.Uri | null): Promise<FolderScannerItem[]> {
+    if (folder === null) {
+      return [];
+    }
     const items: FolderScannerItem[] = [];
 
     try {
