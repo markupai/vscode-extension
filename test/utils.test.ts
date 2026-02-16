@@ -3,6 +3,17 @@ import * as vscode from "vscode";
 import * as utils from "../src/utils";
 import { ContentIssue } from "../src/types";
 
+function createMockConfig(
+  getter: (key: string, defaultValue?: unknown) => unknown,
+): vscode.WorkspaceConfiguration {
+  return {
+    get: vi.fn(getter),
+    update: vi.fn(),
+    has: vi.fn(() => true),
+    inspect: vi.fn(),
+  } as unknown as vscode.WorkspaceConfiguration;
+}
+
 describe("utils", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -18,22 +29,20 @@ describe("utils", () => {
 
   describe("getApiToken", () => {
     it("should return API token from configuration", () => {
-      const mockConfig = {
-        get: vi.fn((key: string, defaultValue?: any) =>
+      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(
+        createMockConfig((key, defaultValue) =>
           key === "apiToken" ? "test-token" : defaultValue,
         ),
-      };
-      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(mockConfig as any);
+      );
 
       const token = utils.getApiToken();
       expect(token).toBe("test-token");
     });
 
     it("should return empty string if no token configured", () => {
-      const mockConfig = {
-        get: vi.fn((key: string, defaultValue?: any) => defaultValue),
-      };
-      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(mockConfig as any);
+      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(
+        createMockConfig((_key, defaultValue) => defaultValue),
+      );
 
       const token = utils.getApiToken();
       expect(token).toBe("");
@@ -42,28 +51,25 @@ describe("utils", () => {
 
   describe("hasApiToken", () => {
     it("should return true when token is configured", () => {
-      const mockConfig = {
-        get: vi.fn(() => "test-token"),
-      };
-      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(mockConfig as any);
+      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(
+        createMockConfig(() => "test-token"),
+      );
 
       expect(utils.hasApiToken()).toBe(true);
     });
 
     it("should return false when token is empty", () => {
-      const mockConfig = {
-        get: vi.fn(() => ""),
-      };
-      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(mockConfig as any);
+      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(
+        createMockConfig(() => ""),
+      );
 
       expect(utils.hasApiToken()).toBe(false);
     });
 
     it("should return false when token is only whitespace", () => {
-      const mockConfig = {
-        get: vi.fn(() => "   "),
-      };
-      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(mockConfig as any);
+      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(
+        createMockConfig(() => "   "),
+      );
 
       expect(utils.hasApiToken()).toBe(false);
     });
@@ -71,21 +77,19 @@ describe("utils", () => {
 
   describe("getDialect", () => {
     it("should return configured dialect", () => {
-      const mockConfig = {
-        get: vi.fn((key: string, defaultValue?: any) =>
+      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(
+        createMockConfig((key, defaultValue) =>
           key === "dialect" ? "british_english" : defaultValue,
         ),
-      };
-      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(mockConfig as any);
+      );
 
       expect(utils.getDialect()).toBe("british_english");
     });
 
     it("should return default american_english if not configured", () => {
-      const mockConfig = {
-        get: vi.fn((key: string, defaultValue?: any) => defaultValue),
-      };
-      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(mockConfig as any);
+      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(
+        createMockConfig((_key, defaultValue) => defaultValue),
+      );
 
       expect(utils.getDialect()).toBe("american_english");
     });
@@ -93,21 +97,19 @@ describe("utils", () => {
 
   describe("getStyleGuide", () => {
     it("should return configured style guide", () => {
-      const mockConfig = {
-        get: vi.fn((key: string, defaultValue?: any) =>
+      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(
+        createMockConfig((key, defaultValue) =>
           key === "styleGuide" ? "chicago" : defaultValue,
         ),
-      };
-      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(mockConfig as any);
+      );
 
       expect(utils.getStyleGuide()).toBe("chicago");
     });
 
     it("should return default ap if not configured", () => {
-      const mockConfig = {
-        get: vi.fn((key: string, defaultValue?: any) => defaultValue),
-      };
-      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(mockConfig as any);
+      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(
+        createMockConfig((_key, defaultValue) => defaultValue),
+      );
 
       expect(utils.getStyleGuide()).toBe("ap");
     });
@@ -117,10 +119,10 @@ describe("utils", () => {
     it("should convert character index to VS Code position", () => {
       const mockDocument = {
         positionAt: vi.fn((offset: number) => new vscode.Position(1, offset - 10)),
-      } as any;
+      } as unknown as vscode.TextDocument;
 
       const position = utils.indexToPosition(mockDocument, 15);
-      expect(mockDocument.positionAt).toHaveBeenCalledWith(15);
+      expect((mockDocument.positionAt as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith(15);
       expect(position).toBeInstanceOf(vscode.Position);
     });
   });
@@ -224,7 +226,7 @@ describe("utils", () => {
     });
 
     it("should return default emoji for unknown type", () => {
-      expect(utils.getTypeEmoji("unknown" as any)).toBe("📝");
+      expect(utils.getTypeEmoji("unknown" as ContentIssue["type"])).toBe("📝");
     });
   });
 });
