@@ -82,7 +82,7 @@ export class MarkupAIContentChecker {
     // Determine file extension and MIME type
     const fileExtension = filename ? filename.split(".").pop()?.toLowerCase() : "txt";
     const mimeType = this.getMimeType(fileExtension || "txt");
-    const fileName = filename || `content.${fileExtension ?? "txt"}`;
+    const fileName = filename || `content.${fileExtension || "txt"}`;
 
     // Create a Blob from the text content
     const blob = new Blob([text], { type: mimeType });
