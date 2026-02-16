@@ -160,7 +160,7 @@ export class ThemeIcon {
 export class TreeItem {
   label?: string;
   iconPath?: ThemeIcon | Uri;
-  command?: any;
+  command?: { command: string; title: string; arguments?: unknown[] };
   contextValue?: string;
   tooltip?: string;
   description?: string;
@@ -207,12 +207,12 @@ export class Hover {
 
 export class CodeAction {
   title: string;
-  command?: any;
+  command?: { command: string; title: string; arguments?: unknown[] };
   diagnostics?: Diagnostic[];
   isPreferred?: boolean;
-  kind?: any;
+  kind?: { value: string };
 
-  constructor(title: string, kind?: any) {
+  constructor(title: string, kind?: { value: string }) {
     this.title = title;
     this.kind = kind;
   }
@@ -223,21 +223,24 @@ export const CodeActionKind = {
 };
 
 export class WorkspaceEdit {
-  private edits: Map<string, any[]> = new Map();
+  private edits: Map<string, { type: string; range: Range; newText: string }[]> = new Map();
 
   replace(uri: Uri, range: Range, newText: string): void {
     if (!this.edits.has(uri.toString())) {
       this.edits.set(uri.toString(), []);
     }
-    this.edits.get(uri.toString())!.push({ type: "replace", range, newText });
+    const entries = this.edits.get(uri.toString());
+    if (entries) {
+      entries.push({ type: "replace", range, newText });
+    }
   }
 }
 
 export class EventEmitter<T> {
-  private listeners: ((e: T) => any)[] = [];
+  private listeners: ((e: T) => void)[] = [];
 
   get event() {
-    return (listener: (e: T) => any) => {
+    return (listener: (e: T) => void) => {
       this.listeners.push(listener);
       return { dispose: () => {} };
     };
@@ -254,38 +257,40 @@ export class EventEmitter<T> {
 
 // Mock workspace
 export const workspace = {
-  getConfiguration: vi.fn((section?: string) => ({
-    get: vi.fn((key: string, defaultValue?: any) => defaultValue),
+  getConfiguration: vi.fn((_section?: string) => ({
+    get: vi.fn((_key: string, defaultValue?: unknown) => defaultValue),
     update: vi.fn(),
     has: vi.fn(() => true),
     inspect: vi.fn(),
   })),
 
-  openTextDocument: vi.fn(async (uri: Uri) => ({
-    uri,
-    getText: vi.fn(() => "Test content"),
-    positionAt: vi.fn((offset: number) => new Position(0, offset)),
-    offsetAt: vi.fn((position: Position) => position.character),
-    lineAt: vi.fn((line: number) => ({
-      text: "Test line",
-      range: new Range(new Position(line, 0), new Position(line, 10)),
-    })),
-    lineCount: 1,
-    fileName: uri.path,
-    languageId: "markdown",
-    version: 1,
-    isDirty: false,
-    isClosed: false,
-  })),
+  openTextDocument: vi.fn((uri: Uri) =>
+    Promise.resolve({
+      uri,
+      getText: vi.fn(() => "Test content"),
+      positionAt: vi.fn((offset: number) => new Position(0, offset)),
+      offsetAt: vi.fn((position: Position) => position.character),
+      lineAt: vi.fn((line: number) => ({
+        text: "Test line",
+        range: new Range(new Position(line, 0), new Position(line, 10)),
+      })),
+      lineCount: 1,
+      fileName: uri.path,
+      languageId: "markdown",
+      version: 1,
+      isDirty: false,
+      isClosed: false,
+    }),
+  ),
 
-  applyEdit: vi.fn(async () => true),
+  applyEdit: vi.fn(() => Promise.resolve(true)),
 
   fs: {
-    readDirectory: vi.fn(async () => []),
-    readFile: vi.fn(async () => new Uint8Array()),
-    writeFile: vi.fn(async () => {}),
-    delete: vi.fn(async () => {}),
-    createDirectory: vi.fn(async () => {}),
+    readDirectory: vi.fn(() => Promise.resolve([])),
+    readFile: vi.fn(() => Promise.resolve(new Uint8Array())),
+    writeFile: vi.fn(() => Promise.resolve()),
+    delete: vi.fn(() => Promise.resolve()),
+    createDirectory: vi.fn(() => Promise.resolve()),
   },
 
   workspaceFolders: [],
@@ -322,7 +327,7 @@ export const window = {
     dispose: vi.fn(),
   })),
 
-  withProgress: vi.fn(async (options, task) => {
+  withProgress: vi.fn((_options: unknown, task: (progress: { report: ReturnType<typeof vi.fn> }) => unknown) => {
     return task({ report: vi.fn() });
   }),
 
@@ -355,7 +360,7 @@ export const commands = {
 
 // Mock ExtensionContext
 export class ExtensionContext {
-  subscriptions: any[] = [];
+  subscriptions: { dispose(): void }[] = [];
   workspaceState = {
     get: vi.fn(),
     update: vi.fn(),
