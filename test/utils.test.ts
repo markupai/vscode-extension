@@ -117,12 +117,13 @@ describe("utils", () => {
 
   describe("indexToPosition", () => {
     it("should convert character index to VS Code position", () => {
+      const positionAtSpy = vi.fn((offset: number) => new vscode.Position(1, offset - 10));
       const mockDocument = {
-        positionAt: vi.fn((offset: number) => new vscode.Position(1, offset - 10)),
+        positionAt: positionAtSpy,
       } as unknown as vscode.TextDocument;
 
       const position = utils.indexToPosition(mockDocument, 15);
-      expect((mockDocument.positionAt as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith(15);
+      expect(positionAtSpy).toHaveBeenCalledWith(15);
       expect(position).toBeInstanceOf(vscode.Position);
     });
   });
