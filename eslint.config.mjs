@@ -24,10 +24,10 @@ export default [
     },
   },
   {
-    files: ["eslint.config.mjs", "vitest.config.ts", "vitest.config.js", ".vscode-test.mjs"],
+    files: ["eslint.config.mjs", "vitest.config.ts"],
     ...tseslint.configs.disableTypeChecked,
   },
   {
-    ignores: ["out", "dist", "coverage", ".vscode-test", "**/*.d.ts", "vitest.config.js"],
+    ignores: ["out", "dist", "coverage", ".vscode-test", "**/*.d.ts"],
   },
 ];
