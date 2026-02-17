@@ -52,8 +52,8 @@ export class DiagnosticsManager {
     this.disabledCategories.add(category.toLowerCase());
   }
 
-  removeDisabledCategory(category: string): void {
-    this.disabledCategories.delete(category);
+  removeDisabledCategory(category: string): boolean {
+    return this.disabledCategories.delete(category.toLowerCase());
   }
 
   updateDiagnostics(
