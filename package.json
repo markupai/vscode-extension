@@ -31,7 +31,8 @@
     "test:watch": "vitest watch",
     "test:web": "vscode-test-web --browserType=chromium --extensionDevelopmentPath=. .",
     "vscode:prepublish": "npm run compile",
-    "watch": "tsc -watch -p tsconfig.build.json"
+    "watch": "tsc -watch -p tsconfig.build.json",
+    "type-check": "tsc --project tsconfig.json --noEmit"
   },
   "contributes": {
     "commands": [

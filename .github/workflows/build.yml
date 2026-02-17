@@ -1,0 +1,75 @@
+name: Build Packages
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  check-code-formatting:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check code formatting
+        run: npm run format:check
+
+  build-package:
+    runs-on: ubuntu-latest
+    needs: check-code-formatting
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run type check
+        run: npm run type-check
+
+      - name: Run Lint check
+        run: npm run lint:check
+
+      - name: compile
+        run: npm run compile
+
+      - name: Run tests
+        run: npm run test:coverage
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v7
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      - name: Package vscode extension
+        run: npm run package
+
+      - name: Upload vscode extension build artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: vscode-extension-build
+          path: dist/
+          retention-days: 7
