@@ -32,6 +32,8 @@ export class StatusBarManager {
   showChecking(): void {
     this.statusBarItem.text = "$(sync~spin) MarkupAI: Checking...";
     this.statusBarItem.tooltip = "Checking content...";
+    this.statusBarItem.command = undefined;
+    this.statusBarItem.backgroundColor = undefined;
     this.statusBarItem.show();
   }
 
@@ -45,6 +47,9 @@ export class StatusBarManager {
 
   showError(): void {
     this.statusBarItem.text = "⚠️ MarkupAI: Error";
+    this.statusBarItem.tooltip = "An error occurred while checking content";
+    this.statusBarItem.command = undefined;
+    this.statusBarItem.backgroundColor = undefined;
     this.statusBarItem.show();
   }
 

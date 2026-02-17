@@ -84,7 +84,17 @@ describe("StatusBarManager", () => {
 
       expect(mockItem.text).toBe("$(sync~spin) MarkupAI: Checking...");
       expect(mockItem.tooltip).toBe("Checking content...");
+      expect(mockItem.command).toBeUndefined();
+      expect(mockItem.backgroundColor).toBeUndefined();
       expect(mockItem.show).toHaveBeenCalled();
+    });
+
+    it("should reset stale state from showNoToken", () => {
+      statusBar.showNoToken();
+      statusBar.showChecking();
+
+      expect(mockItem.command).toBeUndefined();
+      expect(mockItem.backgroundColor).toBeUndefined();
     });
   });
 
@@ -104,7 +114,18 @@ describe("StatusBarManager", () => {
       statusBar.showError();
 
       expect(mockItem.text).toBe("⚠️ MarkupAI: Error");
+      expect(mockItem.tooltip).toBe("An error occurred while checking content");
+      expect(mockItem.command).toBeUndefined();
+      expect(mockItem.backgroundColor).toBeUndefined();
       expect(mockItem.show).toHaveBeenCalled();
+    });
+
+    it("should reset stale state from showNoToken", () => {
+      statusBar.showNoToken();
+      statusBar.showError();
+
+      expect(mockItem.command).toBeUndefined();
+      expect(mockItem.backgroundColor).toBeUndefined();
     });
   });
 
