@@ -146,22 +146,21 @@ export class FindingsTreeDataProvider implements vscode.TreeDataProvider<Finding
       const document = vscode.workspace.textDocuments.find((d) => d.uri.toString() === uriString);
 
       const issueItems: FindingTreeItem[] = issues.map((issue) => {
-        let lineInfo = "";
-        if (document) {
-          const position = document.positionAt(issue.startIndex);
-          lineInfo = `Ln ${String(position.line + 1)}`;
-        }
-
         let label = issue.message;
         if (label.length > 80) {
           label = label.substring(0, 77) + "...";
+        }
+
+        if (document) {
+          const position = document.positionAt(issue.startIndex);
+          label += ` (Ln ${String(position.line + 1)})`;
         }
 
         return {
           type: "issue" as const,
           uri: uri,
           issue: issue,
-          label: `${label} (${lineInfo})`,
+          label: label,
         };
       });
 
