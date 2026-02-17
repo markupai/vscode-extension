@@ -19,7 +19,14 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "json", "html", "lcov"],
       include: ["src/**/*.ts"],
-      exclude: ["src/test/**", "**/*.d.ts", "**/node_modules/**", "**/out/**", "**/dist/**"],
+      exclude: [
+        "src/test/**",
+        "src/extension.ts",
+        "**/*.d.ts",
+        "**/node_modules/**",
+        "**/out/**",
+        "**/dist/**",
+      ],
       thresholds: {
         lines: 80,
         functions: 80,

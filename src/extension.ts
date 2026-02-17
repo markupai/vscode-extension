@@ -1,15 +1,7 @@
 import * as vscode from "vscode";
-import { OffsetTranslator, TextOffsetMapper } from "./offsetMapper";
+import { OffsetTranslator } from "./offsetMapper";
 import { MarkupAIContentChecker } from "./apiClient";
-import {
-  ContentIssue,
-  ContentScores,
-  CheckResult,
-  StyleGuideOption,
-  FindingTreeItem,
-  FolderScannerItem,
-  MarkupAIDiagnostic,
-} from "./types";
+import { ContentIssue, ContentScores, StyleGuideOption, FolderScannerItem } from "./types";
 import { DIALECTS, BUILT_IN_STYLE_GUIDES } from "./constants";
 import {
   getConfig,
@@ -17,11 +9,14 @@ import {
   hasApiToken,
   getDialect,
   getStyleGuide,
-  indexToPosition,
-  getSeverityForIssue,
   getScoreEmoji,
-  getTypeEmoji,
 } from "./utils";
+import { DiagnosticsManager } from "./diagnosticsManager";
+import { StatusBarManager } from "./statusBarManager";
+import { FindingsTreeDataProvider } from "./findingsTreeProvider";
+import { FolderScannerTreeDataProvider } from "./folderScannerProvider";
+import { MarkupAICodeActionProvider } from "./codeActionProvider";
+import { MarkupAIHoverProvider } from "./hoverProvider";
 
 // ============================================================================
 // Internal Types
@@ -40,17 +35,15 @@ interface ApplyFixArgs {
 // Extension State
 // ============================================================================
 
-let diagnosticCollection: vscode.DiagnosticCollection;
-let statusBarItem: vscode.StatusBarItem;
-const documentIssues: Map<string, ContentIssue[]> = new Map();
-const documentScores: Map<string, ContentScores> = new Map();
+let diagnosticsManager: DiagnosticsManager;
+let statusBar: StatusBarManager;
+let findingsTreeDataProvider: FindingsTreeDataProvider;
+let folderScannerTreeDataProvider: FolderScannerTreeDataProvider;
 const checkDebounceTimers: Map<string, NodeJS.Timeout> = new Map();
 let isEnabled = true;
 let cachedStyleGuides: StyleGuideOption[] = [...BUILT_IN_STYLE_GUIDES];
 const isCheckingDocument: Map<string, boolean> = new Map();
-let isApplyingFix = false; // Flag to prevent re-checking when applying fixes
-const disabledCategories: Set<string> = new Set(); // Categories that are disabled by user
-const documentTextAtCheckStart: Map<string, string> = new Map(); // Store text when check started
+let isApplyingFix = false;
 
 // ============================================================================
 // Extension-specific Utility Functions
@@ -70,50 +63,47 @@ async function checkDocument(
   showCompletionNotification: boolean = true,
 ): Promise<void> {
   if (!isExtensionEnabled()) {
-    clearDiagnostics(document);
-    updateStatusBar(null);
+    diagnosticsManager.clearForDocument(document.uri);
+    statusBar.update(null);
+    findingsTreeDataProvider.refresh();
     return;
   }
 
-  // Check if API token is configured
   if (!hasApiToken()) {
-    updateStatusBarNoToken();
+    statusBar.showNoToken();
     return;
   }
 
-  // Only check text-based documents
   if (document.uri.scheme !== "file" && document.uri.scheme !== "untitled") {
     return;
   }
 
   const text = document.getText();
   if (!text.trim()) {
-    clearDiagnostics(document);
-    updateStatusBar({
+    diagnosticsManager.clearForDocument(document.uri);
+    statusBar.update({
       grammar: 100,
       consistency: 100,
       terminology: 100,
       overall: 100,
     });
+    findingsTreeDataProvider.refresh();
     return;
   }
 
-  // Prevent concurrent checks on the same document
   const docKey = document.uri.toString();
   if (isCheckingDocument.get(docKey)) {
     return;
   }
 
   isCheckingDocument.set(docKey, true);
-  updateStatusBarChecking();
+  statusBar.showChecking();
 
-  // Store the text at check start to detect changes during the check
   const textAtCheckStart = text;
-  documentTextAtCheckStart.set(docKey, textAtCheckStart);
 
   try {
     const checker = new MarkupAIContentChecker(getApiToken());
-    let result: CheckResult;
+    let result: { issues: ContentIssue[]; scores: ContentScores };
 
     if (showProgress) {
       result = await vscode.window.withProgress(
@@ -130,27 +120,18 @@ async function checkDocument(
       result = await checker.checkContent(text, getDialect(), getStyleGuide(), document.fileName);
     }
 
-    // Store issues and scores for this document
-    documentIssues.set(docKey, result.issues);
-    documentScores.set(docKey, result.scores);
-
-    // Update diagnostics - pass the original text to handle document changes during check
-    updateDiagnostics(document, result.issues, textAtCheckStart);
-
-    // Update status bar
-    updateStatusBar(result.scores);
-
-    // Refresh findings panel
+    diagnosticsManager.setIssues(docKey, result.issues);
+    diagnosticsManager.setScores(docKey, result.scores);
+    diagnosticsManager.updateDiagnostics(document, result.issues, textAtCheckStart);
+    statusBar.update(result.scores);
     findingsTreeDataProvider.refresh();
 
-    // Show completion notification (unless suppressed for batch operations)
     if (showCompletionNotification) {
       void showCheckCompleteNotification(result.scores, result.issues.length);
     }
   } catch (error: unknown) {
     console.error("MarkupAI: Error checking content", error);
 
-    // Only show error notifications if not in batch mode
     if (showCompletionNotification) {
       const isUnauthorized =
         typeof error === "object" &&
@@ -167,241 +148,25 @@ async function checkDocument(
 
       if (isUnauthorized) {
         vscode.window.showErrorMessage("MarkupAI: Invalid API token. Please check your settings.");
-        updateStatusBarNoToken();
+        statusBar.showNoToken();
       } else {
         vscode.window.showErrorMessage(`MarkupAI: Error checking content - ${errorMessage}`);
-        statusBarItem.text = "⚠️ MarkupAI: Error";
-        statusBarItem.show();
+        statusBar.showError();
       }
     } else {
-      // In batch mode, rethrow the error so it can be caught and handled by checkMultipleFiles
       throw error;
     }
   } finally {
     isCheckingDocument.set(docKey, false);
-    // Clean up stored text for this document
-    documentTextAtCheckStart.delete(docKey);
   }
-}
-
-function updateDiagnostics(
-  document: vscode.TextDocument,
-  issues: ContentIssue[],
-  originalText?: string,
-): void {
-  const diagnostics: vscode.Diagnostic[] = [];
-  const currentText = document.getText();
-  const docKey = document.uri.toString();
-
-  // Check if document changed during the check
-  const documentChanged = originalText !== undefined && originalText !== currentText;
-
-  // Create offset translator using diff-match-patch if document changed
-  let offsetTranslator: OffsetTranslator | null = null;
-  if (documentChanged) {
-    offsetTranslator = new OffsetTranslator(originalText, currentText);
-  }
-
-  // Create a text mapper for fallback text search
-  const currentTextMapper = documentChanged ? new TextOffsetMapper(currentText) : null;
-
-  // Track adjusted issues to update the documentIssues map
-  const adjustedIssues: ContentIssue[] = [];
-
-  for (const issue of issues) {
-    // Skip issues from disabled categories
-    if (issue.category && disabledCategories.has(issue.category.toLowerCase())) {
-      continue;
-    }
-
-    let startIndex = issue.startIndex;
-    let endIndex = issue.endIndex;
-
-    // If the document changed during the check, translate positions using diff algorithm
-    if (documentChanged && offsetTranslator) {
-      // Use diff-match-patch to translate the positions
-      const translatedRange = offsetTranslator.translateRange(issue.startIndex, issue.endIndex);
-
-      if (translatedRange) {
-        startIndex = translatedRange.start;
-        endIndex = translatedRange.end;
-
-        // Verify that the original text still exists at the translated position
-        if (!OffsetTranslator.verifyTextAtPosition(issue.originalText, currentText, startIndex)) {
-          // Text doesn't match at translated position, try fallback text search
-          if (currentTextMapper && issue.originalText) {
-            const fallbackPosition = currentTextMapper.findNearbyText(
-              issue.originalText,
-              startIndex,
-              100,
-            );
-
-            if (fallbackPosition) {
-              startIndex = fallbackPosition.start;
-              endIndex = fallbackPosition.end;
-            } else {
-              // Text not found - skip this issue as it was likely edited
-              continue;
-            }
-          } else {
-            continue;
-          }
-        }
-      } else {
-        // Range was deleted (start >= end after translation)
-        // Try fallback text search in case the text still exists elsewhere
-        if (currentTextMapper && issue.originalText) {
-          const fallbackPosition = currentTextMapper.findNearbyText(
-            issue.originalText,
-            issue.startIndex,
-            200, // Wider search for deleted ranges
-          );
-
-          if (fallbackPosition) {
-            startIndex = fallbackPosition.start;
-            endIndex = fallbackPosition.end;
-          } else {
-            // Text truly not found - skip this issue
-            continue;
-          }
-        } else {
-          continue;
-        }
-      }
-    }
-
-    // Store adjusted issue for the findings panel
-    const adjustedIssue: ContentIssue = {
-      ...issue,
-      startIndex,
-      endIndex,
-    };
-    adjustedIssues.push(adjustedIssue);
-
-    const startPos = indexToPosition(document, startIndex);
-    const endPos = indexToPosition(document, endIndex);
-    const range = new vscode.Range(startPos, endPos);
-
-    const diagnostic = new vscode.Diagnostic(
-      range,
-      issue.message,
-      getSeverityForIssue(issue),
-    ) as MarkupAIDiagnostic;
-
-    diagnostic.source = "MarkupAI";
-
-    // Store additional data in the diagnostic
-    diagnostic.markupaiSuggestion = issue.suggestion;
-    diagnostic.markupaiOriginalText = issue.originalText;
-    diagnostic.markupaiIssueType = issue.type;
-    diagnostic.markupaiCategory = issue.category ?? "";
-    diagnostic.markupaiSubcategory = issue.subcategory;
-    diagnostic.markupaiSeverity = issue.severity;
-
-    diagnostics.push(diagnostic);
-  }
-
-  // Update stored issues with adjusted positions for findings panel navigation
-  if (documentChanged) {
-    documentIssues.set(docKey, adjustedIssues);
-  }
-
-  diagnosticCollection.set(document.uri, diagnostics);
-}
-
-// Filter out diagnostics from disabled categories across all documents
-function filterDiagnosticsByDisabledCategories(): void {
-  diagnosticCollection.forEach((uri, diagnostics) => {
-    const filteredDiagnostics = diagnostics.filter((diagnostic) => {
-      const markupDiagnostic = diagnostic as MarkupAIDiagnostic;
-      const category = markupDiagnostic.markupaiCategory;
-      if (category && disabledCategories.has(category.toLowerCase())) {
-        return false;
-      }
-      return true;
-    });
-    diagnosticCollection.set(uri, filteredDiagnostics);
-  });
-}
-
-function clearDiagnostics(document: vscode.TextDocument): void {
-  diagnosticCollection.delete(document.uri);
-  documentIssues.delete(document.uri.toString());
-  documentScores.delete(document.uri.toString());
-  findingsTreeDataProvider.refresh();
-}
-
-function clearAllDiagnostics(): void {
-  diagnosticCollection.clear();
-  documentIssues.clear();
-  documentScores.clear();
-  findingsTreeDataProvider.refresh();
-}
-
-async function setMarkupAIEnabled(enabled: boolean): Promise<void> {
-  isEnabled = enabled;
-
-  // Update the context variable for menu visibility
-  await vscode.commands.executeCommand("setContext", "markupai.enabled", isEnabled);
-
-  // Persist the setting
-  const config = getConfig();
-  await config.update("enabled", isEnabled, vscode.ConfigurationTarget.Global);
-
-  if (isEnabled) {
-    vscode.window.showInformationMessage("MarkupAI: Issues Enabled");
-    // Re-check the active document
-    const editor = vscode.window.activeTextEditor;
-    if (editor) {
-      void checkDocument(editor.document, true);
-    }
-  } else {
-    vscode.window.showInformationMessage("MarkupAI: Issues Disabled");
-    clearAllDiagnostics();
-    statusBarItem.text = "$(circle-slash) MarkupAI: Disabled";
-    statusBarItem.tooltip = "MarkupAI issues are disabled. Right-click to enable.";
-    statusBarItem.command = "markupai.enableIssues";
-    statusBarItem.backgroundColor = undefined;
-    statusBarItem.show();
-  }
-}
-
-function updateStatusBar(scores: ContentScores | null): void {
-  if (!scores) {
-    statusBarItem.hide();
-    return;
-  }
-
-  const emoji = getScoreEmoji(scores.overall);
-  statusBarItem.text = `${emoji} MarkupAI: ${String(scores.overall)}`;
-  statusBarItem.tooltip = `Click to see detailed scores\n\nGrammar: ${String(scores.grammar)}\nConsistency: ${String(scores.consistency)}\nTerminology: ${String(scores.terminology)}`;
-  statusBarItem.command = "markupai.showScores";
-  statusBarItem.backgroundColor = undefined;
-  statusBarItem.show();
-}
-
-function updateStatusBarNoToken(): void {
-  statusBarItem.text = "$(key) MarkupAI: Add API Token";
-  statusBarItem.tooltip = "Click to configure your MarkupAI API token";
-  statusBarItem.command = "markupai.configureApiToken";
-  statusBarItem.backgroundColor = new vscode.ThemeColor("statusBarItem.warningBackground");
-  statusBarItem.show();
-}
-
-function updateStatusBarChecking(): void {
-  statusBarItem.text = "$(sync~spin) MarkupAI: Checking...";
-  statusBarItem.tooltip = "Checking content...";
-  statusBarItem.show();
 }
 
 async function showCheckCompleteNotification(
   scores: ContentScores,
   issueCount: number,
 ): Promise<void> {
-  // Build a visually appealing notification message
   const scoreEmoji = getScoreEmoji(scores.overall);
 
-  // Determine overall message based on score
   let statusMessage: string;
   if (scores.overall >= 90) {
     statusMessage = "Excellent!";
@@ -434,13 +199,11 @@ async function showCheckCompleteNotification(
 function scheduleCheck(document: vscode.TextDocument): void {
   const uri = document.uri.toString();
 
-  // Clear existing timer
   const existingTimer = checkDebounceTimers.get(uri);
   if (existingTimer) {
     clearTimeout(existingTimer);
   }
 
-  // Schedule new check
   const delay = getConfig().get("checkDelay", 2000);
   const timer = setTimeout(() => {
     void checkDocument(document);
@@ -448,163 +211,6 @@ function scheduleCheck(document: vscode.TextDocument): void {
   }, delay);
 
   checkDebounceTimers.set(uri, timer);
-}
-
-// ============================================================================
-// Code Actions Provider (Quick Fixes)
-// ============================================================================
-
-class MarkupAICodeActionProvider implements vscode.CodeActionProvider {
-  static readonly providedCodeActionKinds = [vscode.CodeActionKind.QuickFix];
-
-  provideCodeActions(
-    document: vscode.TextDocument,
-    _range: vscode.Range | vscode.Selection,
-    context: vscode.CodeActionContext,
-    _cancellationToken: vscode.CancellationToken,
-  ): vscode.CodeAction[] {
-    const actions: vscode.CodeAction[] = [];
-
-    for (const diagnostic of context.diagnostics) {
-      if (diagnostic.source !== "MarkupAI") {
-        continue;
-      }
-
-      const markupDiagnostic = diagnostic as MarkupAIDiagnostic;
-      const suggestion = markupDiagnostic.markupaiSuggestion;
-      const originalText = markupDiagnostic.markupaiOriginalText;
-      const category = markupDiagnostic.markupaiCategory;
-
-      if (suggestion && suggestion !== originalText) {
-        // Create quick fix action using applyFix command to handle overlapping issues
-        const action = new vscode.CodeAction(
-          `Fix: Replace "${originalText}" with "${suggestion}"`,
-          vscode.CodeActionKind.QuickFix,
-        );
-
-        action.command = {
-          command: "markupai.applyFix",
-          title: "Apply Fix",
-          arguments: [
-            {
-              uri: document.uri.toString(),
-              range: {
-                start: {
-                  line: diagnostic.range.start.line,
-                  character: diagnostic.range.start.character,
-                },
-                end: {
-                  line: diagnostic.range.end.line,
-                  character: diagnostic.range.end.character,
-                },
-              },
-              suggestion: suggestion,
-            },
-          ],
-        };
-        action.diagnostics = [diagnostic];
-        action.isPreferred = true;
-
-        actions.push(action);
-
-        // Add category-specific disable action
-        if (category) {
-          const categoryLabel = category.charAt(0).toUpperCase() + category.slice(1);
-          const disableCategoryAction = new vscode.CodeAction(
-            `Disable ${categoryLabel} Issues`,
-            vscode.CodeActionKind.QuickFix,
-          );
-          disableCategoryAction.command = {
-            command: "markupai.disableCategory",
-            title: `Disable ${categoryLabel} Issues`,
-            arguments: [category],
-          };
-          actions.push(disableCategoryAction);
-        }
-      }
-    }
-
-    return actions;
-  }
-}
-
-// ============================================================================
-// Hover Provider
-// ============================================================================
-
-class MarkupAIHoverProvider implements vscode.HoverProvider {
-  provideHover(
-    document: vscode.TextDocument,
-    position: vscode.Position,
-    _cancellationToken: vscode.CancellationToken,
-  ): vscode.Hover | null {
-    const diagnostics = diagnosticCollection.get(document.uri);
-    if (!diagnostics) {
-      return null;
-    }
-
-    for (const diagnostic of diagnostics) {
-      if (diagnostic.range.contains(position)) {
-        const markupDiagnostic = diagnostic as MarkupAIDiagnostic;
-        const suggestion = markupDiagnostic.markupaiSuggestion;
-        const originalText = markupDiagnostic.markupaiOriginalText;
-        const category = markupDiagnostic.markupaiCategory;
-        const subcategory = markupDiagnostic.markupaiSubcategory;
-        const severity = markupDiagnostic.markupaiSeverity;
-
-        const markdown = new vscode.MarkdownString();
-        markdown.isTrusted = true;
-        markdown.supportHtml = true;
-
-        // 1. Category on top
-        if (category) {
-          const categoryLabel = category.charAt(0).toUpperCase() + category.slice(1);
-          const categoryEmoji = getTypeEmoji(category as ContentIssue["type"]);
-          markdown.appendMarkdown(`### ${categoryEmoji} ${categoryLabel}\n\n`);
-        }
-
-        // 2. Suggestion and Apply button immediately after category (visible without scrolling)
-        if (suggestion && suggestion !== originalText) {
-          markdown.appendMarkdown(`**Suggestion:** \`${suggestion}\`\n\n`);
-
-          const args = encodeURIComponent(
-            JSON.stringify({
-              uri: document.uri.toString(),
-              range: {
-                start: {
-                  line: diagnostic.range.start.line,
-                  character: diagnostic.range.start.character,
-                },
-                end: {
-                  line: diagnostic.range.end.line,
-                  character: diagnostic.range.end.character,
-                },
-              },
-              suggestion: suggestion,
-            }),
-          );
-          markdown.appendMarkdown(`[Apply Fix](command:markupai.applyFix?${args})\n\n`);
-        }
-
-        // 3. Subcategory
-        if (subcategory) {
-          const subcategoryLabel = subcategory.charAt(0).toUpperCase() + subcategory.slice(1);
-          markdown.appendMarkdown(`**Subcategory:** ${subcategoryLabel}\n\n`);
-        }
-
-        // 4. Severity (colors match underline: high=red, medium=yellow, low=blue)
-        if (severity) {
-          const severityEmoji = severity === "high" ? "🔴" : severity === "medium" ? "🟡" : "🔵";
-          const severityLabel = severity.charAt(0).toUpperCase() + severity.slice(1);
-          markdown.appendMarkdown(`**Severity:** ${severityEmoji} ${severityLabel}\n\n`);
-        }
-
-        return new vscode.Hover(markdown, diagnostic.range);
-      }
-    }
-
-    return null;
-  }
 }
 
 // ============================================================================
@@ -626,17 +232,14 @@ async function configureApiToken(): Promise<void> {
 
     if (token.trim()) {
       vscode.window.showInformationMessage("MarkupAI: API token saved");
-
-      // Refresh style guides
       await refreshStyleGuides();
 
-      // Re-check active document
       const editor = vscode.window.activeTextEditor;
       if (editor) {
         void checkDocument(editor.document, true);
       }
     } else {
-      updateStatusBarNoToken();
+      statusBar.showNoToken();
     }
   }
 }
@@ -668,7 +271,6 @@ async function selectStyleGuide(): Promise<void> {
     return;
   }
 
-  // Refresh style guides before showing picker
   await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
@@ -686,7 +288,6 @@ async function selectStyleGuide(): Promise<void> {
 
   const items: vscode.QuickPickItem[] = [];
 
-  // Add custom/server guides first
   if (customGuides.length > 0) {
     items.push({
       label: "Your Style Guides",
@@ -701,7 +302,6 @@ async function selectStyleGuide(): Promise<void> {
     }
   }
 
-  // Add built-in guides at the bottom
   items.push({
     label: "Built-in Style Guides",
     kind: vscode.QuickPickItemKind.Separator,
@@ -726,7 +326,6 @@ async function selectStyleGuide(): Promise<void> {
     await getConfig().update("styleGuide", selected.detail, vscode.ConfigurationTarget.Global);
     vscode.window.showInformationMessage(`MarkupAI: Style guide set to "${selected.label}"`);
 
-    // Re-check active document
     const editor = vscode.window.activeTextEditor;
     if (editor) {
       void checkDocument(editor.document, true);
@@ -752,7 +351,6 @@ async function selectDialect(): Promise<void> {
     await getConfig().update("dialect", selected.detail, vscode.ConfigurationTarget.Global);
     vscode.window.showInformationMessage(`MarkupAI: Dialect set to "${selected.label}"`);
 
-    // Re-check active document
     const editor = vscode.window.activeTextEditor;
     if (editor) {
       void checkDocument(editor.document, true);
@@ -767,13 +365,13 @@ async function showScoresDialog(): Promise<void> {
     return;
   }
 
-  const scores = documentScores.get(editor.document.uri.toString());
+  const scores = diagnosticsManager.getScores(editor.document.uri.toString());
   if (!scores) {
     vscode.window.showInformationMessage("No scores available. Run a check first.");
     return;
   }
 
-  const issues = documentIssues.get(editor.document.uri.toString()) || [];
+  const issues = diagnosticsManager.getIssues(editor.document.uri.toString()) || [];
   const grammarCount = issues.filter(
     (i) => i.type === "grammar" || i.category === "grammar",
   ).length;
@@ -785,7 +383,6 @@ async function showScoresDialog(): Promise<void> {
   ).length;
   const otherCount = issues.length - grammarCount - consistencyCount - terminologyCount;
 
-  // Get current settings for display
   const currentStyleGuide = getStyleGuide();
   const currentDialect = getDialect();
   const dialectLabel = DIALECTS.find((d) => d.value === currentDialect)?.label || currentDialect;
@@ -821,7 +418,6 @@ async function showScoresDialog(): Promise<void> {
     });
   }
 
-  // Add configuration options
   items.push(
     {
       label: "Settings",
@@ -852,493 +448,27 @@ async function showScoresDialog(): Promise<void> {
   }
 }
 
-// ============================================================================
-// Findings Panel - TreeView for Issues
-// ============================================================================
+async function setMarkupAIEnabled(enabled: boolean): Promise<void> {
+  isEnabled = enabled;
 
-class FindingsTreeDataProvider implements vscode.TreeDataProvider<FindingTreeItem> {
-  private _onDidChangeTreeData: vscode.EventEmitter<FindingTreeItem | undefined | null> =
-    new vscode.EventEmitter<FindingTreeItem | undefined | null>();
-  readonly onDidChangeTreeData: vscode.Event<FindingTreeItem | undefined | null> =
-    this._onDidChangeTreeData.event;
+  await vscode.commands.executeCommand("setContext", "markupai.enabled", isEnabled);
 
-  private severityFilter: string | null = null;
-  private categoryFilter: string | null = null;
-  private showAllFiles: boolean = true;
+  const config = getConfig();
+  await config.update("enabled", isEnabled, vscode.ConfigurationTarget.Global);
 
-  refresh(): void {
-    this._onDidChangeTreeData.fire(undefined);
-  }
-
-  setSeverityFilter(severity: string | null): void {
-    this.severityFilter = severity;
-    this.refresh();
-  }
-
-  setCategoryFilter(category: string | null): void {
-    this.categoryFilter = category;
-    this.refresh();
-  }
-
-  clearFilters(): void {
-    this.severityFilter = null;
-    this.categoryFilter = null;
-    this.refresh();
-  }
-
-  setShowAllFiles(showAll: boolean): void {
-    this.showAllFiles = showAll;
-    vscode.commands.executeCommand("setContext", "markupai.showAllFiles", showAll);
-    this.refresh();
-  }
-
-  getFilters(): { severity: string | null; category: string | null } {
-    return { severity: this.severityFilter, category: this.categoryFilter };
-  }
-
-  getTreeItem(element: FindingTreeItem): vscode.TreeItem {
-    if (element.type === "file") {
-      const treeItem = new vscode.TreeItem(element.label, vscode.TreeItemCollapsibleState.Expanded);
-      treeItem.iconPath = vscode.ThemeIcon.File;
-      treeItem.resourceUri = element.uri;
-      treeItem.description = `${String(element.children?.length || 0)} issues`;
-      return treeItem;
-    } else {
-      // Issue item
-      if (!element.issue) {
-        // Fallback for malformed item
-        return new vscode.TreeItem(element.label, vscode.TreeItemCollapsibleState.None);
-      }
-      const issue = element.issue;
-      const treeItem = new vscode.TreeItem(element.label, vscode.TreeItemCollapsibleState.None);
-
-      // Set icon based on severity with colors matching SonarQube style
-      if (issue.severity === "high") {
-        treeItem.iconPath = new vscode.ThemeIcon(
-          "circle-filled",
-          new vscode.ThemeColor("charts.red"),
-        );
-      } else if (issue.severity === "medium") {
-        treeItem.iconPath = new vscode.ThemeIcon(
-          "circle-filled",
-          new vscode.ThemeColor("charts.yellow"),
-        );
-      } else {
-        treeItem.iconPath = new vscode.ThemeIcon(
-          "circle-filled",
-          new vscode.ThemeColor("charts.blue"),
-        );
-      }
-
-      // Add description with category
-      treeItem.description = issue.category || issue.type;
-
-      // Add tooltip
-      treeItem.tooltip = new vscode.MarkdownString();
-      treeItem.tooltip.appendMarkdown(`**${issue.category || issue.type}**\n\n`);
-      treeItem.tooltip.appendMarkdown(`${issue.message}\n\n`);
-      if (issue.suggestion) {
-        treeItem.tooltip.appendMarkdown(`**Suggestion:** \`${issue.suggestion}\``);
-      }
-
-      // Command to navigate to issue
-      treeItem.command = {
-        command: "markupai.goToIssue",
-        title: "Go to Issue",
-        arguments: [element.uri, issue],
-      };
-
-      return treeItem;
+  if (isEnabled) {
+    vscode.window.showInformationMessage("MarkupAI: Issues Enabled");
+    const editor = vscode.window.activeTextEditor;
+    if (editor) {
+      void checkDocument(editor.document, true);
     }
-  }
-
-  getChildren(element?: FindingTreeItem): Thenable<FindingTreeItem[]> {
-    if (!element) {
-      // Root level - return files with issues
-      return Promise.resolve(this.getFileItems());
-    } else if (element.type === "file") {
-      // Return issues for this file
-      return Promise.resolve(element.children || []);
-    }
-    return Promise.resolve([]);
-  }
-
-  private getFileItems(): FindingTreeItem[] {
-    const items: FindingTreeItem[] = [];
-    const activeEditor = vscode.window.activeTextEditor;
-
-    // Get all document URIs that have issues
-    const urisToShow: string[] = [];
-
-    if (this.showAllFiles) {
-      // Show all files with issues
-      documentIssues.forEach((_, uriString) => {
-        urisToShow.push(uriString);
-      });
-    } else {
-      // Show only current file
-      if (activeEditor) {
-        const currentUri = activeEditor.document.uri.toString();
-        if (documentIssues.has(currentUri)) {
-          urisToShow.push(currentUri);
-        }
-      }
-    }
-
-    for (const uriString of urisToShow) {
-      const uri = vscode.Uri.parse(uriString);
-      let issues = documentIssues.get(uriString) || [];
-
-      // Apply filters
-      if (this.severityFilter) {
-        issues = issues.filter((i) => i.severity === this.severityFilter);
-      }
-      if (this.categoryFilter) {
-        issues = issues.filter(
-          (i) => i.category === this.categoryFilter || i.type === this.categoryFilter,
-        );
-      }
-
-      if (issues.length === 0) {
-        continue;
-      }
-
-      // Get document to convert indices to line numbers
-      const document = vscode.workspace.textDocuments.find((d) => d.uri.toString() === uriString);
-
-      const issueItems: FindingTreeItem[] = issues.map((issue) => {
-        let lineInfo = "";
-        if (document) {
-          const position = document.positionAt(issue.startIndex);
-          lineInfo = `Ln ${String(position.line + 1)}`;
-        }
-
-        // Truncate message if too long
-        let label = issue.message;
-        if (label.length > 80) {
-          label = label.substring(0, 77) + "...";
-        }
-
-        return {
-          type: "issue" as const,
-          uri: uri,
-          issue: issue,
-          label: `${label} (${lineInfo})`,
-        };
-      });
-
-      // Get just the filename for display
-      const fileName = uri.path.split("/").pop() || uri.path;
-
-      items.push({
-        type: "file",
-        uri: uri,
-        label: fileName,
-        children: issueItems,
-      });
-    }
-
-    return items;
-  }
-
-  getTotalIssueCount(): number {
-    let count = 0;
-    documentIssues.forEach((issues) => {
-      let filtered = issues;
-      if (this.severityFilter) {
-        filtered = filtered.filter((i) => i.severity === this.severityFilter);
-      }
-      if (this.categoryFilter) {
-        filtered = filtered.filter(
-          (i) => i.category === this.categoryFilter || i.type === this.categoryFilter,
-        );
-      }
-      count += filtered.length;
-    });
-    return count;
-  }
-
-  getAvailableCategories(): string[] {
-    const categories = new Set<string>();
-    documentIssues.forEach((issues) => {
-      issues.forEach((issue) => {
-        if (issue.category) {
-          categories.add(issue.category);
-        }
-        categories.add(issue.type);
-      });
-    });
-    return Array.from(categories);
-  }
-
-  getAvailableSeverities(): string[] {
-    const severities = new Set<string>();
-    documentIssues.forEach((issues) => {
-      issues.forEach((issue) => {
-        severities.add(issue.severity);
-      });
-    });
-    return Array.from(severities);
+  } else {
+    vscode.window.showInformationMessage("MarkupAI: Issues Disabled");
+    diagnosticsManager.clearAll();
+    findingsTreeDataProvider.refresh();
+    statusBar.showDisabled();
   }
 }
-
-let findingsTreeDataProvider: FindingsTreeDataProvider;
-
-// ============================================================================
-// Folder Scanner - TreeView for Bulk Checking
-// ============================================================================
-
-class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<FolderScannerItem> {
-  private _onDidChangeTreeData: vscode.EventEmitter<FolderScannerItem | undefined | null> =
-    new vscode.EventEmitter<FolderScannerItem | undefined | null>();
-  readonly onDidChangeTreeData: vscode.Event<FolderScannerItem | undefined | null> =
-    this._onDidChangeTreeData.event;
-
-  private rootFolder: vscode.Uri | null = null;
-  private selectedFiles: Set<string> = new Set();
-  private fileExtensions = [".md", ".txt", ".dita", ".html", ".htm", ".xml"];
-
-  constructor() {
-    // Auto-initialize with workspace folder if available
-    this.initializeFromWorkspace();
-  }
-
-  /**
-   * Initialize the folder scanner with the current VS Code workspace folder.
-   * Works with both formal workspaces and folders opened via File > Open Folder.
-   */
-  initializeFromWorkspace(): boolean {
-    const workspaceFolders = vscode.workspace.workspaceFolders;
-    console.log("MarkupAI: Workspace folders:", workspaceFolders);
-
-    if (workspaceFolders && workspaceFolders.length > 0) {
-      // Use the first workspace folder
-      this.rootFolder = workspaceFolders[0].uri;
-      this.selectedFiles.clear();
-      console.log("MarkupAI: Folder scanner initialized with:", this.rootFolder.fsPath);
-      return true;
-    }
-
-    console.log("MarkupAI: No workspace folder found");
-    return false;
-  }
-
-  /**
-   * Check if a folder is loaded
-   */
-  hasFolder(): boolean {
-    return this.rootFolder !== null;
-  }
-
-  /**
-   * Get the current root folder
-   */
-  getRootFolder(): vscode.Uri | null {
-    return this.rootFolder;
-  }
-
-  refresh(): void {
-    this._onDidChangeTreeData.fire(undefined);
-  }
-
-  setRootFolder(folder: vscode.Uri): void {
-    this.rootFolder = folder;
-    this.selectedFiles.clear();
-    this.refresh();
-  }
-
-  toggleFileSelection(item: FolderScannerItem): void {
-    const uriString = item.uri.toString();
-    if (this.selectedFiles.has(uriString)) {
-      this.selectedFiles.delete(uriString);
-    } else {
-      this.selectedFiles.add(uriString);
-    }
-    this.refresh();
-  }
-
-  selectAll(): void {
-    if (!this.rootFolder) {
-      return;
-    }
-    void this.getAllFiles().then((files) => {
-      files.forEach((file) => this.selectedFiles.add(file.toString()));
-      this.refresh();
-    });
-  }
-
-  deselectAll(): void {
-    this.selectedFiles.clear();
-    this.refresh();
-  }
-
-  getSelectedFiles(): vscode.Uri[] {
-    return Array.from(this.selectedFiles).map((uriString) => vscode.Uri.parse(uriString));
-  }
-
-  async getAllFiles(): Promise<vscode.Uri[]> {
-    if (!this.rootFolder) {
-      return [];
-    }
-    const files: vscode.Uri[] = [];
-    await this.collectFiles(this.rootFolder, files);
-    return files;
-  }
-
-  private async collectFiles(folder: vscode.Uri, files: vscode.Uri[]): Promise<void> {
-    try {
-      const entries = await vscode.workspace.fs.readDirectory(folder);
-
-      for (const [name, type] of entries) {
-        // Skip hidden files and folders, and common ignore patterns
-        if (
-          name.startsWith(".") ||
-          name === "node_modules" ||
-          name === "dist" ||
-          name === "build"
-        ) {
-          continue;
-        }
-
-        const uri = vscode.Uri.joinPath(folder, name);
-
-        if (type === vscode.FileType.Directory) {
-          await this.collectFiles(uri, files);
-        } else if (type === vscode.FileType.File) {
-          // Check if file has a supported extension
-          if (this.fileExtensions.some((ext) => name.endsWith(ext))) {
-            files.push(uri);
-          }
-        }
-      }
-    } catch (error) {
-      console.error(`Error reading directory ${folder.fsPath}:`, error);
-    }
-  }
-
-  getTreeItem(element: FolderScannerItem): vscode.TreeItem {
-    const treeItem = new vscode.TreeItem(
-      element.label,
-      element.type === "folder"
-        ? vscode.TreeItemCollapsibleState.Expanded
-        : vscode.TreeItemCollapsibleState.None,
-    );
-
-    if (element.type === "folder") {
-      treeItem.iconPath = vscode.ThemeIcon.Folder;
-      treeItem.contextValue = "folder";
-    } else {
-      // File item
-      const isSelected = this.selectedFiles.has(element.uri.toString());
-      treeItem.iconPath = new vscode.ThemeIcon(isSelected ? "check" : "circle-outline");
-      treeItem.contextValue = "file";
-      treeItem.resourceUri = element.uri;
-
-      // Check if file has been checked and show status
-      const docKey = element.uri.toString();
-      const score = documentScores.get(docKey);
-      if (score) {
-        const emoji = getScoreEmoji(score.overall);
-        treeItem.description = `${emoji} ${String(score.overall)}`;
-      }
-
-      // Make file clickable to open it
-      treeItem.command = {
-        command: "markupai.openFile",
-        title: "Open File",
-        arguments: [element.uri],
-      };
-    }
-
-    return treeItem;
-  }
-
-  async getChildren(element?: FolderScannerItem): Promise<FolderScannerItem[]> {
-    if (!this.rootFolder) {
-      // No workspace folder - try to initialize again in case workspace changed
-      const initialized = this.initializeFromWorkspace();
-      if (!initialized) {
-        return [];
-      }
-    }
-
-    if (!element) {
-      // Root level - show folder contents
-      // rootFolder is guaranteed non-null here due to the check above
-      return this.getFolderContents(this.rootFolder);
-    } else if (element.type === "folder") {
-      return this.getFolderContents(element.uri);
-    }
-
-    return [];
-  }
-
-  private async getFolderContents(folder: vscode.Uri | null): Promise<FolderScannerItem[]> {
-    if (folder === null) {
-      return [];
-    }
-    const items: FolderScannerItem[] = [];
-
-    try {
-      const entries = await vscode.workspace.fs.readDirectory(folder);
-
-      // Sort: folders first, then files
-      const folders: [string, vscode.FileType][] = [];
-      const files: [string, vscode.FileType][] = [];
-
-      for (const entry of entries) {
-        const [name] = entry;
-        // Skip hidden and ignored items
-        if (
-          name.startsWith(".") ||
-          name === "node_modules" ||
-          name === "dist" ||
-          name === "build"
-        ) {
-          continue;
-        }
-
-        if (entry[1] === vscode.FileType.Directory) {
-          folders.push(entry);
-        } else if (entry[1] === vscode.FileType.File) {
-          // Only show supported file types
-          if (this.fileExtensions.some((ext) => name.endsWith(ext))) {
-            files.push(entry);
-          }
-        }
-      }
-
-      // Add folders
-      for (const [name] of folders) {
-        const uri = vscode.Uri.joinPath(folder, name);
-        items.push({
-          type: "folder",
-          uri: uri,
-          label: name,
-          isSelected: false,
-        });
-      }
-
-      // Add files
-      for (const [name] of files) {
-        const uri = vscode.Uri.joinPath(folder, name);
-        const isSelected = this.selectedFiles.has(uri.toString());
-        items.push({
-          type: "file",
-          uri: uri,
-          label: name,
-          isSelected: isSelected,
-        });
-      }
-    } catch (error) {
-      console.error(`Error reading directory ${folder.fsPath}:`, error);
-    }
-
-    return items;
-  }
-}
-
-let folderScannerTreeDataProvider: FolderScannerTreeDataProvider;
 
 // ============================================================================
 // Bulk File Checking
@@ -1366,7 +496,6 @@ async function checkMultipleFiles(files: vscode.Uri[]): Promise<void> {
 
         try {
           const document = await vscode.workspace.openTextDocument(fileUri);
-          // Pass false for showProgress and showCompletionNotification during batch operations
           await checkDocument(document, false, false);
           completed++;
         } catch (error: unknown) {
@@ -1385,13 +514,9 @@ async function checkMultipleFiles(files: vscode.Uri[]): Promise<void> {
     },
   );
 
-  // Refresh the folder scanner to show updated scores
   folderScannerTreeDataProvider.refresh();
-
-  // Refresh findings panel
   findingsTreeDataProvider.refresh();
 
-  // Show completion summary
   let message = `MarkupAI: Checked ${String(completed)} file(s)`;
   if (failed > 0) {
     message += `, ${String(failed)} failed`;
@@ -1421,20 +546,23 @@ export function activate(context: vscode.ExtensionContext) {
   console.log("MarkupAI extension is now active!");
 
   // Initialize diagnostic collection
-  diagnosticCollection = vscode.languages.createDiagnosticCollection("markupai");
+  const diagnosticCollection = vscode.languages.createDiagnosticCollection("markupai");
   context.subscriptions.push(diagnosticCollection);
 
-  // Initialize status bar
-  statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+  // Initialize managers
+  diagnosticsManager = new DiagnosticsManager(diagnosticCollection);
+
+  const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
   statusBarItem.name = "MarkupAI Score";
   context.subscriptions.push(statusBarItem);
+  statusBar = new StatusBarManager(statusBarItem);
 
-  // Set initial enabled state from config and update context for menu visibility
+  // Set initial enabled state
   isEnabled = getConfig().get("enabled", true);
   vscode.commands.executeCommand("setContext", "markupai.enabled", isEnabled);
   vscode.commands.executeCommand("setContext", "markupai.showAllFiles", true);
 
-  // Fetch style guides from server on startup (async, don't block activation)
+  // Fetch style guides on startup
   if (hasApiToken()) {
     refreshStyleGuides().catch((error: unknown) => {
       console.error("MarkupAI: Failed to fetch style guides on startup", error);
@@ -1442,7 +570,7 @@ export function activate(context: vscode.ExtensionContext) {
   }
 
   // Initialize Findings TreeView
-  findingsTreeDataProvider = new FindingsTreeDataProvider();
+  findingsTreeDataProvider = new FindingsTreeDataProvider(() => diagnosticsManager.getAllIssues());
   const findingsTreeView = vscode.window.createTreeView("markupai.findings", {
     treeDataProvider: findingsTreeDataProvider,
     showCollapseAll: true,
@@ -1450,15 +578,23 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(findingsTreeView);
 
   // Initialize Folder Scanner TreeView
-  folderScannerTreeDataProvider = new FolderScannerTreeDataProvider();
+  folderScannerTreeDataProvider = new FolderScannerTreeDataProvider(() => {
+    const scores = new Map<string, ContentScores>();
+    diagnosticsManager.getAllIssues().forEach((_, docKey) => {
+      const s = diagnosticsManager.getScores(docKey);
+      if (s) {
+        scores.set(docKey, s);
+      }
+    });
+    return scores;
+  });
   const folderScannerTreeView = vscode.window.createTreeView("markupai.folderScanner", {
     treeDataProvider: folderScannerTreeDataProvider,
     showCollapseAll: true,
   });
   context.subscriptions.push(folderScannerTreeView);
 
-  // Refresh the folder scanner after a short delay to ensure workspace is ready
-  // This handles the case where the extension activates before workspace is fully loaded
+  // Refresh folder scanner after workspace is ready
   setTimeout(() => {
     if (!folderScannerTreeDataProvider.hasFolder()) {
       folderScannerTreeDataProvider.initializeFromWorkspace();
@@ -1466,7 +602,7 @@ export function activate(context: vscode.ExtensionContext) {
     folderScannerTreeDataProvider.refresh();
   }, 500);
 
-  // Listen for workspace folder changes and refresh folder scanner
+  // Listen for workspace folder changes
   context.subscriptions.push(
     vscode.workspace.onDidChangeWorkspaceFolders(() => {
       folderScannerTreeDataProvider.initializeFromWorkspace();
@@ -1673,7 +809,7 @@ export function activate(context: vscode.ExtensionContext) {
     }),
   );
 
-  // Register Code Actions Provider (for quick fixes)
+  // Register Code Actions Provider
   context.subscriptions.push(
     vscode.languages.registerCodeActionsProvider(
       { scheme: "file" },
@@ -1686,7 +822,10 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Register Hover Provider
   context.subscriptions.push(
-    vscode.languages.registerHoverProvider({ scheme: "file" }, new MarkupAIHoverProvider()),
+    vscode.languages.registerHoverProvider(
+      { scheme: "file" },
+      new MarkupAIHoverProvider((uri) => diagnosticsManager.getDiagnosticsForUri(uri)),
+    ),
   );
 
   // Register Commands
@@ -1717,28 +856,26 @@ export function activate(context: vscode.ExtensionContext) {
     }),
   );
 
-  // Command to disable a specific category
   context.subscriptions.push(
     vscode.commands.registerCommand("markupai.disableCategory", (category: string) => {
       if (!category) {
         return;
       }
 
-      disabledCategories.add(category.toLowerCase());
+      diagnosticsManager.addDisabledCategory(category);
       const categoryLabel = category.charAt(0).toUpperCase() + category.slice(1);
       vscode.window.showInformationMessage(
         `MarkupAI: ${categoryLabel} issues are now hidden. Use "MarkupAI: Enable Category" to show them again.`,
       );
 
-      // Remove diagnostics for this category from all documents
-      filterDiagnosticsByDisabledCategories();
+      diagnosticsManager.filterDiagnosticsByDisabledCategories();
       findingsTreeDataProvider.refresh();
     }),
   );
 
-  // Command to enable a specific category
   context.subscriptions.push(
     vscode.commands.registerCommand("markupai.enableCategory", async () => {
+      const disabledCategories = diagnosticsManager.getDisabledCategories();
       if (disabledCategories.size === 0) {
         vscode.window.showInformationMessage("MarkupAI: All categories are already enabled.");
         return;
@@ -1761,7 +898,7 @@ export function activate(context: vscode.ExtensionContext) {
         for (const label of selected) {
           const cat = categories.find((c) => c.label === label);
           if (cat) {
-            disabledCategories.delete(cat.value);
+            diagnosticsManager.removeDisabledCategory(cat.value);
           }
         }
 
@@ -1803,48 +940,39 @@ export function activate(context: vscode.ExtensionContext) {
         new vscode.Position(parsedArgs.range.end.line, parsedArgs.range.end.character),
       );
 
-      // Get the document to access text
       const document = await vscode.workspace.openTextDocument(uri);
       const oldText = document.getText();
       const startOffset = document.offsetAt(range.start);
       const endOffset = document.offsetAt(range.end);
 
-      // Set flag to prevent re-checking when applying fix
       isApplyingFix = true;
 
-      // Apply the edit
       const edit = new vscode.WorkspaceEdit();
       edit.replace(uri, range, parsedArgs.suggestion);
       await vscode.workspace.applyEdit(edit);
 
-      // Get the new text after the edit
       const newText = document.getText();
 
-      // Translate all remaining issue positions using OffsetTranslator
       const translator = new OffsetTranslator(oldText, newText);
       const docKey = uri.toString();
-      const existingIssues = documentIssues.get(docKey);
+      const existingIssues = diagnosticsManager.getIssues(docKey);
 
       if (existingIssues) {
         const updatedIssues: ContentIssue[] = [];
 
         for (const issue of existingIssues) {
-          // Skip the issue that was just fixed (overlapping with the applied range)
           if (
             (issue.startIndex >= startOffset && issue.startIndex < endOffset) ||
             (issue.endIndex > startOffset && issue.endIndex <= endOffset)
           ) {
-            continue; // This issue was fixed, don't keep it
+            continue;
           }
 
-          // Translate the issue position to the new text
           const translatedRange = translator.translateRange(issue.startIndex, issue.endIndex);
 
           if (translatedRange) {
-            // Verify the text still exists at the new position
             const textAtPosition = newText.substring(translatedRange.start, translatedRange.end);
 
-            // Only keep the issue if the original text still matches
             if (textAtPosition === issue.originalText) {
               updatedIssues.push({
                 ...issue,
@@ -1855,17 +983,11 @@ export function activate(context: vscode.ExtensionContext) {
           }
         }
 
-        // Update the stored issues with new positions
-        documentIssues.set(docKey, updatedIssues);
-
-        // Update diagnostics with new positions
-        updateDiagnostics(document, updatedIssues);
-
-        // Refresh the findings panel
+        diagnosticsManager.setIssues(docKey, updatedIssues);
+        diagnosticsManager.updateDiagnostics(document, updatedIssues);
         findingsTreeDataProvider.refresh();
       }
 
-      // Reset flag after a short delay to allow the document change event to fire
       setTimeout(() => {
         isApplyingFix = false;
       }, 100);
@@ -1885,13 +1007,10 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.workspace.onDidChangeTextDocument((event) => {
-      // Skip re-checking if we're applying a fix from the extension
-      // This prevents unnecessary API calls when user accepts suggestions
       if (isApplyingFix) {
         return;
       }
 
-      // Only auto-check on change if the setting is enabled (default: false)
       // Runtime check - user can change this setting
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       if (getConfig().get("checkOnChange", false)) {
@@ -1902,7 +1021,8 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.workspace.onDidCloseTextDocument((document) => {
-      clearDiagnostics(document);
+      diagnosticsManager.clearForDocument(document.uri);
+      findingsTreeDataProvider.refresh();
       const timer = checkDebounceTimers.get(document.uri.toString());
       if (timer) {
         clearTimeout(timer);
@@ -1914,16 +1034,16 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.window.onDidChangeActiveTextEditor((editor) => {
       if (editor) {
-        const scores = documentScores.get(editor.document.uri.toString());
+        const scores = diagnosticsManager.getScores(editor.document.uri.toString());
         if (scores) {
-          updateStatusBar(scores);
+          statusBar.update(scores);
         } else if (!hasApiToken()) {
-          updateStatusBarNoToken();
+          statusBar.showNoToken();
         } else {
           void checkDocument(editor.document);
         }
       } else {
-        statusBarItem.hide();
+        statusBar.hide();
       }
     }),
   );
@@ -1933,18 +1053,14 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration("markupai.enabled")) {
         isEnabled = getConfig().get("enabled", true);
-        // Update context for menu visibility
         vscode.commands.executeCommand("setContext", "markupai.enabled", isEnabled);
 
         // Runtime check - user can change this setting
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (!isEnabled) {
-          clearAllDiagnostics();
-          statusBarItem.text = "$(circle-slash) MarkupAI: Disabled";
-          statusBarItem.tooltip = "MarkupAI issues are disabled. Right-click to enable.";
-          statusBarItem.command = "markupai.enableIssues";
-          statusBarItem.backgroundColor = undefined;
-          statusBarItem.show();
+          diagnosticsManager.clearAll();
+          findingsTreeDataProvider.refresh();
+          statusBar.showDisabled();
         } else {
           const editor = vscode.window.activeTextEditor;
           if (editor) {
@@ -1969,10 +1085,10 @@ export function activate(context: vscode.ExtensionContext) {
     if (hasApiToken()) {
       void checkDocument(vscode.window.activeTextEditor.document);
     } else {
-      updateStatusBarNoToken();
+      statusBar.showNoToken();
     }
   } else if (!hasApiToken()) {
-    updateStatusBarNoToken();
+    statusBar.showNoToken();
   }
 }
 

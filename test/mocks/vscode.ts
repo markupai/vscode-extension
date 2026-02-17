@@ -296,6 +296,7 @@ export const workspace = {
   },
 
   workspaceFolders: [],
+  textDocuments: [] as ReturnType<typeof vi.fn>[],
 
   onDidChangeConfiguration: vi.fn(() => ({ dispose: vi.fn() })),
   onDidOpenTextDocument: vi.fn(() => ({ dispose: vi.fn() })),
