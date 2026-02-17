@@ -59,10 +59,11 @@ jobs:
       - name: Run tests
         run: npm run test:coverage
 
-      - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v7
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      # TODO: Enable after SONAR_TOKEN is configured in repo secrets
+      # - name: SonarQube Scan
+      #   uses: SonarSource/sonarqube-scan-action@v7
+      #   env:
+      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
       - name: Package vscode extension
         run: npm run package
