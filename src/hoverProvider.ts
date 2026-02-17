@@ -30,8 +30,7 @@ export class MarkupAIHoverProvider implements vscode.HoverProvider {
         const severity = markupDiagnostic.markupaiSeverity;
 
         const markdown = new vscode.MarkdownString();
-        markdown.isTrusted = true;
-        markdown.supportHtml = true;
+        markdown.isTrusted = { enabledCommands: ["markupai.applyFix"] };
 
         if (category) {
           const categoryLabel = category.charAt(0).toUpperCase() + category.slice(1);

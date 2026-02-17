@@ -191,7 +191,7 @@ describe("MarkupAIHoverProvider", () => {
     expect(markdown.value).toContain("Low");
   });
 
-  it("should set markdown as trusted with HTML support", () => {
+  it("should restrict trust to markupai.applyFix command only", () => {
     const diagnostic = createMarkupDiagnostic();
     const provider = new MarkupAIHoverProvider(() => [diagnostic]);
     const doc = createMockDocument();
@@ -200,8 +200,8 @@ describe("MarkupAIHoverProvider", () => {
     const hover = provider.provideHover(doc, position, mockToken);
     const markdown = getHoverMarkdown(hover);
 
-    expect(markdown.isTrusted).toBe(true);
-    expect(markdown.supportHtml).toBe(true);
+    expect(markdown.isTrusted).toEqual({ enabledCommands: ["markupai.applyFix"] });
+    expect(markdown.supportHtml).toBeUndefined();
   });
 
   it("should return hover for the first matching diagnostic", () => {
