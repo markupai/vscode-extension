@@ -296,7 +296,7 @@ export const workspace = {
   },
 
   workspaceFolders: [],
-  textDocuments: [] as ReturnType<typeof vi.fn>[],
+  textDocuments: [] as { uri: Uri; getText: ReturnType<typeof vi.fn>; languageId: string }[],
 
   onDidChangeConfiguration: vi.fn(() => ({ dispose: vi.fn() })),
   onDidOpenTextDocument: vi.fn(() => ({ dispose: vi.fn() })),
