@@ -3,6 +3,12 @@ import { ContentScores, FolderScannerItem } from "./types";
 import { SUPPORTED_FILE_EXTENSIONS } from "./constants";
 import { getScoreEmoji } from "./utils";
 
+const IGNORED_DIRECTORIES = new Set(["node_modules", "dist", "build"]);
+
+function shouldSkipEntry(name: string): boolean {
+  return name.startsWith(".") || IGNORED_DIRECTORIES.has(name);
+}
+
 /**
  * Provides tree data for the Folder Scanner panel.
  * Discovers and lists supported document files for bulk checking.
@@ -96,12 +102,7 @@ export class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<Fo
       const entries = await vscode.workspace.fs.readDirectory(folder);
 
       for (const [name, type] of entries) {
-        if (
-          name.startsWith(".") ||
-          name === "node_modules" ||
-          name === "dist" ||
-          name === "build"
-        ) {
+        if (shouldSkipEntry(name)) {
           continue;
         }
 
@@ -186,12 +187,7 @@ export class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<Fo
 
       for (const entry of entries) {
         const [name] = entry;
-        if (
-          name.startsWith(".") ||
-          name === "node_modules" ||
-          name === "dist" ||
-          name === "build"
-        ) {
+        if (shouldSkipEntry(name)) {
           continue;
         }
 
