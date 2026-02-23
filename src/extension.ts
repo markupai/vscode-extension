@@ -99,10 +99,7 @@ function handleCheckError(error: unknown, showCompletionNotification: boolean): 
   }
 
   const errorMessage =
-    error &&
-    typeof error === "object" &&
-    "message" in error &&
-    typeof error.message === "string"
+    error && typeof error === "object" && "message" in error && typeof error.message === "string"
       ? error.message
       : "Unknown error";
 
@@ -665,8 +662,13 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
+      const severityLabels: Record<string, string> = {
+        high: "🔴 High",
+        medium: "🟡 Medium",
+        low: "🔵 Low",
+      };
       const items = severities.map((s) => ({
-        label: s === "high" ? "🔴 High" : s === "medium" ? "🟡 Medium" : "🔵 Low",
+        label: severityLabels[s] ?? "🔵 Low",
         value: s,
       }));
       items.unshift({ label: "All Severities", value: "" });
@@ -746,7 +748,7 @@ export function activate(context: vscode.ExtensionContext) {
         defaultUri: currentFolder || undefined,
       });
 
-      if (folderUri && folderUri[0]) {
+      if (folderUri?.[0]) {
         folderScannerTreeDataProvider.setRootFolder(folderUri[0]);
         const folderName = folderUri[0].path.split("/").pop() || folderUri[0].fsPath;
         vscode.window.showInformationMessage(`MarkupAI: Now scanning "${folderName}"`);
@@ -1049,10 +1051,10 @@ export function activate(context: vscode.ExtensionContext) {
         const scores = diagnosticsManager.getScores(editor.document.uri.toString());
         if (scores) {
           statusBar.update(scores);
-        } else if (!hasApiToken()) {
-          statusBar.showNoToken();
-        } else {
+        } else if (hasApiToken()) {
           void checkDocument(editor.document);
+        } else {
+          statusBar.showNoToken();
         }
       } else {
         statusBar.hide();
@@ -1069,15 +1071,15 @@ export function activate(context: vscode.ExtensionContext) {
 
         // Runtime check - user can change this setting
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-        if (!isEnabled) {
-          diagnosticsManager.clearAll();
-          findingsTreeDataProvider.refresh();
-          statusBar.showDisabled();
-        } else {
+        if (isEnabled) {
           const editor = vscode.window.activeTextEditor;
           if (editor) {
             void checkDocument(editor.document);
           }
+        } else {
+          diagnosticsManager.clearAll();
+          findingsTreeDataProvider.refresh();
+          statusBar.showDisabled();
         }
       }
 
