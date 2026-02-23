@@ -148,8 +148,8 @@ export class ThemeColor {
 }
 
 export class ThemeIcon {
-  static File = new ThemeIcon("file");
-  static Folder = new ThemeIcon("folder");
+  static readonly File = new ThemeIcon("file");
+  static readonly Folder = new ThemeIcon("folder");
 
   constructor(
     public id: string,
@@ -223,7 +223,7 @@ export const CodeActionKind = {
 };
 
 export class WorkspaceEdit {
-  private edits: Map<string, { type: string; range: Range; newText: string }[]> = new Map();
+  private readonly edits: Map<string, { type: string; range: Range; newText: string }[]> = new Map();
 
   replace(uri: Uri, range: Range, newText: string): void {
     if (!this.edits.has(uri.toString())) {
