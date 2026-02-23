@@ -223,7 +223,8 @@ export const CodeActionKind = {
 };
 
 export class WorkspaceEdit {
-  private readonly edits: Map<string, { type: string; range: Range; newText: string }[]> = new Map();
+  private readonly edits: Map<string, { type: string; range: Range; newText: string }[]> =
+    new Map();
 
   replace(uri: Uri, range: Range, newText: string): void {
     if (!this.edits.has(uri.toString())) {
