@@ -84,76 +84,21 @@ export class DiagnosticsManager {
       let endIndex = issue.endIndex;
 
       if (documentChanged && offsetTranslator) {
-        const translatedRange = offsetTranslator.translateRange(issue.startIndex, issue.endIndex);
-
-        if (translatedRange) {
-          startIndex = translatedRange.start;
-          endIndex = translatedRange.end;
-
-          if (!OffsetTranslator.verifyTextAtPosition(issue.originalText, currentText, startIndex)) {
-            if (currentTextMapper && issue.originalText) {
-              const fallbackPosition = currentTextMapper.findNearbyText(
-                issue.originalText,
-                startIndex,
-                100,
-              );
-
-              if (fallbackPosition) {
-                startIndex = fallbackPosition.start;
-                endIndex = fallbackPosition.end;
-              } else {
-                continue;
-              }
-            } else {
-              continue;
-            }
-          }
-        } else {
-          if (currentTextMapper && issue.originalText) {
-            const fallbackPosition = currentTextMapper.findNearbyText(
-              issue.originalText,
-              issue.startIndex,
-              200,
-            );
-
-            if (fallbackPosition) {
-              startIndex = fallbackPosition.start;
-              endIndex = fallbackPosition.end;
-            } else {
-              continue;
-            }
-          } else {
-            continue;
-          }
+        const adjusted = this.resolveAdjustedOffsets(
+          issue,
+          offsetTranslator,
+          currentTextMapper,
+          currentText,
+        );
+        if (!adjusted) {
+          continue;
         }
+        startIndex = adjusted.startIndex;
+        endIndex = adjusted.endIndex;
       }
 
-      const adjustedIssue: ContentIssue = {
-        ...issue,
-        startIndex,
-        endIndex,
-      };
-      adjustedIssues.push(adjustedIssue);
-
-      const startPos = indexToPosition(document, startIndex);
-      const endPos = indexToPosition(document, endIndex);
-      const range = new vscode.Range(startPos, endPos);
-
-      const diagnostic = new vscode.Diagnostic(
-        range,
-        issue.message,
-        getSeverityForIssue(issue),
-      ) as MarkupAIDiagnostic;
-
-      diagnostic.source = "MarkupAI";
-      diagnostic.markupaiSuggestion = issue.suggestion;
-      diagnostic.markupaiOriginalText = issue.originalText;
-      diagnostic.markupaiIssueType = issue.type;
-      diagnostic.markupaiCategory = issue.category ?? "";
-      diagnostic.markupaiSubcategory = issue.subcategory;
-      diagnostic.markupaiSeverity = issue.severity;
-
-      diagnostics.push(diagnostic);
+      adjustedIssues.push({ ...issue, startIndex, endIndex });
+      diagnostics.push(this.createMarkupDiagnostic(document, issue, startIndex, endIndex));
     }
 
     if (documentChanged) {
@@ -161,6 +106,80 @@ export class DiagnosticsManager {
     }
 
     this.diagnosticCollection.set(document.uri, diagnostics);
+  }
+
+  private resolveAdjustedOffsets(
+    issue: ContentIssue,
+    offsetTranslator: OffsetTranslator,
+    currentTextMapper: TextOffsetMapper | null,
+    currentText: string,
+  ): { startIndex: number; endIndex: number } | null {
+    const translatedRange = offsetTranslator.translateRange(issue.startIndex, issue.endIndex);
+
+    if (translatedRange) {
+      if (
+        OffsetTranslator.verifyTextAtPosition(
+          issue.originalText,
+          currentText,
+          translatedRange.start,
+        )
+      ) {
+        return { startIndex: translatedRange.start, endIndex: translatedRange.end };
+      }
+      return this.findFallbackPosition(
+        currentTextMapper,
+        issue.originalText,
+        translatedRange.start,
+        100,
+      );
+    }
+
+    return this.findFallbackPosition(currentTextMapper, issue.originalText, issue.startIndex, 200);
+  }
+
+  private findFallbackPosition(
+    currentTextMapper: TextOffsetMapper | null,
+    originalText: string | undefined,
+    searchStart: number,
+    searchRadius: number,
+  ): { startIndex: number; endIndex: number } | null {
+    if (!currentTextMapper || !originalText) {
+      return null;
+    }
+
+    const position = currentTextMapper.findNearbyText(originalText, searchStart, searchRadius);
+    if (!position) {
+      return null;
+    }
+
+    return { startIndex: position.start, endIndex: position.end };
+  }
+
+  private createMarkupDiagnostic(
+    document: vscode.TextDocument,
+    issue: ContentIssue,
+    startIndex: number,
+    endIndex: number,
+  ): MarkupAIDiagnostic {
+    const startPos = indexToPosition(document, startIndex);
+    const endPos = indexToPosition(document, endIndex);
+    const range = new vscode.Range(startPos, endPos);
+
+    const diagnostic = new vscode.Diagnostic(
+      range,
+      issue.message,
+      getSeverityForIssue(issue),
+    ) as MarkupAIDiagnostic;
+
+    diagnostic.source = "MarkupAI";
+    diagnostic.markupaiSuggestion = issue.suggestion;
+    diagnostic.markupaiOriginalText = issue.originalText;
+    diagnostic.markupaiIssueType = issue.type;
+    diagnostic.markupaiCategory = issue.category ?? "";
+    diagnostic.markupaiSubcategory = issue.subcategory;
+    diagnostic.markupaiSeverity = issue.severity;
+
+    return diagnostic;
   }
 
   filterDiagnosticsByDisabledCategories(): void {
