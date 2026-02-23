@@ -57,6 +57,59 @@ function isExtensionEnabled(): boolean {
 // Core Functionality
 // ============================================================================
 
+async function runContentCheck(
+  text: string,
+  document: vscode.TextDocument,
+  showProgress: boolean,
+): Promise<{ issues: ContentIssue[]; scores: ContentScores }> {
+  const checker = new MarkupAIContentChecker(getApiToken());
+  const check = () => checker.checkContent(text, getDialect(), getStyleGuide(), document.fileName);
+
+  if (!showProgress) {
+    return check();
+  }
+
+  return await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: "MarkupAI: Checking content...",
+      cancellable: false,
+    },
+    () => check(),
+  );
+}
+
+function handleCheckError(error: unknown, showCompletionNotification: boolean): void {
+  console.error("MarkupAI: Error checking content", error);
+
+  if (!showCompletionNotification) {
+    throw error;
+  }
+
+  const isUnauthorized =
+    typeof error === "object" &&
+    error !== null &&
+    "statusCode" in error &&
+    error.statusCode === 401;
+
+  if (isUnauthorized) {
+    vscode.window.showErrorMessage("MarkupAI: Invalid API token. Please check your settings.");
+    statusBar.showNoToken();
+    return;
+  }
+
+  const errorMessage =
+    error &&
+    typeof error === "object" &&
+    "message" in error &&
+    typeof error.message === "string"
+      ? error.message
+      : "Unknown error";
+
+  vscode.window.showErrorMessage(`MarkupAI: Error checking content - ${errorMessage}`);
+  statusBar.showError();
+}
+
 async function checkDocument(
   document: vscode.TextDocument,
   showProgress: boolean = false,
@@ -102,23 +155,7 @@ async function checkDocument(
   const textAtCheckStart = text;
 
   try {
-    const checker = new MarkupAIContentChecker(getApiToken());
-    let result: { issues: ContentIssue[]; scores: ContentScores };
-
-    if (showProgress) {
-      result = await vscode.window.withProgress(
-        {
-          location: vscode.ProgressLocation.Notification,
-          title: "MarkupAI: Checking content...",
-          cancellable: false,
-        },
-        async () => {
-          return await checker.checkContent(text, getDialect(), getStyleGuide(), document.fileName);
-        },
-      );
-    } else {
-      result = await checker.checkContent(text, getDialect(), getStyleGuide(), document.fileName);
-    }
+    const result = await runContentCheck(text, document, showProgress);
 
     diagnosticsManager.setIssues(docKey, result.issues);
     diagnosticsManager.setScores(docKey, result.scores);
@@ -130,32 +167,7 @@ async function checkDocument(
       void showCheckCompleteNotification(result.scores, result.issues.length);
     }
   } catch (error: unknown) {
-    console.error("MarkupAI: Error checking content", error);
-
-    if (showCompletionNotification) {
-      const isUnauthorized =
-        typeof error === "object" &&
-        error !== null &&
-        "statusCode" in error &&
-        error.statusCode === 401;
-      const errorMessage =
-        error &&
-        typeof error === "object" &&
-        "message" in error &&
-        typeof error.message === "string"
-          ? error.message
-          : "Unknown error";
-
-      if (isUnauthorized) {
-        vscode.window.showErrorMessage("MarkupAI: Invalid API token. Please check your settings.");
-        statusBar.showNoToken();
-      } else {
-        vscode.window.showErrorMessage(`MarkupAI: Error checking content - ${errorMessage}`);
-        statusBar.showError();
-      }
-    } else {
-      throw error;
-    }
+    handleCheckError(error, showCompletionNotification);
   } finally {
     isCheckingDocument.set(docKey, false);
   }
