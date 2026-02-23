@@ -193,7 +193,7 @@ async function showCheckCompleteNotification(
   const message =
     `${scoreEmoji} MarkupAI Check Complete — ${statusMessage} | ` +
     `Score: ${String(scores.overall)} | ` +
-    `${String(issueCount)} issue${issueCount !== 1 ? "s" : ""} found`;
+    `${String(issueCount)} issue${issueCount === 1 ? "" : "s"} found`;
 
   const action = await vscode.window.showInformationMessage(
     message,
@@ -334,7 +334,7 @@ async function selectStyleGuide(): Promise<void> {
     matchOnDetail: true,
   });
 
-  if (selected && selected.detail) {
+  if (selected?.detail) {
     await getConfig().update("styleGuide", selected.detail, vscode.ConfigurationTarget.Global);
     vscode.window.showInformationMessage(`MarkupAI: Style guide set to "${selected.label}"`);
 
@@ -359,7 +359,7 @@ async function selectDialect(): Promise<void> {
     canPickMany: false,
   });
 
-  if (selected && selected.detail) {
+  if (selected?.detail) {
     await getConfig().update("dialect", selected.detail, vscode.ConfigurationTarget.Global);
     vscode.window.showInformationMessage(`MarkupAI: Dialect set to "${selected.label}"`);
 
