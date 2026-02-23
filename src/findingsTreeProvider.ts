@@ -117,12 +117,10 @@ export class FindingsTreeDataProvider implements vscode.TreeDataProvider<Finding
       documentIssues.forEach((_, uriString) => {
         urisToShow.push(uriString);
       });
-    } else {
-      if (activeEditor) {
-        const currentUri = activeEditor.document.uri.toString();
-        if (documentIssues.has(currentUri)) {
-          urisToShow.push(currentUri);
-        }
+    } else if (activeEditor) {
+      const currentUri = activeEditor.document.uri.toString();
+      if (documentIssues.has(currentUri)) {
+        urisToShow.push(currentUri);
       }
     }
 

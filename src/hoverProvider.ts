@@ -66,7 +66,8 @@ export class MarkupAIHoverProvider implements vscode.HoverProvider {
         }
 
         if (severity) {
-          const severityEmoji = severity === "high" ? "🔴" : severity === "medium" ? "🟡" : "🔵";
+          const severityEmojiMap: Record<string, string> = { high: "🔴", medium: "🟡", low: "🔵" };
+          const severityEmoji = severityEmojiMap[severity] ?? "🔵";
           const severityLabel = severity.charAt(0).toUpperCase() + severity.slice(1);
           markdown.appendMarkdown(`**Severity:** ${severityEmoji} ${severityLabel}\n\n`);
         }
