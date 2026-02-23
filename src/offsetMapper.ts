@@ -89,8 +89,8 @@ export class OffsetTranslator {
 
     // If the location was deleted, return the position where deletion started in text2
     // Otherwise, add the remaining characters
-    if (diffs.length > 0) {
-      const lastDiff = diffs.at(-1)!;
+    const lastDiff = diffs.at(-1);
+    if (lastDiff !== undefined) {
       if (chars1 === loc && lastDiff[0] === DiffOp.Delete) {
         // The location is at a deletion point
         return lastChars2;
