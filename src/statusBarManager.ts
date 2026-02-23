@@ -6,7 +6,7 @@ import { getScoreEmoji } from "./utils";
  * Manages the status bar item for MarkupAI score display.
  */
 export class StatusBarManager {
-  private statusBarItem: vscode.StatusBarItem;
+  private readonly statusBarItem: vscode.StatusBarItem;
 
   constructor(statusBarItem: vscode.StatusBarItem) {
     this.statusBarItem = statusBarItem;

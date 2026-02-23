@@ -7,10 +7,10 @@ import { indexToPosition, getSeverityForIssue } from "./utils";
  * Manages diagnostics, document issues, scores, and category filtering.
  */
 export class DiagnosticsManager {
-  private diagnosticCollection: vscode.DiagnosticCollection;
-  private documentIssues: Map<string, ContentIssue[]> = new Map();
-  private documentScores: Map<string, ContentScores> = new Map();
-  private disabledCategories: Set<string> = new Set();
+  private readonly diagnosticCollection: vscode.DiagnosticCollection;
+  private readonly documentIssues: Map<string, ContentIssue[]> = new Map();
+  private readonly documentScores: Map<string, ContentScores> = new Map();
+  private readonly disabledCategories: Set<string> = new Set();
 
   constructor(diagnosticCollection: vscode.DiagnosticCollection) {
     this.diagnosticCollection = diagnosticCollection;

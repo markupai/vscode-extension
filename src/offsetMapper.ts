@@ -10,8 +10,8 @@ import { DiffMatchPatch, Diff, DiffOp } from "diff-match-patch-ts";
  * and modifications accurately.
  */
 export class OffsetTranslator {
-  private diffs: Diff[];
-  private dmp: DiffMatchPatch;
+  private readonly diffs: Diff[];
+  private readonly dmp: DiffMatchPatch;
 
   constructor(oldText: string, newText: string) {
     this.dmp = new DiffMatchPatch();
@@ -90,7 +90,7 @@ export class OffsetTranslator {
     // If the location was deleted, return the position where deletion started in text2
     // Otherwise, add the remaining characters
     if (diffs.length > 0) {
-      const lastDiff = diffs[diffs.length - 1];
+      const lastDiff = diffs.at(-1)!;
       if (chars1 === loc && lastDiff[0] === DiffOp.Delete) {
         // The location is at a deletion point
         return lastChars2;
@@ -136,9 +136,9 @@ export class OffsetTranslator {
  * - 😀 (U+1F600): 1 code point, 4 UTF-8 bytes, 2 UTF-16 code units
  */
 export class TextOffsetMapper {
-  private text: string;
-  private codePointToStringIndex: number[] = [];
-  private byteToStringIndex: number[] = [];
+  private readonly text: string;
+  private readonly codePointToStringIndex: number[] = [];
+  private readonly byteToStringIndex: number[] = [];
 
   constructor(text: string) {
     this.text = text;

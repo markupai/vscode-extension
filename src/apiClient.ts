@@ -8,7 +8,7 @@ import { BUILT_IN_STYLE_GUIDES, POLL_INTERVAL_MS, MAX_POLL_ATTEMPTS } from "./co
  * Handles communication with the MarkupAI service for content checking
  */
 export class MarkupAIContentChecker {
-  private client: MarkupAIClient;
+  private readonly client: MarkupAIClient;
   private offsetMapper: TextOffsetMapper | null = null;
 
   constructor(apiToken: string) {

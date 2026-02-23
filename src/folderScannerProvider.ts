@@ -14,15 +14,15 @@ function shouldSkipEntry(name: string): boolean {
  * Discovers and lists supported document files for bulk checking.
  */
 export class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<FolderScannerItem> {
-  private _onDidChangeTreeData: vscode.EventEmitter<FolderScannerItem | undefined | null> =
+  private readonly _onDidChangeTreeData: vscode.EventEmitter<FolderScannerItem | undefined | null> =
     new vscode.EventEmitter<FolderScannerItem | undefined | null>();
   readonly onDidChangeTreeData: vscode.Event<FolderScannerItem | undefined | null> =
     this._onDidChangeTreeData.event;
 
   private rootFolder: vscode.Uri | null = null;
-  private selectedFiles: Set<string> = new Set();
+  private readonly selectedFiles: Set<string> = new Set();
 
-  constructor(private getDocumentScores: () => Map<string, ContentScores>) {
+  constructor(private readonly getDocumentScores: () => Map<string, ContentScores>) {
     this.initializeFromWorkspace();
   }
 

@@ -7,7 +7,7 @@ import { getTypeEmoji } from "./utils";
  */
 export class MarkupAIHoverProvider implements vscode.HoverProvider {
   constructor(
-    private getDiagnostics: (uri: vscode.Uri) => readonly vscode.Diagnostic[] | undefined,
+    private readonly getDiagnostics: (uri: vscode.Uri) => readonly vscode.Diagnostic[] | undefined,
   ) {}
 
   provideHover(
