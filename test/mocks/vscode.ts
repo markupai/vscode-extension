@@ -364,7 +364,7 @@ export const languages = {
 };
 
 // Mock env
-export const env = {
+export const env: { uiKind: UIKind } = {
   uiKind: UIKind.Desktop,
 };
 

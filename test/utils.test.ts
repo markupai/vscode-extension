@@ -17,7 +17,7 @@ function createMockConfig(
 describe("utils", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vscode.env.uiKind = vscode.UIKind.Desktop;
+    Object.assign(vscode.env, { uiKind: vscode.UIKind.Desktop });
   });
 
   describe("getConfig", () => {
@@ -196,12 +196,12 @@ describe("utils", () => {
 
   describe("isWebEnvironment", () => {
     it("should return false when running on desktop", () => {
-      vscode.env.uiKind = vscode.UIKind.Desktop;
+      Object.assign(vscode.env, { uiKind: vscode.UIKind.Desktop });
       expect(utils.isWebEnvironment()).toBe(false);
     });
 
     it("should return true when running on web", () => {
-      vscode.env.uiKind = vscode.UIKind.Web;
+      Object.assign(vscode.env, { uiKind: vscode.UIKind.Web });
       expect(utils.isWebEnvironment()).toBe(true);
     });
   });
