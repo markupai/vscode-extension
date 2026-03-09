@@ -24,10 +24,19 @@ export default [
     },
   },
   {
-    files: ["eslint.config.mjs", "vitest.config.ts"],
+    files: ["eslint.config.mjs", "vitest.config.ts", "esbuild.mjs"],
     ...tseslint.configs.disableTypeChecked,
   },
   {
-    ignores: ["out", "dist", "coverage", ".vscode-test", "**/*.d.ts"],
+    files: ["esbuild.mjs"],
+    languageOptions: {
+      globals: {
+        console: "readonly",
+        process: "readonly",
+      },
+    },
+  },
+  {
+    ignores: ["out", "dist", "coverage", ".vscode-test", ".vscode-test-web", "**/*.d.ts"],
   },
 ];

@@ -25,10 +25,10 @@
     "package": "mkdir -p dist && vsce package --out dist/",
     "package:pre-release": "mkdir -p dist && vsce package --pre-release --out dist/",
     "test": "vitest run",
-    "test:web": "vscode-test-web --extensionDevelopmentPath=. --browserType=chromium",
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
     "test:watch": "vitest watch",
+    "test:web": "vscode-test-web --extensionDevelopmentPath=. --browserType=chromium",
     "type-check": "tsc --project tsconfig.json --noEmit",
     "vscode:prepublish": "npm run compile:production",
     "watch": "npm run compile:watch"

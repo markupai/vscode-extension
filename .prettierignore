@@ -3,5 +3,6 @@ out/
 dist/
 coverage/
 .vscode-test/
+.vscode-test-web/
 node_modules/
 *.vsix

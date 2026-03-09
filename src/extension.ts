@@ -863,9 +863,7 @@ export function activate(context: vscode.ExtensionContext) {
         providedCodeActionKinds: MarkupAICodeActionProvider.providedCodeActionKinds,
       }),
     );
-    context.subscriptions.push(
-      vscode.languages.registerHoverProvider({ scheme }, hoverProvider),
-    );
+    context.subscriptions.push(vscode.languages.registerHoverProvider({ scheme }, hoverProvider));
   }
 
   // Register Commands
