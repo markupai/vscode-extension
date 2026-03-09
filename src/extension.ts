@@ -13,6 +13,7 @@ import {
   isWebEnvironment,
   isSupportedScheme,
   isCorsOrNetworkError,
+  SUPPORTED_SCHEMES,
 } from "./utils";
 import { DiagnosticsManager } from "./diagnosticsManager";
 import { StatusBarManager } from "./statusBarManager";
@@ -857,7 +858,7 @@ export function activate(context: vscode.ExtensionContext) {
     diagnosticsManager.getDiagnosticsForUri(uri),
   );
 
-  for (const scheme of ["file", "untitled", "vscode-vfs", "github", "vscode-remote"]) {
+  for (const scheme of SUPPORTED_SCHEMES) {
     context.subscriptions.push(
       vscode.languages.registerCodeActionsProvider({ scheme }, codeActionProvider, {
         providedCodeActionKinds: MarkupAICodeActionProvider.providedCodeActionKinds,

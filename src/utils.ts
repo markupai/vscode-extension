@@ -2,7 +2,15 @@ import * as vscode from "vscode";
 import { MarkupAI } from "@markupai/api";
 import { ContentIssue } from "./types";
 
-const SUPPORTED_SCHEMES = new Set(["file", "untitled", "vscode-vfs", "github", "vscode-remote"]);
+export const SUPPORTED_SCHEMES = [
+  "file",
+  "untitled",
+  "vscode-vfs",
+  "github",
+  "vscode-remote",
+] as const;
+
+const SUPPORTED_SCHEMES_SET = new Set<string>(SUPPORTED_SCHEMES);
 
 /**
  * Get the MarkupAI configuration
@@ -89,7 +97,7 @@ export function isWebEnvironment(): boolean {
  * Whether the given URI scheme is supported for content checking.
  */
 export function isSupportedScheme(scheme: string): boolean {
-  return SUPPORTED_SCHEMES.has(scheme);
+  return SUPPORTED_SCHEMES_SET.has(scheme);
 }
 
 /**
