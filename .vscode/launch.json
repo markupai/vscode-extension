@@ -15,6 +15,18 @@
       ],
       "outFiles": ["${workspaceFolder}/out/**/*.js"],
       "preLaunchTask": "${defaultBuildTask}"
+    },
+    {
+      "name": "Run Web Extension",
+      "type": "extensionHost",
+      "debugPort": 9222,
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}",
+        "--extensionDevelopmentKind=web"
+      ],
+      "outFiles": ["${workspaceFolder}/out/web/**/*.js"],
+      "preLaunchTask": "${defaultBuildTask}"
     }
   ]
 }

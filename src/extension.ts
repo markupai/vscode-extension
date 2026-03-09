@@ -10,6 +10,9 @@ import {
   getDialect,
   getStyleGuide,
   getScoreEmoji,
+  isWebEnvironment,
+  isSupportedScheme,
+  isCorsOrNetworkError,
 } from "./utils";
 import { DiagnosticsManager } from "./diagnosticsManager";
 import { StatusBarManager } from "./statusBarManager";
@@ -44,6 +47,7 @@ let isEnabled = true;
 let cachedStyleGuides: StyleGuideOption[] = [...BUILT_IN_STYLE_GUIDES];
 const isCheckingDocument: Map<string, boolean> = new Map();
 let isApplyingFix = false;
+let corsWarningShown = false;
 
 // ============================================================================
 // Extension-specific Utility Functions
@@ -81,6 +85,20 @@ async function runContentCheck(
 
 function handleCheckError(error: unknown, showCompletionNotification: boolean): void {
   console.error("MarkupAI: Error checking content", error);
+
+  if (isWebEnvironment() && isCorsOrNetworkError(error)) {
+    if (!corsWarningShown) {
+      corsWarningShown = true;
+      void vscode.window.showWarningMessage(
+        "MarkupAI: API requests are blocked by the browser (CORS). " +
+          "Content checking is not yet supported in VS Code for the Web. " +
+          "Please use VS Code Desktop for full functionality.",
+        "Dismiss",
+      );
+    }
+    statusBar.showError();
+    return;
+  }
 
   if (!showCompletionNotification) {
     throw error;
@@ -124,7 +142,7 @@ async function checkDocument(
     return;
   }
 
-  if (document.uri.scheme !== "file" && document.uri.scheme !== "untitled") {
+  if (!isSupportedScheme(document.uri.scheme)) {
     return;
   }
 
@@ -265,6 +283,16 @@ async function refreshStyleGuides(): Promise<void> {
   } catch (error) {
     console.error("MarkupAI: Error refreshing style guides", error);
     cachedStyleGuides = [...BUILT_IN_STYLE_GUIDES];
+
+    if (isWebEnvironment() && isCorsOrNetworkError(error) && !corsWarningShown) {
+      corsWarningShown = true;
+      void vscode.window.showWarningMessage(
+        "MarkupAI: API requests are blocked by the browser (CORS). " +
+          "Content checking is not yet supported in VS Code for the Web. " +
+          "Please use VS Code Desktop for full functionality.",
+        "Dismiss",
+      );
+    }
   }
 }
 
@@ -823,24 +851,22 @@ export function activate(context: vscode.ExtensionContext) {
     }),
   );
 
-  // Register Code Actions Provider
-  context.subscriptions.push(
-    vscode.languages.registerCodeActionsProvider(
-      { scheme: "file" },
-      new MarkupAICodeActionProvider(),
-      {
-        providedCodeActionKinds: MarkupAICodeActionProvider.providedCodeActionKinds,
-      },
-    ),
+  // Register Code Actions Provider and Hover Provider for all supported schemes
+  const codeActionProvider = new MarkupAICodeActionProvider();
+  const hoverProvider = new MarkupAIHoverProvider((uri) =>
+    diagnosticsManager.getDiagnosticsForUri(uri),
   );
 
-  // Register Hover Provider
-  context.subscriptions.push(
-    vscode.languages.registerHoverProvider(
-      { scheme: "file" },
-      new MarkupAIHoverProvider((uri) => diagnosticsManager.getDiagnosticsForUri(uri)),
-    ),
-  );
+  for (const scheme of ["file", "untitled", "vscode-vfs", "github", "vscode-remote"]) {
+    context.subscriptions.push(
+      vscode.languages.registerCodeActionsProvider({ scheme }, codeActionProvider, {
+        providedCodeActionKinds: MarkupAICodeActionProvider.providedCodeActionKinds,
+      }),
+    );
+    context.subscriptions.push(
+      vscode.languages.registerHoverProvider({ scheme }, hoverProvider),
+    );
+  }
 
   // Register Commands
   context.subscriptions.push(

@@ -1,11 +1,10 @@
 name: Build Packages
 
 on:
-  push:
-    branches: [main, develop]
   pull_request:
+  push:
   schedule:
-    - cron: "0 3 * * *"
+    - cron: "0 4 * * *"
   workflow_dispatch:
 
 jobs:
@@ -53,7 +52,7 @@ jobs:
       - name: Run Lint check
         run: npm run lint:check
 
-      - name: Compile TypeScript
+      - name: Compile and bundle (desktop + web)
         run: npm run compile
 
       - name: Run tests
@@ -63,6 +62,11 @@ jobs:
         uses: SonarSource/sonarqube-scan-action@v7
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      - name: Verify web bundle compatibility
+        run: |
+          test -f out/web/extension.js || { echo "Web bundle not found — esbuild browser build failed"; exit 1; }
+          echo "Web bundle built successfully ($(wc -c < out/web/extension.js) bytes)"
 
       - name: Package vscode extension
         run: npm run package

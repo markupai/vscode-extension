@@ -2,6 +2,8 @@ import * as vscode from "vscode";
 import { MarkupAI } from "@markupai/api";
 import { ContentIssue } from "./types";
 
+const SUPPORTED_SCHEMES = new Set(["file", "untitled", "vscode-vfs", "github", "vscode-remote"]);
+
 /**
  * Get the MarkupAI configuration
  */
@@ -74,6 +76,38 @@ export function getScoreEmoji(score: number): string {
     return "🟠";
   }
   return "🔴";
+}
+
+/**
+ * Whether the extension is running in a web (browser) extension host.
+ */
+export function isWebEnvironment(): boolean {
+  return vscode.env.uiKind === vscode.UIKind.Web;
+}
+
+/**
+ * Whether the given URI scheme is supported for content checking.
+ */
+export function isSupportedScheme(scheme: string): boolean {
+  return SUPPORTED_SCHEMES.has(scheme);
+}
+
+/**
+ * Detect CORS / network errors that occur when the API server
+ * does not return proper Access-Control-Allow-* headers.
+ */
+export function isCorsOrNetworkError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  const msg = error.message.toLowerCase();
+  return (
+    msg.includes("failed to fetch") ||
+    msg.includes("networkerror") ||
+    msg.includes("network request failed") ||
+    msg.includes("cors") ||
+    msg.includes("load failed")
+  );
 }
 
 /**

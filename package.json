@@ -14,9 +14,10 @@
   "license": "Apache-2.0",
   "publisher": "markupai",
   "main": "./out/extension.js",
-  "browser": "./out/extension.js",
   "scripts": {
-    "compile": "tsc -p tsconfig.build.json",
+    "compile": "node esbuild.mjs",
+    "compile:production": "node esbuild.mjs --production",
+    "compile:watch": "node esbuild.mjs --watch",
     "format:check": "prettier --check .",
     "format:fix": "prettier --write .",
     "lint:check": "eslint .",
@@ -24,12 +25,13 @@
     "package": "mkdir -p dist && vsce package --out dist/",
     "package:pre-release": "mkdir -p dist && vsce package --pre-release --out dist/",
     "test": "vitest run",
+    "test:web": "vscode-test-web --extensionDevelopmentPath=. --browserType=chromium",
     "test:coverage": "vitest run --coverage",
     "test:ui": "vitest --ui",
     "test:watch": "vitest watch",
     "type-check": "tsc --project tsconfig.json --noEmit",
-    "vscode:prepublish": "npm run compile",
-    "watch": "tsc -watch -p tsconfig.build.json"
+    "vscode:prepublish": "npm run compile:production",
+    "watch": "npm run compile:watch"
   },
   "contributes": {
     "commands": [
@@ -391,7 +393,9 @@
     "@types/vscode": "^1.108.1",
     "@vitest/coverage-v8": "^2.1.8",
     "@vitest/ui": "^2.1.8",
+    "@vscode/test-web": "^0.0.80",
     "@vscode/vsce": "^3.7.1",
+    "esbuild": "^0.27.3",
     "eslint": "^9.39.2",
     "prettier": "^3.4.2",
     "prettier-plugin-packagejson": "^2.5.6",

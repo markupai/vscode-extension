@@ -98,18 +98,21 @@ Issues are highlighted with different colors based on severity:
 
 ## Requirements
 
-- VS Code 1.108.1 or higher (Desktop, Web, or Remote)
+- VS Code 1.108.1 or higher (Desktop or Remote)
 - MarkupAI API token (get one at [markup.ai](https://markup.ai))
 
 ## Platform Support
 
-This extension works on:
-
 - ✅ **VS Code Desktop** (Windows, macOS, Linux)
-- ✅ **VS Code for Web** ([vscode.dev](https://vscode.dev))
-- ✅ **GitHub Web Editor** ([github.dev](https://github.dev))
 - ✅ **Remote Development** (SSH, Containers, WSL)
 - ✅ **Virtual Workspaces** (Cloud storage, read-only folders)
+- 🚧 **VS Code for Web** — not yet available (see below)
+
+### Web Compatibility
+
+The extension codebase is web-compatible — no Node.js built-in modules are used, and all file operations go through VS Code's `workspace.fs` API. A browser-targeted bundle is built and validated in CI to prevent regressions.
+
+However, the extension is currently **published for desktop only** because the MarkupAI API does not yet support browser CORS requests. Once CORS is enabled on the API server, web support can be activated by adding `"browser"` back to `package.json`.
 
 ## Testing
 
@@ -143,11 +146,27 @@ npm run compile
 npm test
 
 # Run linter
-npm run lint
+npm run lint:check
 
 # Package extension
 npm run package
+
+# Validate web compatibility
+npx @vscode/vsce package --target web --out dist/web.vsix
 ```
+
+### CI/CD Pipeline
+
+The GitHub Actions workflow (`build.yml`) runs the following checks on every push and pull request:
+
+1. **Code formatting** — `prettier --check`
+2. **Type checking** — `tsc --noEmit`
+3. **Linting** — `eslint`
+4. **Compile** — esbuild bundles for desktop (Node.js) and web (browser)
+5. **Tests** — `vitest` with coverage
+6. **SonarQube scan** — static analysis
+7. **Web bundle verification** — ensures the browser-targeted bundle builds successfully (catches accidental Node.js imports)
+8. **Package** — produces the desktop VSIX artifact
 
 ## Support
 
