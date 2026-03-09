@@ -17,6 +17,7 @@ function createMockConfig(
 describe("utils", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vscode.env.uiKind = vscode.UIKind.Desktop;
   });
 
   describe("getConfig", () => {
@@ -190,6 +191,90 @@ describe("utils", () => {
       expect(utils.getScoreEmoji(0)).toBe("🔴");
       expect(utils.getScoreEmoji(25)).toBe("🔴");
       expect(utils.getScoreEmoji(49)).toBe("🔴");
+    });
+  });
+
+  describe("isWebEnvironment", () => {
+    it("should return false when running on desktop", () => {
+      vscode.env.uiKind = vscode.UIKind.Desktop;
+      expect(utils.isWebEnvironment()).toBe(false);
+    });
+
+    it("should return true when running on web", () => {
+      vscode.env.uiKind = vscode.UIKind.Web;
+      expect(utils.isWebEnvironment()).toBe(true);
+    });
+  });
+
+  describe("isSupportedScheme", () => {
+    it("should return true for file scheme", () => {
+      expect(utils.isSupportedScheme("file")).toBe(true);
+    });
+
+    it("should return true for untitled scheme", () => {
+      expect(utils.isSupportedScheme("untitled")).toBe(true);
+    });
+
+    it("should return true for vscode-vfs scheme", () => {
+      expect(utils.isSupportedScheme("vscode-vfs")).toBe(true);
+    });
+
+    it("should return true for github scheme", () => {
+      expect(utils.isSupportedScheme("github")).toBe(true);
+    });
+
+    it("should return true for vscode-remote scheme", () => {
+      expect(utils.isSupportedScheme("vscode-remote")).toBe(true);
+    });
+
+    it("should return false for unsupported schemes", () => {
+      expect(utils.isSupportedScheme("ftp")).toBe(false);
+      expect(utils.isSupportedScheme("http")).toBe(false);
+      expect(utils.isSupportedScheme("")).toBe(false);
+    });
+  });
+
+  describe("isCorsOrNetworkError", () => {
+    it("should return true for 'Failed to fetch' errors", () => {
+      expect(utils.isCorsOrNetworkError(new TypeError("Failed to fetch"))).toBe(true);
+    });
+
+    it("should return true for 'NetworkError' errors", () => {
+      expect(utils.isCorsOrNetworkError(new Error("NetworkError when attempting to fetch"))).toBe(
+        true,
+      );
+    });
+
+    it("should return true for 'Network request failed' errors", () => {
+      expect(utils.isCorsOrNetworkError(new Error("Network request failed"))).toBe(true);
+    });
+
+    it("should return true for CORS errors", () => {
+      expect(
+        utils.isCorsOrNetworkError(new Error("CORS policy: No 'Access-Control-Allow-Origin'")),
+      ).toBe(true);
+    });
+
+    it("should return true for 'Load failed' errors (Safari)", () => {
+      expect(utils.isCorsOrNetworkError(new TypeError("Load failed"))).toBe(true);
+    });
+
+    it("should return false for non-network errors", () => {
+      expect(utils.isCorsOrNetworkError(new Error("Invalid API token"))).toBe(false);
+      expect(utils.isCorsOrNetworkError(new Error("Timeout exceeded"))).toBe(false);
+    });
+
+    it("should return false for non-Error objects", () => {
+      expect(utils.isCorsOrNetworkError("Failed to fetch")).toBe(false);
+      expect(utils.isCorsOrNetworkError(null)).toBe(false);
+      expect(utils.isCorsOrNetworkError(undefined)).toBe(false);
+      expect(utils.isCorsOrNetworkError(42)).toBe(false);
+      expect(utils.isCorsOrNetworkError({ message: "Failed to fetch" })).toBe(false);
+    });
+
+    it("should be case-insensitive", () => {
+      expect(utils.isCorsOrNetworkError(new Error("FAILED TO FETCH"))).toBe(true);
+      expect(utils.isCorsOrNetworkError(new Error("cors error"))).toBe(true);
     });
   });
 

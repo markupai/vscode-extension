@@ -45,6 +45,11 @@ export enum TextEditorRevealType {
   AtTop = 3,
 }
 
+export enum UIKind {
+  Desktop = 1,
+  Web = 2,
+}
+
 export class Range {
   start: Position;
   end: Position;
@@ -356,6 +361,11 @@ export const languages = {
 
   registerCodeActionsProvider: vi.fn(() => ({ dispose: vi.fn() })),
   registerHoverProvider: vi.fn(() => ({ dispose: vi.fn() })),
+};
+
+// Mock env
+export const env = {
+  uiKind: UIKind.Desktop,
 };
 
 // Mock commands
