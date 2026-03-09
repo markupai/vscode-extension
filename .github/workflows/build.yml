@@ -72,7 +72,7 @@ jobs:
         run: npm run package
 
       - name: Upload vscode extension build artifacts
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: vscode-extension-build
           path: dist/
