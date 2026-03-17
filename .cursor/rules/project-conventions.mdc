@@ -1,0 +1,59 @@
+---
+description: Core project conventions for the MarkupAI VS Code extension
+alwaysApply: true
+---
+
+# MarkupAI VS Code Extension — Project Conventions
+
+## Tech Stack
+
+- **Language**: TypeScript (strict mode, ES2022, NodeNext modules)
+- **Runtime**: VS Code Extension API
+- **Build**: esbuild (`esbuild.mjs`)
+- **Test**: Vitest (80% coverage thresholds for lines/functions/statements, 75% branches)
+- **Lint**: ESLint 9 with `strictTypeChecked` rules
+- **Format**: Prettier (printWidth: 100)
+
+## Architecture
+
+- One module per concern — each file in `src/` owns a single responsibility (e.g., `apiClient.ts`, `diagnosticsManager.ts`, `hoverProvider.ts`)
+- Shared types live in `src/types.ts`; shared constants in `src/constants.ts`
+- The `vscode` module is mocked via path alias in tests (`test/mocks/vscode.ts`)
+- Entry point is `src/extension.ts` — keep it as a thin orchestrator; push logic into dedicated modules
+
+## Coding Standards
+
+- Use `readonly` for class fields that are assigned once
+- Prefix unused parameters with `_` (enforced by ESLint)
+- Use explicit return types on exported functions and public methods
+- Prefer `interface` over `type` for object shapes
+- Use JSDoc comments on exported functions and classes to describe intent
+- Use section headers (`// ====...`) to group related exports in constants/types files
+- Error messages must be prefixed with `"MarkupAI: "` for user-facing strings
+
+## Testing Conventions
+
+- Every `src/<module>.ts` must have a corresponding `test/<module>.test.ts`
+- Use `describe` blocks that match the class/function name being tested
+- Use `beforeEach` / `afterEach` for setup/teardown with `vi.clearAllMocks()` and `vi.restoreAllMocks()`
+- Mock external dependencies with `vi.mock()` at the top of the test file, before imports
+- When adding or changing code, always add or update the corresponding tests
+- Run `npm test` to verify all tests pass before considering the task done
+- **Coverage requirement**: every changed or new module must have >90% test coverage (lines, functions, statements, and branches)
+- `src/extension.ts` is excluded from coverage only for code that is inherently untestable (e.g., direct VS Code API wiring); any extractable logic must be moved to a dedicated module and tested to the >90% standard
+
+## Workflow Steps (Follow Every Time)
+
+1. **Understand** — Read the relevant source and test files before making changes
+2. **Implement** — Make changes following the coding standards above
+3. **Test** — Add/update tests for every code change; ensure `npm test` passes
+4. **Lint & Format** — Verify no lint errors (`npm run lint:check`) and formatting is correct (`npm run format:check`)
+5. **Type-check** — Run `npm run type-check` to confirm no TypeScript errors
+
+## Do NOT
+
+- Add new dependencies without explicit approval
+- Modify `extension.ts` for logic that belongs in a dedicated module
+- Skip writing tests for new code
+- Use `any` type — use `unknown` and narrow instead
+- Commit `.env` files or API tokens
