@@ -1,4 +1,4 @@
-import * as vscode from "vscode";
+import type * as vscode from "vscode";
 
 /** Generate a cryptographically-strong nonce for inline `<script nonce="...">`. */
 export function makeNonce(): string {

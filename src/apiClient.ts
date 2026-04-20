@@ -1,23 +1,13 @@
-import {
-  CONTENT_PROFILE,
-  INTEGRATION_ID,
-  PARALLEL_EXECUTOR_AGENT_ID,
-  USER_MESSAGE_PREFIX,
-} from "./constants.js";
+import { INTEGRATION_ID, PARALLEL_EXECUTOR_AGENT_ID, USER_MESSAGE_PREFIX } from "./constants.js";
 import type { AuthStore } from "./auth.js";
 import type { ExtensionConfig } from "./config.js";
 import type { Logger } from "./logger.js";
-import type {
-  AgentConfig,
-  AgentListResponse,
-  AgentRunResponse,
-  SSEEvent,
-} from "./types.js";
+import type { AgentConfig, AgentListResponse, AgentRunResponse, SSEEvent } from "./types.js";
 
 export interface RunAgentsRequest {
   readonly internalIds: readonly string[];
   readonly text: string;
-  readonly contentProfile: (typeof CONTENT_PROFILE)[keyof typeof CONTENT_PROFILE];
+  readonly contentProfile: "markdown" | "dita";
   readonly agentConfig: AgentConfig;
   readonly documentName?: string;
   readonly documentRef?: string;
@@ -82,8 +72,7 @@ export class MarkupAIClient {
   }
 
   async runAgents(req: RunAgentsRequest, signal?: AbortSignal): Promise<AgentRunResponse> {
-    const url =
-      `${this.config.getApiBaseUrl()}/agents/${PARALLEL_EXECUTOR_AGENT_ID}/run?wait=false`;
+    const url = `${this.config.getApiBaseUrl()}/agents/${PARALLEL_EXECUTOR_AGENT_ID}/run?wait=false`;
     const headers = await this.authHeaders();
     const body = {
       agents: req.internalIds,
@@ -151,9 +140,7 @@ async function safeText(res: Response): Promise<string> {
  * Parse a Server-Sent Events byte stream into structured events.
  * Uses only standard web APIs — works in both Node 18+ and browser.
  */
-export async function* parseSSE(
-  stream: ReadableStream<Uint8Array>,
-): AsyncGenerator<SSEEvent> {
+export async function* parseSSE(stream: ReadableStream<Uint8Array>): AsyncGenerator<SSEEvent> {
   const reader = stream.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
@@ -202,7 +189,7 @@ function parseEventBlock(block: string): SSEEvent | null {
       typeof parsed === "object" &&
       parsed !== null &&
       "type" in parsed &&
-      typeof (parsed as { type: unknown }).type === "string"
+      typeof (parsed as Record<string, unknown>).type === "string"
     ) {
       return parsed as SSEEvent;
     }

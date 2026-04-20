@@ -10,7 +10,11 @@ export class EventEmitter<T> {
   private listeners: Listener<T>[] = [];
   event = (listener: Listener<T>): { dispose(): void } => {
     this.listeners.push(listener);
-    return { dispose: () => { this.listeners = this.listeners.filter((l) => l !== listener); } };
+    return {
+      dispose: () => {
+        this.listeners = this.listeners.filter((l) => l !== listener);
+      },
+    };
   };
   fire(e: T): void {
     for (const l of this.listeners) l(e);
@@ -21,11 +25,17 @@ export class EventEmitter<T> {
 }
 
 export class Position {
-  constructor(public line: number, public character: number) {}
+  constructor(
+    public line: number,
+    public character: number,
+  ) {}
 }
 
 export class Range {
-  constructor(public start: Position, public end: Position) {}
+  constructor(
+    public start: Position,
+    public end: Position,
+  ) {}
 }
 
 export enum DiagnosticSeverity {
@@ -38,7 +48,11 @@ export enum DiagnosticSeverity {
 export class Diagnostic {
   source?: string;
   code?: string;
-  constructor(public range: Range, public message: string, public severity: DiagnosticSeverity) {}
+  constructor(
+    public range: Range,
+    public message: string,
+    public severity: DiagnosticSeverity,
+  ) {}
 }
 
 export enum CodeActionKind {
@@ -50,7 +64,10 @@ export class CodeAction {
   edit?: WorkspaceEdit;
   command?: { command: string; title: string; arguments?: unknown[] };
   isPreferred?: boolean;
-  constructor(public title: string, public kind?: string) {}
+  constructor(
+    public title: string,
+    public kind?: string,
+  ) {}
 }
 
 export class WorkspaceEdit {
@@ -126,10 +143,18 @@ export const window = {
     const ch = {
       name,
       lines,
-      appendLine(s: string) { lines.push(s); },
-      append(s: string) { lines.push(s); },
-      show() { /* no-op */ },
-      dispose() { /* no-op */ },
+      appendLine(s: string) {
+        lines.push(s);
+      },
+      append(s: string) {
+        lines.push(s);
+      },
+      show() {
+        /* no-op */
+      },
+      dispose() {
+        /* no-op */
+      },
     };
     _outputChannels.push({ name, lines });
     return ch;
@@ -138,9 +163,19 @@ export const window = {
   showWarningMessage: (..._args: any[]) => Promise.resolve(undefined as any),
   showErrorMessage: (..._args: any[]) => Promise.resolve(undefined as any),
   showInputBox: (..._args: any[]) => Promise.resolve(undefined as any),
-  registerWebviewViewProvider: (_id: string, _provider: unknown) => ({ dispose() { /* noop */ } }),
+  registerWebviewViewProvider: (_id: string, _provider: unknown) => ({
+    dispose() {
+      /* noop */
+    },
+  }),
   withProgress: async (_opts: any, task: any) => {
-    const token = { onCancellationRequested: (_cb: any) => ({ dispose() { /* noop */ } }) };
+    const token = {
+      onCancellationRequested: (_cb: any) => ({
+        dispose() {
+          /* noop */
+        },
+      }),
+    };
     return task({ report: (_: any) => undefined }, token);
   },
 };
@@ -149,7 +184,11 @@ export const _registeredCommands = new Map<string, (...args: any[]) => any>();
 export const commands = {
   registerCommand(id: string, cb: (...args: any[]) => any) {
     _registeredCommands.set(id, cb);
-    return { dispose() { _registeredCommands.delete(id); } };
+    return {
+      dispose() {
+        _registeredCommands.delete(id);
+      },
+    };
   },
   executeCommand: async (_id: string, ..._args: any[]) => undefined,
 };
@@ -174,12 +213,19 @@ function getConfiguration(section: string): {
   };
 }
 
-export const _onDidChangeConfigurationEmitter = new EventEmitter<{ affectsConfiguration(s: string): boolean }>();
+export const _onDidChangeConfigurationEmitter = new EventEmitter<{
+  affectsConfiguration(s: string): boolean;
+}>();
 
 export const workspace = {
   getConfiguration,
   workspaceFolders: [] as { uri: Uri; name: string; index: number }[] | undefined,
-  textDocuments: [] as { uri: Uri; getText(): string; positionAt(o: number): Position; offsetAt(p: Position): number }[],
+  textDocuments: [] as {
+    uri: Uri;
+    getText(): string;
+    positionAt(o: number): Position;
+    offsetAt(p: Position): number;
+  }[],
   findFiles: async (_inc: string, _exc?: string, _max?: number): Promise<Uri[]> => [],
   asRelativePath: (uri: Uri | string, _includeWorkspaceFolder?: boolean): string =>
     typeof uri === "string" ? uri : uri.fsPath,
@@ -203,15 +249,33 @@ export const languages = {
     const store = new Map<string, Diagnostic[]>();
     return {
       name,
-      set(uri: Uri, diagnostics: Diagnostic[]) { store.set(uri.toString(), diagnostics); },
-      get(uri: Uri) { return store.get(uri.toString()); },
-      delete(uri: Uri) { store.delete(uri.toString()); },
-      clear() { store.clear(); },
-      dispose() { store.clear(); },
+      set(uri: Uri, diagnostics: Diagnostic[]) {
+        store.set(uri.toString(), diagnostics);
+      },
+      get(uri: Uri) {
+        return store.get(uri.toString());
+      },
+      delete(uri: Uri) {
+        store.delete(uri.toString());
+      },
+      clear() {
+        store.clear();
+      },
+      dispose() {
+        store.clear();
+      },
     };
   },
-  registerHoverProvider: (_s: any, _p: any) => ({ dispose() { /* noop */ } }),
-  registerCodeActionsProvider: (_s: any, _p: any, _o?: any) => ({ dispose() { /* noop */ } }),
+  registerHoverProvider: (_s: any, _p: any) => ({
+    dispose() {
+      /* noop */
+    },
+  }),
+  registerCodeActionsProvider: (_s: any, _p: any, _o?: any) => ({
+    dispose() {
+      /* noop */
+    },
+  }),
 };
 
 // ---- helpers for tests -----------------------------------------------

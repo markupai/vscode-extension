@@ -73,7 +73,7 @@ export class AgentConfigView implements vscode.WebviewViewProvider {
 
   private async handleMessage(msg: unknown): Promise<void> {
     if (!isRecord(msg)) return;
-    const type = typeof msg["type"] === "string" ? msg["type"] : "";
+    const type = typeof msg.type === "string" ? msg.type : "";
     switch (type) {
       case "refresh":
         await this.refresh();
@@ -87,15 +87,16 @@ export class AgentConfigView implements vscode.WebviewViewProvider {
         await this.render();
         return;
       case "setEnabledAgents": {
-        const slugs = Array.isArray(msg["slugs"])
-          ? (msg["slugs"].filter((s) => typeof s === "string") as string[])
+        const raw: unknown = msg.slugs;
+        const slugs = Array.isArray(raw)
+          ? raw.filter((s): s is string => typeof s === "string")
           : [];
         await this.config.setEnabledAgents(slugs);
         await this.render();
         return;
       }
       case "setTargetId": {
-        const id = typeof msg["id"] === "string" ? msg["id"] : "";
+        const id = typeof msg.id === "string" ? msg.id : "";
         await this.config.setStyleGuideTargetId(id);
         await this.render();
         return;
@@ -113,17 +114,20 @@ export class AgentConfigView implements vscode.WebviewViewProvider {
         &middot; ${state.signedIn ? "Signed in" : "Not signed in"}
       </div>
       <div class="row">
-        ${state.signedIn
-          ? `<button class="secondary" data-action="signOut">Sign out</button>`
-          : `<button data-action="signIn">Sign in</button>`}
+        ${
+          state.signedIn
+            ? `<button class="secondary" data-action="signOut">Sign out</button>`
+            : `<button data-action="signIn">Sign in</button>`
+        }
         <button class="secondary" data-action="refresh">Refresh agents</button>
       </div>
       ${state.error ? `<div class="status-err">${escapeHtml(state.error)}</div>` : ""}
 
       <h3>Agents</h3>
-      ${state.agents.length === 0
-        ? `<div class="muted">No agents loaded. Sign in and click "Refresh agents".</div>`
-        : `<div id="agents">
+      ${
+        state.agents.length === 0
+          ? `<div class="muted">No agents loaded. Sign in and click "Refresh agents".</div>`
+          : `<div id="agents">
             ${state.agents
               .map(
                 (a) => /* html */ `
@@ -134,7 +138,8 @@ export class AgentConfigView implements vscode.WebviewViewProvider {
                 </label>`,
               )
               .join("")}
-          </div>`}
+          </div>`
+      }
 
       <h3>Style Agent &middot; target</h3>
       <input type="text" id="targetId" placeholder="Style-guide target id (e.g. tgt_...)" value="${escapeHtml(state.styleGuideTargetId)}" />

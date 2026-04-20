@@ -101,7 +101,10 @@ function rangeFromOffsets(
   if (doc) {
     return new vscode.Range(doc.positionAt(start), doc.positionAt(Math.max(start, end)));
   }
-  return new vscode.Range(new vscode.Position(0, start), new vscode.Position(0, Math.max(start, end)));
+  return new vscode.Range(
+    new vscode.Position(0, start),
+    new vscode.Position(0, Math.max(start, end)),
+  );
 }
 
 function severityToVscode(sev: IssueSeverity): vscode.DiagnosticSeverity {

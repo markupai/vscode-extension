@@ -1,4 +1,4 @@
-import * as vscode from "vscode";
+import type * as vscode from "vscode";
 import type { MarkupAIClient } from "./apiClient.js";
 import { convertForAgents, detectKind } from "./converters/index.js";
 import type { DiagnosticsManager } from "./diagnostics.js";
@@ -55,29 +55,23 @@ export class Scanner {
     const hasStyle = requested.some((a) => a.slug === "style_agent");
     const buckets = this.buildBuckets(requested, isDita, hasStyle);
 
-    const result: ScanResult = { totalIssues: 0, perAgent: {}, errors: [] };
-    const mutable = {
-      total: 0,
-      perAgent: result.perAgent as Record<string, IssueWithId[]>,
-      errors: result.errors as string[],
-    };
+    const perAgent: Record<string, IssueWithId[]> = {};
+    const errors: string[] = [];
+    const mutable = { total: 0, perAgent, errors };
 
     await Promise.all(
       buckets.map((bucket) =>
-        this.runBucket(opts, bucket, mutable).catch((err) => {
-          const msg = err instanceof Error ? err.message : String(err);
+        this.runBucket(opts, bucket, mutable).catch((err: unknown) => {
+          const msg = toErrorMessage(err);
           this.logger.error("bucket failed", msg);
           mutable.errors.push(msg);
         }),
       ),
     );
-    (result as { totalIssues: number }).totalIssues = mutable.total;
-    return result;
+    return { totalIssues: mutable.total, perAgent, errors };
   }
 
-  private resolveAgents(
-    slugs: readonly string[],
-  ): { slug: string; internalId: string }[] {
+  private resolveAgents(slugs: readonly string[]): { slug: string; internalId: string }[] {
     return slugs
       .map((slug) => this.registry.getBySlug(slug))
       .filter((a): a is NonNullable<typeof a> => Boolean(a))
@@ -139,9 +133,7 @@ export class Scanner {
         continue;
       }
       const slug =
-        byInternalId.get(event.agent_name) ??
-        byName.get(event.agent_name) ??
-        event.agent_name;
+        byInternalId.get(event.agent_name) ?? byName.get(event.agent_name) ?? event.agent_name;
       const rawIssues = event.result?.issues ?? [];
       const remapped = rawIssues.map((i) => remapSingle(i, converted));
       const withId = withIds(remapped);
@@ -155,4 +147,10 @@ export class Scanner {
 
 function remapSingle(issue: Issue, converted: ConvertedContent): Issue {
   return remapIssue(issue, converted.offsetMap);
+}
+
+function toErrorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (typeof err === "string") return err;
+  return JSON.stringify(err);
 }

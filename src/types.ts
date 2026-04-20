@@ -126,11 +126,7 @@ export interface SSECompletionEvent {
   readonly type: "completion";
 }
 
-export type SSEEvent =
-  | SSEAgentResultEvent
-  | SSEStatusEvent
-  | SSEErrorEvent
-  | SSECompletionEvent;
+export type SSEEvent = SSEAgentResultEvent | SSEStatusEvent | SSEErrorEvent | SSECompletionEvent;
 
 // ===================================================================
 // Content conversion

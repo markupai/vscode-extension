@@ -18,10 +18,7 @@ export interface CommandDeps {
   onAgentsRefreshed: () => void | Promise<void>;
 }
 
-export function registerCommands(
-  context: vscode.ExtensionContext,
-  deps: CommandDeps,
-): void {
+export function registerCommands(context: vscode.ExtensionContext, deps: CommandDeps): void {
   context.subscriptions.push(
     vscode.commands.registerCommand("markupai.signIn", async () => {
       const ok = await promptForToken(deps.auth);
@@ -78,31 +75,25 @@ export function registerCommands(
       await vscode.commands.executeCommand("markupai.batchCheck.focus");
     }),
 
-    vscode.commands.registerCommand(
-      "markupai._dismissIssues",
-      (uriStr: string, ids: string[]) => {
-        const uri = vscode.Uri.parse(uriStr);
-        const existing = deps.diagnostics.getAllIssues(uri);
-        const dismissed = new Set(ids);
-        const perAgent = new Map<string, typeof existing>();
-        for (const issue of existing) {
-          if (dismissed.has(issue.id)) continue;
-          const slug = issue.agent;
-          perAgent.set(slug, [...(perAgent.get(slug) ?? []), issue]);
-        }
-        deps.diagnostics.clear(uri);
-        for (const [slug, list] of perAgent) {
-          deps.diagnostics.setIssuesForAgent(uri, slug, list);
-        }
-      },
-    ),
+    vscode.commands.registerCommand("markupai._dismissIssues", (uriStr: string, ids: string[]) => {
+      const uri = vscode.Uri.parse(uriStr);
+      const existing = deps.diagnostics.getAllIssues(uri);
+      const dismissed = new Set(ids);
+      const perAgent = new Map<string, typeof existing>();
+      for (const issue of existing) {
+        if (dismissed.has(issue.id)) continue;
+        const slug = issue.agent;
+        perAgent.set(slug, [...(perAgent.get(slug) ?? []), issue]);
+      }
+      deps.diagnostics.clear(uri);
+      for (const [slug, list] of perAgent) {
+        deps.diagnostics.setIssuesForAgent(uri, slug, list);
+      }
+    }),
   );
 }
 
-export async function scanDocument(
-  doc: vscode.TextDocument,
-  deps: CommandDeps,
-): Promise<void> {
+export async function scanDocument(doc: vscode.TextDocument, deps: CommandDeps): Promise<void> {
   const fileName = doc.fileName;
   const lower = fileName.toLowerCase();
   const supported = SUPPORTED_EXTENSIONS.some((ext) => lower.endsWith(ext));
@@ -157,7 +148,9 @@ export async function scanDocument(
     },
     async (progress, token) => {
       const controller = new AbortController();
-      token.onCancellationRequested(() => controller.abort());
+      token.onCancellationRequested(() => {
+        controller.abort();
+      });
       try {
         const result = await deps.scanner.scan({
           uri: doc.uri,

@@ -81,7 +81,9 @@ function renderTokens(tokens: Token[]): { markdown: string; pairs: OffsetPair[] 
   }
   state.pairs.push({
     md: state.out.length,
-    src: tokens.length ? tokens[tokens.length - 1].offset + tokens[tokens.length - 1].value.length : 0,
+    src: tokens.length
+      ? tokens[tokens.length - 1].offset + tokens[tokens.length - 1].value.length
+      : 0,
   });
   return { markdown: state.out.replace(/\n{3,}/g, "\n\n").trimEnd(), pairs: state.pairs };
 }
@@ -89,7 +91,7 @@ function renderTokens(tokens: Token[]): { markdown: string; pairs: OffsetPair[] 
 function emitText(state: RenderState, text: string, srcOffset: number): void {
   if (!text) return;
   const collapsed = state.inPre ? text : text.replace(/\s+/g, " ");
-  if (!collapsed || collapsed === " " && state.out.endsWith(" ")) return;
+  if (!collapsed || (collapsed === " " && state.out.endsWith(" "))) return;
   state.pairs.push({ md: state.out.length, src: srcOffset });
   state.out += collapsed;
 }
@@ -163,9 +165,9 @@ function handleTag(state: RenderState, tok: Token): void {
         state.out += "\n";
         return;
       }
-      const top = state.lists[state.lists.length - 1];
+      const top = state.lists.at(-1);
       const indent = "  ".repeat(Math.max(0, state.listDepth - 1));
-      if (top && top.kind === "ol") {
+      if (top?.kind === "ol") {
         top.index += 1;
         state.out += `\n${indent}${top.index}. `;
       } else {

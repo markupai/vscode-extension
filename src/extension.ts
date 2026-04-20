@@ -24,7 +24,7 @@ export function activate(context: vscode.ExtensionContext): void {
   logger.setLevel(config.getLogLevel());
 
   const auth = new AuthStore(context.secrets);
-  const extVersion = (context.extension?.packageJSON as { version?: string })?.version ?? "0.0.0";
+  const extVersion = (context.extension.packageJSON as { version?: string }).version ?? "0.0.0";
   const client = new MarkupAIClient(config, auth, logger, extVersion);
   const registry = new AgentRegistry(client);
   const diagnostics = new DiagnosticsManager();
@@ -67,8 +67,12 @@ export function activate(context: vscode.ExtensionContext): void {
     }
     registry
       .refresh()
-      .then(() => agentConfigView.refresh())
-      .catch((err) => logger.error("initial agent refresh failed", err));
+      .then(async () => {
+        await agentConfigView.refresh();
+      })
+      .catch((err: unknown) => {
+        logger.error("initial agent refresh failed", err);
+      });
   });
 
   logger.info(`MarkupAI activated (env=${config.getEnvironment()}, v${extVersion})`);

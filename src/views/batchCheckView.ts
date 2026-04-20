@@ -59,14 +59,15 @@ export class BatchCheckView implements vscode.WebviewViewProvider {
 
   private async handleMessage(msg: unknown): Promise<void> {
     if (!isRecord(msg)) return;
-    const type = typeof msg["type"] === "string" ? msg["type"] : "";
+    const type = typeof msg.type === "string" ? msg.type : "";
     switch (type) {
       case "refresh":
         await this.discover();
         return;
       case "run": {
-        const selected = Array.isArray(msg["uris"])
-          ? (msg["uris"].filter((s) => typeof s === "string") as string[])
+        const raw: unknown = msg.uris;
+        const selected = Array.isArray(raw)
+          ? raw.filter((s): s is string => typeof s === "string")
           : [];
         await this.runBatch(selected);
         return;
@@ -165,7 +166,12 @@ export class BatchCheckView implements vscode.WebviewViewProvider {
         });
       });
     `;
-    this.view.webview.html = webviewScaffold(this.view.webview, "MarkupAI Batch Check", body, script);
+    this.view.webview.html = webviewScaffold(
+      this.view.webview,
+      "MarkupAI Batch Check",
+      body,
+      script,
+    );
   }
 }
 

@@ -1,27 +1,67 @@
 {
   "name": "markupai-vscode",
   "displayName": "MarkupAI",
-  "description": "MarkupAI content agents (style, terminology, and more) for VS Code.",
   "version": "0.1.0",
-  "publisher": "markupai",
-  "license": "Apache-2.0",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/markupai/vscode-extension.git"
-  },
-  "engines": {
-    "vscode": "^1.95.0"
-  },
+  "description": "MarkupAI content agents (style, terminology, and more) for VS Code.",
   "categories": [
     "Linters",
     "Other"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/markupai/vscode-extension.git"
+  },
+  "license": "Apache-2.0",
+  "publisher": "markupai",
   "main": "./out/extension.js",
   "browser": "./out/web/extension.js",
-  "activationEvents": [
-    "onStartupFinished"
-  ],
+  "scripts": {
+    "compile": "node esbuild.mjs",
+    "compile:watch": "node esbuild.mjs --watch",
+    "format": "prettier --write \"**/*.{ts,tsx,js,mjs,json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,mjs,json,md,yml,yaml}\"",
+    "lint": "eslint src test",
+    "lint:check": "eslint src test",
+    "lint:fix": "eslint src test --fix",
+    "package": "vsce package --out dist/",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
+    "type-check": "tsc --noEmit"
+  },
   "contributes": {
+    "commands": [
+      {
+        "command": "markupai.signIn",
+        "title": "MarkupAI: Sign In (set API token)"
+      },
+      {
+        "command": "markupai.signOut",
+        "title": "MarkupAI: Sign Out"
+      },
+      {
+        "command": "markupai.scanCurrentFile",
+        "title": "MarkupAI: Scan Current File",
+        "icon": "$(play)"
+      },
+      {
+        "command": "markupai.clearDiagnostics",
+        "title": "MarkupAI: Clear Diagnostics"
+      },
+      {
+        "command": "markupai.refreshAgents",
+        "title": "MarkupAI: Refresh Agents",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "markupai.openAgentConfig",
+        "title": "MarkupAI: Open Agent Configuration"
+      },
+      {
+        "command": "markupai.openBatchCheck",
+        "title": "MarkupAI: Open Batch Check"
+      }
+    ],
     "configuration": {
       "title": "MarkupAI",
       "properties": {
@@ -60,44 +100,19 @@
         }
       }
     },
-    "commands": [
-      {
-        "command": "markupai.signIn",
-        "title": "MarkupAI: Sign In (set API token)"
-      },
-      {
-        "command": "markupai.signOut",
-        "title": "MarkupAI: Sign Out"
-      },
-      {
-        "command": "markupai.scanCurrentFile",
-        "title": "MarkupAI: Scan Current File",
-        "icon": "$(play)"
-      },
-      {
-        "command": "markupai.clearDiagnostics",
-        "title": "MarkupAI: Clear Diagnostics"
-      },
-      {
-        "command": "markupai.refreshAgents",
-        "title": "MarkupAI: Refresh Agents",
-        "icon": "$(refresh)"
-      },
-      {
-        "command": "markupai.openAgentConfig",
-        "title": "MarkupAI: Open Agent Configuration"
-      },
-      {
-        "command": "markupai.openBatchCheck",
-        "title": "MarkupAI: Open Batch Check"
-      }
-    ],
-    "viewsContainers": {
-      "activitybar": [
+    "menus": {
+      "editor/title": [
         {
-          "id": "markupai",
-          "title": "MarkupAI",
-          "icon": "$(sparkle)"
+          "command": "markupai.scanCurrentFile",
+          "group": "navigation",
+          "when": "resourceExtname =~ /\\.(md|markdown|html|htm|dita|txt|xml|rst)$/"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "markupai.refreshAgents",
+          "when": "view == markupai.agentConfig",
+          "group": "navigation"
         }
       ]
     },
@@ -115,37 +130,19 @@
         }
       ]
     },
-    "menus": {
-      "editor/title": [
+    "viewsContainers": {
+      "activitybar": [
         {
-          "command": "markupai.scanCurrentFile",
-          "group": "navigation",
-          "when": "resourceExtname =~ /\\.(md|markdown|html|htm|dita|txt|xml|rst)$/"
-        }
-      ],
-      "view/title": [
-        {
-          "command": "markupai.refreshAgents",
-          "when": "view == markupai.agentConfig",
-          "group": "navigation"
+          "id": "markupai",
+          "title": "MarkupAI",
+          "icon": "$(sparkle)"
         }
       ]
     }
   },
-  "scripts": {
-    "compile": "node esbuild.mjs",
-    "compile:watch": "node esbuild.mjs --watch",
-    "package": "vsce package --out dist/",
-    "type-check": "tsc --noEmit",
-    "lint": "eslint src test",
-    "lint:check": "eslint src test",
-    "lint:fix": "eslint src test --fix",
-    "format": "prettier --write \"**/*.{ts,tsx,js,mjs,json,md,yml,yaml}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,js,mjs,json,md,yml,yaml}\"",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
-  },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "devDependencies": {
     "@types/node": "^24.0.0",
     "@types/vscode": "^1.95.0",
@@ -158,5 +155,8 @@
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.18.0",
     "vitest": "^2.1.8"
+  },
+  "engines": {
+    "vscode": "^1.95.0"
   }
 }
