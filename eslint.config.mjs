@@ -1,11 +1,20 @@
-// @ts-check
-
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 
-export default [
+export default tseslint.config(
+  {
+    ignores: [
+      "out/**",
+      "dist/**",
+      "coverage/**",
+      "node_modules/**",
+      ".vscode-test-web/**",
+      "test/mocks/**",
+    ],
+  },
   js.configs.recommended,
   ...tseslint.configs.strictTypeChecked,
+  ...tseslint.configs.stylisticTypeChecked,
   {
     languageOptions: {
       parserOptions: {
@@ -16,27 +25,28 @@ export default [
     rules: {
       "@typescript-eslint/no-unused-vars": [
         "error",
-        {
-          argsIgnorePattern: "^_",
-          varsIgnorePattern: "^_",
-        },
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
+      "@typescript-eslint/consistent-type-imports": "error",
+      "@typescript-eslint/no-explicit-any": "error",
+      "@typescript-eslint/prefer-nullish-coalescing": "warn",
+      "@typescript-eslint/restrict-template-expressions": [
+        "error",
+        { allowNumber: true, allowBoolean: true },
+      ],
+      "no-console": ["warn", { allow: ["warn", "error"] }],
     },
   },
   {
-    files: ["eslint.config.mjs", "vitest.config.ts", "esbuild.mjs"],
-    ...tseslint.configs.disableTypeChecked,
-  },
-  {
-    files: ["esbuild.mjs"],
-    languageOptions: {
-      globals: {
-        console: "readonly",
-        process: "readonly",
-      },
+    files: ["test/**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unsafe-assignment": "off",
+      "@typescript-eslint/no-unsafe-member-access": "off",
+      "@typescript-eslint/no-unsafe-call": "off",
+      "@typescript-eslint/no-unsafe-argument": "off",
+      "@typescript-eslint/no-unsafe-return": "off",
+      "@typescript-eslint/unbound-method": "off",
     },
   },
-  {
-    ignores: ["out", "dist", "coverage", ".vscode-test", ".vscode-test-web", "**/*.d.ts"],
-  },
-];
+);

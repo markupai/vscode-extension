@@ -1,239 +1,213 @@
-import { MarkupAIClient, MarkupAI } from "@markupai/api";
-import { ContentIssue, CheckResult, StyleGuideOption } from "./types";
-import { TextOffsetMapper } from "./offsetMapper";
-import { BUILT_IN_STYLE_GUIDES, POLL_INTERVAL_MS, MAX_POLL_ATTEMPTS } from "./constants";
+import {
+  CONTENT_PROFILE,
+  INTEGRATION_ID,
+  PARALLEL_EXECUTOR_AGENT_ID,
+  USER_MESSAGE_PREFIX,
+} from "./constants.js";
+import type { AuthStore } from "./auth.js";
+import type { ExtensionConfig } from "./config.js";
+import type { Logger } from "./logger.js";
+import type {
+  AgentConfig,
+  AgentListResponse,
+  AgentRunResponse,
+  SSEEvent,
+} from "./types.js";
+
+export interface RunAgentsRequest {
+  readonly internalIds: readonly string[];
+  readonly text: string;
+  readonly contentProfile: (typeof CONTENT_PROFILE)[keyof typeof CONTENT_PROFILE];
+  readonly agentConfig: AgentConfig;
+  readonly documentName?: string;
+  readonly documentRef?: string;
+}
+
+export class AuthError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AuthError";
+  }
+}
+
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly body?: string,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+type FetchFn = typeof fetch;
 
 /**
- * MarkupAI API Client wrapper
- * Handles communication with the MarkupAI service for content checking
+ * Thin, web-compatible MarkupAI API client. Uses the platform `fetch`
+ * (available in Node 18+ and in browser/worker contexts) and streams
+ * SSE via `ReadableStream` so no Node-only modules are required.
  */
-export class MarkupAIContentChecker {
-  private readonly client: MarkupAIClient;
-  private offsetMapper: TextOffsetMapper | null = null;
+export class MarkupAIClient {
+  constructor(
+    private readonly config: ExtensionConfig,
+    private readonly auth: AuthStore,
+    private readonly logger: Logger,
+    private readonly extensionVersion: string,
+    private readonly fetchImpl: FetchFn = fetch,
+  ) {}
 
-  constructor(apiToken: string) {
-    this.client = new MarkupAIClient({
-      token: apiToken,
-    });
-  }
-
-  async fetchStyleGuides(): Promise<StyleGuideOption[]> {
-    try {
-      const styleGuides = await this.client.styleGuides.listStyleGuides();
-
-      // Known built-in style guide names (case-insensitive matching)
-      const builtInNames = new Set([
-        "ap style guide",
-        "ap",
-        "associated press",
-        "chicago manual of style",
-        "chicago",
-        "cmos",
-        "microsoft style guide",
-        "microsoft",
-        "microsoft writing style guide",
-      ]);
-
-      const customGuides: StyleGuideOption[] = [];
-      const builtInGuides: StyleGuideOption[] = [];
-
-      for (const guide of styleGuides) {
-        const nameLower = guide.name.toLowerCase();
-        const idLower = guide.id.toLowerCase();
-
-        // Check if this is a built-in style guide by name or ID
-        const isBuiltIn =
-          builtInNames.has(nameLower) ||
-          builtInNames.has(idLower) ||
-          nameLower.includes("ap style") ||
-          nameLower.includes("chicago") ||
-          nameLower.includes("microsoft");
-
-        const styleGuideOption: StyleGuideOption = {
-          id: guide.id,
-          name: guide.name,
-          isBuiltIn: isBuiltIn,
-        };
-
-        if (isBuiltIn) {
-          builtInGuides.push(styleGuideOption);
-        } else {
-          customGuides.push(styleGuideOption);
-        }
-      }
-
-      // Custom/server guides at top, built-in guides at bottom
-      return [...customGuides, ...builtInGuides];
-    } catch (error) {
-      console.error("MarkupAI: Error fetching style guides", error);
-      return BUILT_IN_STYLE_GUIDES;
+  private async authHeaders(): Promise<Record<string, string>> {
+    const token = await this.auth.getToken();
+    if (!token) {
+      throw new AuthError(`${USER_MESSAGE_PREFIX}not signed in. Run 'MarkupAI: Sign In' first.`);
     }
-  }
-
-  async checkContent(
-    text: string,
-    dialect: MarkupAI.Dialects,
-    styleGuide: string,
-    filename?: string,
-  ): Promise<CheckResult> {
-    // Create offset mapper for Unicode handling
-    this.offsetMapper = new TextOffsetMapper(text);
-
-    // Determine file extension and MIME type
-    const fileExtension = filename ? filename.split(".").pop()?.toLowerCase() : "txt";
-    const mimeType = this.getMimeType(fileExtension || "txt");
-    const fileName = filename || `content.${fileExtension || "txt"}`;
-
-    // Create a Blob from the text content
-    const blob = new Blob([text], { type: mimeType });
-    const file = new File([blob], fileName, { type: mimeType });
-
-    // Create style suggestion request
-    const workflowResponse = await this.client.styleSuggestions.createStyleSuggestion({
-      file_upload: file,
-      dialect: dialect,
-      style_guide: styleGuide,
-    });
-
-    const workflowId = workflowResponse.workflow_id;
-
-    // Poll for results
-    const result = await this.pollForResults(workflowId);
-    return result;
-  }
-
-  private async pollForResults(workflowId: string): Promise<CheckResult> {
-    let attempts = 0;
-
-    while (attempts < MAX_POLL_ATTEMPTS) {
-      await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
-      attempts++;
-
-      try {
-        const suggestionResponse =
-          await this.client.styleSuggestions.getStyleSuggestion(workflowId);
-        const status = suggestionResponse.workflow.status;
-
-        if (status === "completed") {
-          return this.parseResponse(suggestionResponse);
-        } else if (status === "failed") {
-          throw new Error("MarkupAI: Content check failed");
-        }
-        // If still running, continue polling
-      } catch (error: unknown) {
-        if (
-          typeof error === "object" &&
-          error !== null &&
-          "statusCode" in error &&
-          error.statusCode === 404
-        ) {
-          // Workflow not found yet, continue polling
-          continue;
-        }
-        throw error;
-      }
-    }
-
-    throw new Error("MarkupAI: Content check timed out");
-  }
-
-  private parseResponse(response: MarkupAI.SuggestionResponse): CheckResult {
-    const issues: ContentIssue[] = [];
-    const apiIssues = response.original?.issues || [];
-
-    for (let i = 0; i < apiIssues.length; i++) {
-      const issue = apiIssues[i];
-      const issueType = this.mapCategoryToType(issue.category);
-
-      // Convert API offset to JavaScript string index
-      // The API likely returns Unicode code point offsets, which differ from
-      // JavaScript's UTF-16 code unit indices for emojis and other non-BMP characters
-      let startIndex: number;
-      let endIndex: number;
-
-      if (this.offsetMapper) {
-        // First, try to convert the code point offset
-        const convertedStart = this.offsetMapper.codePointOffsetToStringIndex(
-          issue.position.start_index,
-        );
-
-        // Then, verify by finding the actual text in the document
-        // This handles any remaining edge cases and ensures accuracy
-        const position = this.offsetMapper.findNearbyText(
-          issue.original,
-          convertedStart,
-          50, // Search within 50 characters if not exact match
-        );
-
-        if (position) {
-          startIndex = position.start;
-          endIndex = position.end;
-        } else {
-          // Fallback: use the converted offset and calculate end from original length
-          startIndex = convertedStart;
-          endIndex = startIndex + issue.original.length;
-        }
-      } else {
-        // No mapper available, use raw values (fallback)
-        startIndex = issue.position.start_index;
-        endIndex = issue.position.start_index + issue.original.length;
-      }
-
-      issues.push({
-        id: `issue-${String(i)}`,
-        startIndex: startIndex,
-        endIndex: endIndex,
-        type: issueType,
-        category: issue.category,
-        subcategory: typeof issue.subcategory === "string" ? issue.subcategory : undefined,
-        message:
-          issue.explanation ||
-          `${issue.category ?? "Issue"}: Replace "${issue.original}" with "${issue.suggestion}"`,
-        suggestion: issue.suggestion,
-        originalText: issue.original,
-        severity: issue.severity,
-      });
-    }
-
-    const qualityScore = response.original?.scores?.quality;
-    const scores = {
-      overall: qualityScore?.score ?? 100,
-      grammar: qualityScore?.grammar?.score ?? 100,
-      consistency: qualityScore?.consistency?.score ?? 100,
-      terminology: qualityScore?.terminology?.score ?? 100,
+    return {
+      Authorization: `Bearer ${token}`,
+      "x-integration-id": INTEGRATION_ID,
+      "x-integration-version": this.extensionVersion,
     };
-
-    return { issues, scores };
   }
 
-  private mapCategoryToType(category?: MarkupAI.IssueCategory): ContentIssue["type"] {
-    switch (category) {
-      case "grammar":
-        return "grammar";
-      case "clarity":
-        return "clarity";
-      case "consistency":
-        return "consistency";
-      case "terminology":
-        return "terminology";
-      case "tone":
-        return "tone";
-      default:
-        return "grammar";
+  async listAgents(signal?: AbortSignal): Promise<AgentListResponse> {
+    const url = `${this.config.getApiBaseUrl()}/agents/list?page_size=100`;
+    const headers = await this.authHeaders();
+    this.logger.debug("GET", url);
+    const res = await this.fetchImpl(url, {
+      method: "GET",
+      headers: { ...headers, Accept: "application/json" },
+      signal,
+    });
+    return this.handleJson<AgentListResponse>(res);
+  }
+
+  async runAgents(req: RunAgentsRequest, signal?: AbortSignal): Promise<AgentRunResponse> {
+    const url =
+      `${this.config.getApiBaseUrl()}/agents/${PARALLEL_EXECUTOR_AGENT_ID}/run?wait=false`;
+    const headers = await this.authHeaders();
+    const body = {
+      agents: req.internalIds,
+      text: req.text,
+      content_profile_id: req.contentProfile,
+      document_ref: req.documentRef,
+      document_name: req.documentName,
+      ...req.agentConfig,
+    };
+    this.logger.debug("POST", url, { agents: req.internalIds, len: req.text.length });
+    const res = await this.fetchImpl(url, {
+      method: "POST",
+      headers: {
+        ...headers,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(body),
+      signal,
+    });
+    return this.handleJson<AgentRunResponse>(res);
+  }
+
+  async *streamWorkflow(workflowId: string, signal?: AbortSignal): AsyncGenerator<SSEEvent> {
+    const url = `${this.config.getApiBaseUrl()}/agents/workflows/${workflowId}/stream`;
+    const headers = await this.authHeaders();
+    this.logger.debug("SSE", url);
+    const res = await this.fetchImpl(url, {
+      method: "GET",
+      headers: { ...headers, Accept: "text/event-stream" },
+      signal,
+    });
+    if (!res.ok || !res.body) {
+      const text = await safeText(res);
+      throw new ApiError(`SSE stream failed (${res.status})`, res.status, text);
+    }
+    for await (const event of parseSSE(res.body)) {
+      yield event;
     }
   }
 
-  private getMimeType(extension: string): string {
-    const mimeTypes: { [key: string]: string } = {
-      txt: "text/plain",
-      md: "text/markdown",
-      markdown: "text/markdown",
-      html: "text/html",
-      htm: "text/html",
-      xml: "text/xml",
-      dita: "application/xml",
-      json: "application/json",
-    };
-    return mimeTypes[extension] || "text/plain";
+  private async handleJson<T>(res: Response): Promise<T> {
+    if (res.status === 401 || res.status === 403) {
+      throw new AuthError(
+        `${USER_MESSAGE_PREFIX}authentication failed (${res.status}). Check your token.`,
+      );
+    }
+    if (!res.ok) {
+      const text = await safeText(res);
+      throw new ApiError(`Request failed (${res.status})`, res.status, text);
+    }
+    return (await res.json()) as T;
+  }
+}
+
+async function safeText(res: Response): Promise<string> {
+  try {
+    return await res.text();
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Parse a Server-Sent Events byte stream into structured events.
+ * Uses only standard web APIs — works in both Node 18+ and browser.
+ */
+export async function* parseSSE(
+  stream: ReadableStream<Uint8Array>,
+): AsyncGenerator<SSEEvent> {
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  try {
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      let sepIndex: number;
+      while ((sepIndex = findEventEnd(buffer)) !== -1) {
+        const raw = buffer.slice(0, sepIndex);
+        buffer = buffer.slice(sepIndex).replace(/^(\r?\n){1,2}/, "");
+        const ev = parseEventBlock(raw);
+        if (ev) yield ev;
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+function findEventEnd(buf: string): number {
+  const a = buf.indexOf("\n\n");
+  const b = buf.indexOf("\r\n\r\n");
+  if (a === -1) return b;
+  if (b === -1) return a;
+  return Math.min(a, b);
+}
+
+function parseEventBlock(block: string): SSEEvent | null {
+  const dataLines: string[] = [];
+  for (const line of block.split(/\r?\n/)) {
+    if (line.startsWith(":")) continue;
+    if (line.startsWith("data:")) {
+      dataLines.push(line.slice(5).trimStart());
+    }
+  }
+  if (!dataLines.length) return null;
+  const data = dataLines.join("\n");
+  if (!data || data === "[DONE]") return null;
+  try {
+    const parsed = JSON.parse(data) as unknown;
+    if (
+      typeof parsed === "object" &&
+      parsed !== null &&
+      "type" in parsed &&
+      typeof (parsed as { type: unknown }).type === "string"
+    ) {
+      return parsed as SSEEvent;
+    }
+    return null;
+  } catch {
+    return null;
   }
 }

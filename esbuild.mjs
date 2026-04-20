@@ -1,45 +1,49 @@
-import * as esbuild from "esbuild";
+import esbuild from "esbuild";
 
-const isWatch = process.argv.includes("--watch");
-const isProduction = process.argv.includes("--production");
+const watch = process.argv.includes("--watch");
+const production = process.argv.includes("--production");
 
-/** @type {import('esbuild').BuildOptions} */
-const sharedOptions = {
-  entryPoints: ["src/extension.ts"],
+const shared = {
   bundle: true,
+  minify: production,
+  sourcemap: !production,
+  logLevel: "info",
   external: ["vscode"],
-  sourcemap: !isProduction,
-  minify: isProduction,
-  target: "ES2022",
 };
 
-/** @type {import('esbuild').BuildOptions} */
-const nodeOptions = {
-  ...sharedOptions,
+const desktop = {
+  ...shared,
+  entryPoints: ["src/extension.ts"],
+  outfile: "out/extension.js",
   platform: "node",
   format: "cjs",
-  outfile: "out/extension.js",
+  target: ["node20"],
+  mainFields: ["module", "main"],
 };
 
-/** @type {import('esbuild').BuildOptions} */
-const webOptions = {
-  ...sharedOptions,
+const web = {
+  ...shared,
+  entryPoints: ["src/extension.ts"],
+  outfile: "out/web/extension.js",
   platform: "browser",
   format: "cjs",
-  outfile: "out/web/extension.js",
+  target: ["es2022"],
+  mainFields: ["browser", "module", "main"],
+  define: {
+    "process.env.NODE_ENV": production ? '"production"' : '"development"',
+    global: "globalThis",
+  },
 };
 
 async function build() {
-  if (isWatch) {
-    const [nodeCtx, webCtx] = await Promise.all([
-      esbuild.context(nodeOptions),
-      esbuild.context(webOptions),
-    ]);
-    await Promise.all([nodeCtx.watch(), webCtx.watch()]);
-    console.log("Watching for changes...");
+  if (watch) {
+    const desktopCtx = await esbuild.context(desktop);
+    const webCtx = await esbuild.context(web);
+    await Promise.all([desktopCtx.watch(), webCtx.watch()]);
+    console.log("esbuild: watching both targets (desktop + web)");
   } else {
-    await Promise.all([esbuild.build(nodeOptions), esbuild.build(webOptions)]);
-    console.log("Build complete.");
+    await Promise.all([esbuild.build(desktop), esbuild.build(web)]);
+    console.log("esbuild: built desktop + web bundles");
   }
 }
 

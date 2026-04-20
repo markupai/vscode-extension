@@ -1,11 +1,11 @@
+node_modules/
 out/
 dist/
-node_modules/
+coverage/
 .vscode-test/
 .vscode-test-web/
 .vs
 *.vsix
 .DS_Store
-coverage/
 .vitest/
-mdDocs/
+*.log

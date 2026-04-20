@@ -1,8 +1,7 @@
-package-lock.json
 out/
 dist/
 coverage/
-.vscode-test/
-.vscode-test-web/
 node_modules/
-*.vsix
+.vscode-test-web/
+testdoc/
+package-lock.json

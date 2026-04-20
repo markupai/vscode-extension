@@ -1,417 +1,162 @@
 {
-  "name": "vscode-markupai",
+  "name": "markupai-vscode",
   "displayName": "MarkupAI",
-  "version": "0.0.1",
-  "description": "Real-time content analysis in VS Code. Ensure your writing is clear, on-brand, and compliant with instant feedback as you type.",
+  "description": "MarkupAI content agents (style, terminology, and more) for VS Code.",
+  "version": "0.1.0",
+  "publisher": "markupai",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/markupai/vscode-extension.git"
+  },
+  "engines": {
+    "vscode": "^1.95.0"
+  },
   "categories": [
     "Linters",
     "Other"
   ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/markupai/vscode-extension"
-  },
-  "license": "Apache-2.0",
-  "publisher": "markupai",
   "main": "./out/extension.js",
-  "scripts": {
-    "compile": "node esbuild.mjs",
-    "compile:production": "node esbuild.mjs --production",
-    "compile:watch": "node esbuild.mjs --watch",
-    "format:check": "prettier --check .",
-    "format:fix": "prettier --write .",
-    "lint:check": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "package": "mkdir -p dist && vsce package --out dist/",
-    "package:pre-release": "mkdir -p dist && vsce package --pre-release --out dist/",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
-    "test:ui": "vitest --ui",
-    "test:watch": "vitest watch",
-    "test:web": "vscode-test-web --extensionDevelopmentPath=. --browserType=chromium",
-    "type-check": "tsc --project tsconfig.json --noEmit",
-    "vscode:prepublish": "npm run compile:production",
-    "watch": "npm run compile:watch"
-  },
+  "browser": "./out/web/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "contributes": {
-    "commands": [
-      {
-        "command": "markupai.checkContent",
-        "title": "MarkupAI - Check Content",
-        "category": "MarkupAI"
-      },
-      {
-        "command": "markupai.toggleEnabled",
-        "title": "Toggle Enable/Disable",
-        "category": "MarkupAI"
-      },
-      {
-        "command": "markupai.enableIssues",
-        "title": "MarkupAI - Enable Issues",
-        "category": "MarkupAI"
-      },
-      {
-        "command": "markupai.disableIssues",
-        "title": "MarkupAI - Disable Issues",
-        "category": "MarkupAI"
-      },
-      {
-        "command": "markupai.disableCategory",
-        "title": "MarkupAI - Disable Category",
-        "category": "MarkupAI"
-      },
-      {
-        "command": "markupai.enableCategory",
-        "title": "MarkupAI - Enable Category",
-        "category": "MarkupAI"
-      },
-      {
-        "command": "markupai.showScores",
-        "title": "Show Content Scores",
-        "category": "MarkupAI"
-      },
-      {
-        "command": "markupai.configureApiToken",
-        "title": "Configure API Token",
-        "category": "MarkupAI"
-      },
-      {
-        "command": "markupai.selectStyleGuide",
-        "title": "Select Style Guide",
-        "category": "MarkupAI"
-      },
-      {
-        "command": "markupai.selectDialect",
-        "title": "Select Dialect",
-        "category": "MarkupAI"
-      },
-      {
-        "command": "markupai.goToIssue",
-        "title": "Go to Issue",
-        "category": "MarkupAI"
-      },
-      {
-        "command": "markupai.filterBySeverity",
-        "title": "Filter by Severity",
-        "category": "MarkupAI",
-        "icon": "$(filter)"
-      },
-      {
-        "command": "markupai.filterByCategory",
-        "title": "Filter by Category",
-        "category": "MarkupAI",
-        "icon": "$(tag)"
-      },
-      {
-        "command": "markupai.clearFilters",
-        "title": "Clear Filters",
-        "category": "MarkupAI",
-        "icon": "$(clear-all)"
-      },
-      {
-        "command": "markupai.refreshFindings",
-        "title": "Refresh Findings",
-        "category": "MarkupAI",
-        "icon": "$(refresh)"
-      },
-      {
-        "command": "markupai.showAllFindings",
-        "title": "Show All Files",
-        "category": "MarkupAI",
-        "icon": "$(files)"
-      },
-      {
-        "command": "markupai.showCurrentFileFindings",
-        "title": "Show Current File Only",
-        "category": "MarkupAI",
-        "icon": "$(file)"
-      },
-      {
-        "command": "markupai.selectFolder",
-        "title": "Change Folder",
-        "category": "MarkupAI",
-        "icon": "$(folder-opened)"
-      },
-      {
-        "command": "markupai.refreshFolderScanner",
-        "title": "Refresh Folder Scanner",
-        "category": "MarkupAI",
-        "icon": "$(refresh)"
-      },
-      {
-        "command": "markupai.checkAllFiles",
-        "title": "Check All Files",
-        "category": "MarkupAI",
-        "icon": "$(run-all)"
-      },
-      {
-        "command": "markupai.checkSelectedFiles",
-        "title": "Check Selected Files",
-        "category": "MarkupAI",
-        "icon": "$(run)"
-      },
-      {
-        "command": "markupai.toggleFileSelection",
-        "title": "Toggle File Selection",
-        "category": "MarkupAI",
-        "icon": "$(check)"
-      },
-      {
-        "command": "markupai.openFile",
-        "title": "Open File",
-        "category": "MarkupAI"
-      }
-    ],
     "configuration": {
       "title": "MarkupAI",
       "properties": {
-        "markupai.apiToken": {
+        "markupai.environment": {
+          "type": "string",
+          "enum": [
+            "dev",
+            "prod"
+          ],
+          "default": "dev",
+          "description": "MarkupAI API environment. 'dev' uses api.dev.markup.ai, 'prod' uses api.markup.ai."
+        },
+        "markupai.enabledAgents": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Agent slugs to enable in the UI. When empty, all compile-time-enabled agents that exist on the platform are shown."
+        },
+        "markupai.styleGuideTargetId": {
           "type": "string",
           "default": "",
-          "description": "Your MarkupAI API token. Get one at https://markup.ai",
-          "scope": "application"
+          "description": "Default target (style guide) ID used by the Style agent."
         },
-        "markupai.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable or disable MarkupAI checking"
-        },
-        "markupai.dialect": {
+        "markupai.logLevel": {
           "type": "string",
-          "default": "american_english",
           "enum": [
-            "american_english",
-            "british_english",
-            "canadian_english"
+            "debug",
+            "info",
+            "warn",
+            "error"
           ],
-          "enumDescriptions": [
-            "American English",
-            "British English",
-            "Canadian English"
-          ],
-          "description": "The language dialect to use for checking"
-        },
-        "markupai.styleGuide": {
-          "type": "string",
-          "default": "ap",
-          "description": "The style guide to use. Built-in options: 'ap', 'chicago', 'microsoft', or a custom style guide ID"
-        },
-        "markupai.checkOnOpen": {
-          "type": "boolean",
-          "default": true,
-          "description": "Automatically check content when a file is opened"
-        },
-        "markupai.checkOnChange": {
-          "type": "boolean",
-          "default": false,
-          "description": "Automatically re-check content when the document changes. Enable this for real-time score updates while editing. Disable to save API calls (recommended)."
-        },
-        "markupai.checkDelay": {
-          "type": "number",
-          "default": 2000,
-          "description": "Delay in milliseconds before checking after a document change"
+          "default": "info",
+          "description": "MarkupAI extension log level."
         }
       }
     },
-    "menus": {
-      "view/title": [
+    "commands": [
+      {
+        "command": "markupai.signIn",
+        "title": "MarkupAI: Sign In (set API token)"
+      },
+      {
+        "command": "markupai.signOut",
+        "title": "MarkupAI: Sign Out"
+      },
+      {
+        "command": "markupai.scanCurrentFile",
+        "title": "MarkupAI: Scan Current File",
+        "icon": "$(play)"
+      },
+      {
+        "command": "markupai.clearDiagnostics",
+        "title": "MarkupAI: Clear Diagnostics"
+      },
+      {
+        "command": "markupai.refreshAgents",
+        "title": "MarkupAI: Refresh Agents",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "markupai.openAgentConfig",
+        "title": "MarkupAI: Open Agent Configuration"
+      },
+      {
+        "command": "markupai.openBatchCheck",
+        "title": "MarkupAI: Open Batch Check"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
         {
-          "command": "markupai.refreshFindings",
-          "when": "view == markupai.findings",
-          "group": "navigation@1"
-        },
-        {
-          "command": "markupai.filterBySeverity",
-          "when": "view == markupai.findings",
-          "group": "navigation@2"
-        },
-        {
-          "command": "markupai.filterByCategory",
-          "when": "view == markupai.findings",
-          "group": "navigation@3"
-        },
-        {
-          "command": "markupai.clearFilters",
-          "when": "view == markupai.findings",
-          "group": "navigation@4"
-        },
-        {
-          "command": "markupai.showAllFindings",
-          "when": "view == markupai.findings && !markupai.showAllFiles",
-          "group": "navigation@5"
-        },
-        {
-          "command": "markupai.showCurrentFileFindings",
-          "when": "view == markupai.findings && markupai.showAllFiles",
-          "group": "navigation@5"
-        },
-        {
-          "command": "markupai.selectFolder",
-          "when": "view == markupai.folderScanner",
-          "group": "navigation@1"
-        },
-        {
-          "command": "markupai.refreshFolderScanner",
-          "when": "view == markupai.folderScanner",
-          "group": "navigation@2"
-        },
-        {
-          "command": "markupai.checkAllFiles",
-          "when": "view == markupai.folderScanner",
-          "group": "navigation@3"
-        },
-        {
-          "command": "markupai.checkSelectedFiles",
-          "when": "view == markupai.folderScanner",
-          "group": "navigation@4"
-        }
-      ],
-      "view/item/context": [
-        {
-          "command": "markupai.toggleFileSelection",
-          "when": "view == markupai.folderScanner && viewItem == file",
-          "group": "inline@1"
-        },
-        {
-          "command": "markupai.toggleFileSelection",
-          "when": "view == markupai.folderScanner && viewItem == file",
-          "group": "1_selection@1"
-        }
-      ],
-      "editor/context": [
-        {
-          "command": "markupai.checkContent",
-          "group": "markupai@1",
-          "when": "editorTextFocus && markupai.enabled"
-        },
-        {
-          "command": "markupai.disableIssues",
-          "group": "markupai@2",
-          "when": "editorTextFocus && markupai.enabled"
-        },
-        {
-          "command": "markupai.enableIssues",
-          "group": "markupai@2",
-          "when": "editorTextFocus && !markupai.enabled"
-        }
-      ],
-      "commandPalette": [
-        {
-          "command": "markupai.checkContent",
-          "when": "editorIsOpen"
-        },
-        {
-          "command": "markupai.toggleEnabled"
-        },
-        {
-          "command": "markupai.enableIssues",
-          "when": "!markupai.enabled"
-        },
-        {
-          "command": "markupai.disableIssues",
-          "when": "markupai.enabled"
-        },
-        {
-          "command": "markupai.enableCategory",
-          "when": "markupai.enabled"
-        },
-        {
-          "command": "markupai.disableCategory",
-          "when": "false"
-        },
-        {
-          "command": "markupai.showScores",
-          "when": "editorIsOpen"
-        },
-        {
-          "command": "markupai.configureApiToken"
-        },
-        {
-          "command": "markupai.selectStyleGuide"
-        },
-        {
-          "command": "markupai.selectDialect"
-        },
-        {
-          "command": "markupai.goToIssue",
-          "when": "false"
+          "id": "markupai",
+          "title": "MarkupAI",
+          "icon": "$(sparkle)"
         }
       ]
     },
     "views": {
-      "markupai-sidebar": [
+      "markupai": [
         {
-          "id": "markupai.folderScanner",
-          "name": "Folder Scanner",
-          "type": "tree",
-          "contextualTitle": "MarkupAI Folder Scanner"
-        }
-      ],
-      "markupai-panel": [
+          "id": "markupai.agentConfig",
+          "name": "Agent Configuration",
+          "type": "webview"
+        },
         {
-          "id": "markupai.findings",
-          "name": "Findings",
-          "type": "tree",
-          "contextualTitle": "MarkupAI Findings"
+          "id": "markupai.batchCheck",
+          "name": "Batch Check",
+          "type": "webview"
         }
       ]
     },
-    "viewsContainers": {
-      "activitybar": [
+    "menus": {
+      "editor/title": [
         {
-          "id": "markupai-sidebar",
-          "title": "MarkupAI",
-          "icon": "assets/markup-icon-activitybar.svg"
+          "command": "markupai.scanCurrentFile",
+          "group": "navigation",
+          "when": "resourceExtname =~ /\\.(md|markdown|html|htm|dita|txt|xml|rst)$/"
         }
       ],
-      "panel": [
+      "view/title": [
         {
-          "id": "markupai-panel",
-          "title": "MarkupAI",
-          "icon": "$(checklist)"
+          "command": "markupai.refreshAgents",
+          "when": "view == markupai.agentConfig",
+          "group": "navigation"
         }
       ]
-    },
-    "viewsWelcome": [
-      {
-        "view": "markupai.folderScanner",
-        "contents": "No folder open.\n\nOpen a folder to scan documents for writing issues.\n\n[Open Folder](command:vscode.openFolder)\n\nOr select a specific folder:\n[Select Folder](command:markupai.selectFolder)",
-        "when": "workspaceFolderCount == 0"
-      }
-    ]
+    }
   },
-  "activationEvents": [
-    "onStartupFinished"
-  ],
-  "dependencies": {
-    "@markupai/api": "^1.5.0",
-    "diff-match-patch-ts": "^0.8.0"
+  "scripts": {
+    "compile": "node esbuild.mjs",
+    "compile:watch": "node esbuild.mjs --watch",
+    "package": "vsce package --out dist/",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src test",
+    "lint:check": "eslint src test",
+    "lint:fix": "eslint src test --fix",
+    "format": "prettier --write \"**/*.{ts,tsx,js,mjs,json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,mjs,json,md,yml,yaml}\"",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.2",
-    "@types/node": "24.x",
-    "@types/vscode": "^1.108.1",
+    "@types/node": "^24.0.0",
+    "@types/vscode": "^1.95.0",
     "@vitest/coverage-v8": "^2.1.8",
-    "@vitest/ui": "^2.1.8",
-    "@vscode/test-web": "^0.0.80",
-    "@vscode/vsce": "^3.7.1",
-    "esbuild": "^0.27.3",
-    "eslint": "^9.39.2",
+    "@vscode/vsce": "^3.2.1",
+    "esbuild": "^0.24.0",
+    "eslint": "^9.17.0",
     "prettier": "^3.4.2",
     "prettier-plugin-packagejson": "^2.5.6",
-    "typescript": "^5.9.3",
-    "typescript-eslint": "^8.52.0",
-    "vite": "^6.0.7",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.0",
     "vitest": "^2.1.8"
-  },
-  "engines": {
-    "vscode": "^1.108.1"
-  },
-  "icon": "assets/Markup AI Icon 128.png",
-  "capabilities": {
-    "virtualWorkspaces": true,
-    "untrustedWorkspaces": {
-      "supported": true
-    }
   }
 }

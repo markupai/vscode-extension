@@ -1,18 +1,26 @@
 {
   "compilerOptions": {
-    "esModuleInterop": true,
-    "isolatedModules": true,
-    "lib": ["ES2022"],
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "outDir": "out",
+    "rootDir": ".",
+    "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "outDir": "./out",
-    "resolveJsonModule": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "exactOptionalPropertyTypes": false,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
     "sourceMap": true,
-    "strict": true,
-    "target": "ES2022"
+    "declaration": false,
+    "types": ["node", "vscode"]
   },
-  "include": ["src", "test"]
+  "include": ["src/**/*.ts", "test/**/*.ts", "vitest.config.ts", "esbuild.mjs"],
+  "exclude": ["node_modules", "out", "dist", "coverage"]
 }

@@ -1,46 +1,32 @@
 import { defineConfig } from "vitest/config";
-import path from "path";
+import path from "node:path";
 
 export default defineConfig({
-  test: {
-    globals: true,
-    environment: "node",
-    include: ["test/**/*.{test,spec}.ts"],
-    exclude: ["node_modules", "out", "dist", ".vscode-test"],
-    pool: "forks",
-    poolOptions: {
-      forks: {
-        singleFork: true,
-      },
+  resolve: {
+    alias: {
+      vscode: path.resolve(__dirname, "test/mocks/vscode.ts"),
     },
-    testTimeout: 5000,
-    hookTimeout: 5000,
+  },
+  test: {
+    environment: "node",
+    include: ["test/**/*.test.ts"],
+    globals: false,
     coverage: {
       provider: "v8",
-      reporter: ["text", "json", "html", "lcov"],
+      reporter: ["text", "lcov", "html"],
+      reportsDirectory: "./coverage",
       include: ["src/**/*.ts"],
       exclude: [
-        "src/test/**",
         "src/extension.ts",
+        "src/views/**/webview.html.ts",
         "**/*.d.ts",
-        "**/node_modules/**",
-        "**/out/**",
-        "**/dist/**",
       ],
       thresholds: {
         lines: 80,
         functions: 80,
-        branches: 75,
         statements: 80,
+        branches: 75,
       },
-    },
-    mockReset: true,
-    clearMocks: true,
-    restoreMocks: true,
-  },
-  resolve: {
-    alias: {
-      vscode: path.resolve(__dirname, "./test/mocks/vscode.ts"),
     },
   },
 });

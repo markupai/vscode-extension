@@ -1,35 +1,74 @@
-import { MarkupAI } from "@markupai/api";
-import { StyleGuideOption } from "./types";
+// ===================================================================
+// MarkupAI extension — compile-time constants
+// ===================================================================
 
-// ============================================================================
-// Language Dialects
-// ============================================================================
+export const EXTENSION_ID = "markupai-vscode";
+export const EXTENSION_NAME = "MarkupAI";
+export const DIAGNOSTIC_SOURCE = "MarkupAI";
+export const USER_MESSAGE_PREFIX = "MarkupAI: ";
 
-export const DIALECTS: { value: MarkupAI.Dialects; label: string }[] = [
-  { value: "american_english", label: "American English" },
-  { value: "british_english", label: "British English" },
-  { value: "canadian_english", label: "Canadian English" },
+// ===================================================================
+// API
+// ===================================================================
+
+export const API_BASE_URLS = {
+  dev: "https://api.dev.markup.ai",
+  prod: "https://api.markup.ai",
+} as const;
+
+/**
+ * The "Parallel Executor" agent orchestrates a set of worker agents.
+ * We POST `/agents/{PARALLEL_EXECUTOR_AGENT_ID}/run` with the list of
+ * worker-agent internal IDs in the body. This matches the pattern used
+ * by the MarkupAI browser extension.
+ */
+export const PARALLEL_EXECUTOR_AGENT_ID = "ag_cnct5nkhtfNk";
+
+export const INTEGRATION_ID = "vscode_extension";
+
+// ===================================================================
+// Agents — compile-time allowlist
+// ===================================================================
+
+/**
+ * Slugs of agents this build of the extension is allowed to surface.
+ * Agents returned by the server are intersected with this list, so
+ * removing an entry here hides the agent regardless of platform state.
+ *
+ * To disable an agent for a specific build, comment it out and recompile.
+ */
+export const ENABLED_AGENT_SLUGS: readonly string[] = [
+  "style_agent",
+  "terminology",
+  "fact_check",
+  "compliance",
+  "ai_detection",
+  "filler_removal",
+  "geo_seo",
 ];
 
-// ============================================================================
-// Built-in Style Guides
-// ============================================================================
+// ===================================================================
+// Content profiles
+// ===================================================================
 
-export const BUILT_IN_STYLE_GUIDES: StyleGuideOption[] = [
-  { id: "ap", name: "AP Style Guide", isBuiltIn: true },
-  { id: "chicago", name: "Chicago Manual of Style", isBuiltIn: true },
-  { id: "microsoft", name: "Microsoft Style Guide", isBuiltIn: true },
-];
+export const CONTENT_PROFILE = {
+  markdown: "markdown",
+  dita: "dita",
+} as const;
 
-// ============================================================================
-// API Configuration
-// ============================================================================
+// ===================================================================
+// File-type dispatch
+// ===================================================================
 
-export const POLL_INTERVAL_MS = 2000;
-export const MAX_POLL_ATTEMPTS = 60; // 2 minutes max
-
-// ============================================================================
-// Supported File Extensions
-// ============================================================================
-
-export const SUPPORTED_FILE_EXTENSIONS = [".md", ".txt", ".dita", ".html", ".htm", ".xml"];
+/** Extensions we can natively scan (after optional markdown conversion). */
+export const SUPPORTED_EXTENSIONS = [
+  ".md",
+  ".markdown",
+  ".txt",
+  ".html",
+  ".htm",
+  ".xhtml",
+  ".dita",
+  ".xml",
+  ".rst",
+] as const;
