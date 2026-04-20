@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { API_BASE_URLS, ENABLED_AGENT_SLUGS } from "./constants.js";
+import { API_BASE_URLS, BUILD_DEFAULT_ENVIRONMENT, ENABLED_AGENT_SLUGS } from "./constants.js";
 import type { Environment, LogLevel } from "./types.js";
 
 const SECTION = "markupai";
@@ -15,8 +15,11 @@ export class ExtensionConfig {
   }
 
   getEnvironment(): Environment {
-    const value = this.cfg.get<string>("environment", "dev");
-    return value === "prod" ? "prod" : "dev";
+    // "default" here means "fall back to the build-time default". Users
+    // who want to override the shipped build can pick dev/prod explicitly.
+    const value = this.cfg.get<string>("environment", "default");
+    if (value === "dev" || value === "prod") return value;
+    return BUILD_DEFAULT_ENVIRONMENT;
   }
 
   getApiBaseUrl(): string {

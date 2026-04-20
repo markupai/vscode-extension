@@ -48,12 +48,26 @@ Both auto-trigger `npm: compile` as a pre-launch task.
 
 ## Configuration
 
-| Setting                       | Default | Description                                              |
-| ----------------------------- | ------- | -------------------------------------------------------- |
-| `markupai.environment`        | `dev`   | API environment: `dev` or `prod`                         |
-| `markupai.enabledAgents`      | `[]`    | Slugs to enable; empty = all compile-time allowed agents |
-| `markupai.styleGuideTargetId` | `""`    | Default target id used by the Style agent                |
-| `markupai.logLevel`           | `info`  | `debug` / `info` / `warn` / `error`                      |
+| Setting                       | Default   | Description                                                                     |
+| ----------------------------- | --------- | ------------------------------------------------------------------------------- |
+| `markupai.environment`        | `default` | `default` (build-time), `dev`, or `prod`. Leave at `default` unless overriding. |
+| `markupai.enabledAgents`      | `[]`      | Slugs to enable; empty = all compile-time allowed agents                        |
+| `markupai.styleGuideTargetId` | `""`      | Default target id used by the Style agent                                       |
+| `markupai.logLevel`           | `info`    | `debug` / `info` / `warn` / `error`                                             |
+
+### Build-time environment (dev vs prod)
+
+Released builds point at **`api.markup.ai`**. To compile a build that points at
+**`api.dev.markup.ai`** by default, set `MARKUPAI_ENV=dev` either as an inline env
+or in a `.env` file at the repo root:
+
+```bash
+cp .env.example .env      # contains MARKUPAI_ENV=dev
+npm run compile           # logs: "build-time environment = dev"
+```
+
+The esbuild step bakes the chosen environment into the bundle as a constant. Users
+can still override per-workstation via the `markupai.environment` VS Code setting.
 
 ## Commands
 

@@ -17,6 +17,18 @@ export const API_BASE_URLS = {
 } as const;
 
 /**
+ * Default environment baked in at compile time. Esbuild's `define`
+ * replaces `process.env.MARKUPAI_BUILD_ENV` with a literal, so the
+ * value here is the bundle's default and cannot be changed at runtime
+ * short of the user flipping `markupai.environment`.
+ *
+ * Set by `.env` (MARKUPAI_ENV=dev) at build time. Released/prod builds
+ * have no `.env`, so this defaults to `prod`.
+ */
+export const BUILD_DEFAULT_ENVIRONMENT: "dev" | "prod" =
+  process.env.MARKUPAI_BUILD_ENV === "dev" ? "dev" : "prod";
+
+/**
  * The "Parallel Executor" agent orchestrates a set of worker agents.
  * We POST `/agents/{PARALLEL_EXECUTOR_AGENT_ID}/run` with the list of
  * worker-agent internal IDs in the body. This matches the pattern used

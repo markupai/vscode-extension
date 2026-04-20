@@ -68,11 +68,17 @@
         "markupai.environment": {
           "type": "string",
           "enum": [
+            "default",
             "dev",
             "prod"
           ],
-          "default": "dev",
-          "description": "MarkupAI API environment. 'dev' uses api.dev.markup.ai, 'prod' uses api.markup.ai."
+          "enumDescriptions": [
+            "Use whichever environment this build was compiled for (prod unless .env MARKUPAI_ENV=dev).",
+            "Force api.dev.markup.ai.",
+            "Force api.markup.ai."
+          ],
+          "default": "default",
+          "description": "Override the MarkupAI API environment. Leave at 'default' unless you know what you're doing — the build-time default is 'prod' for released builds and 'dev' when compiled with MARKUPAI_ENV=dev."
         },
         "markupai.enabledAgents": {
           "type": "array",
