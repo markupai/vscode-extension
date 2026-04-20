@@ -30,9 +30,9 @@ describe("ExtensionConfig", () => {
   });
 
   it("intersects user-configured agents with compile-time allowlist", () => {
-    _configStore["markupai.enabledAgents"] = ["style_agent", "bogus", "terminology"];
+    _configStore["markupai.enabledAgents"] = ["style_agent", "bogus", "brand_voice"];
     const c = new ExtensionConfig();
-    expect(c.getEnabledAgents()).toEqual(["style_agent", "terminology"]);
+    expect(c.getEnabledAgents()).toEqual(["style_agent", "brand_voice"]);
   });
 
   it("getLogLevel returns a valid level", () => {

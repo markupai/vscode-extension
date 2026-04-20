@@ -34,7 +34,7 @@ export class AgentRegistry {
   async refresh(): Promise<readonly Agent[]> {
     const response = await this.client.listAgents();
     const allow = new Set(ENABLED_AGENT_SLUGS);
-    this.agents = response.data
+    this.agents = response.agents
       .map(normalize)
       .filter((a): a is Agent => a !== null)
       .filter((a) => !NON_SELECTABLE.has(a.slug))
@@ -47,7 +47,7 @@ export function normalize(raw: RawAgentRecord): Agent | null {
   const slug = deriveSlug(raw);
   if (!slug) return null;
   const ui = raw.metadata?.ui ?? {};
-  const inputSchema = raw.metadata?.input_schema?.properties ?? {};
+  const inputSchema = raw.input_schema?.properties ?? raw.metadata?.input_schema?.properties ?? {};
   const configKeys = Object.keys(inputSchema).filter((k) => k !== "text");
   return {
     slug,

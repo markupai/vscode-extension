@@ -60,7 +60,7 @@ export class MarkupAIClient {
   }
 
   async listAgents(signal?: AbortSignal): Promise<AgentListResponse> {
-    const url = `${this.config.getApiBaseUrl()}/agents/list?page_size=100`;
+    const url = `${this.config.getApiBaseUrl()}/agents?page_size=100`;
     const headers = await this.authHeaders();
     this.logger.debug("GET", url);
     const res = await this.fetchImpl(url, {

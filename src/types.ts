@@ -32,6 +32,9 @@ export interface RawAgentRecord {
   readonly id: string;
   readonly name: string;
   readonly description?: string | null;
+  readonly input_schema?: {
+    readonly properties?: Record<string, unknown>;
+  };
   readonly metadata?: {
     readonly input_schema?: {
       readonly properties?: Record<string, unknown>;
@@ -88,13 +91,12 @@ export interface AgentConfig {
 // ===================================================================
 
 export interface AgentRunResponse {
-  readonly data: {
-    readonly workflow_id: string;
-  };
+  readonly workflow_id: string;
+  readonly status?: string;
 }
 
 export interface AgentListResponse {
-  readonly data: readonly RawAgentRecord[];
+  readonly agents: readonly RawAgentRecord[];
 }
 
 // ===================================================================

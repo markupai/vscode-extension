@@ -33,7 +33,7 @@ function fakeClient(opts: {
   return {
     runAgents: vi.fn(async () => {
       if (opts.runThrows) throw opts.runThrows;
-      return { data: { workflow_id: opts.workflowId ?? "wf_1" } };
+      return { workflow_id: opts.workflowId ?? "wf_1" };
     }),
     streamWorkflow: async function* () {
       for (const ev of opts.events ?? []) yield ev;

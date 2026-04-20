@@ -46,7 +46,7 @@ describe("MarkupAIClient", () => {
   });
 
   it("listAgents sends bearer + integration headers", async () => {
-    const fetchSpy: typeof fetch = vi.fn(async () => jsonResponse({ data: [] }));
+    const fetchSpy: typeof fetch = vi.fn(async () => jsonResponse({ agents: [] }));
     const client = new MarkupAIClient(
       makeConfig(),
       makeAuth("mat_abc"),
@@ -58,16 +58,14 @@ describe("MarkupAIClient", () => {
     const mock = vi.mocked(fetchSpy);
     expect(mock).toHaveBeenCalledOnce();
     const [url, init] = mock.mock.calls[0];
-    expect(String(url)).toContain("/agents/list");
+    expect(String(url)).toContain("/agents?page_size=");
     const headers = init!.headers as Record<string, string>;
     expect(headers.Authorization).toBe("Bearer mat_abc");
     expect(headers["x-integration-version"]).toBe("1.2.3");
   });
 
   it("runAgents posts to the parallel-executor endpoint with body", async () => {
-    const fetchSpy: typeof fetch = vi.fn(async () =>
-      jsonResponse({ data: { workflow_id: "wf_1" } }),
-    );
+    const fetchSpy: typeof fetch = vi.fn(async () => jsonResponse({ workflow_id: "wf_1" }));
     const client = new MarkupAIClient(
       makeConfig(),
       makeAuth("mat_abc"),
@@ -81,7 +79,7 @@ describe("MarkupAIClient", () => {
       contentProfile: "markdown",
       agentConfig: {},
     });
-    expect(res.data.workflow_id).toBe("wf_1");
+    expect(res.workflow_id).toBe("wf_1");
     const [, init] = vi.mocked(fetchSpy).mock.calls[0];
     expect(init!.method).toBe("POST");
     const body = JSON.parse(String(init!.body));

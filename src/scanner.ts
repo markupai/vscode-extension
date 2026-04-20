@@ -112,7 +112,7 @@ export class Scanner {
       },
       opts.signal,
     );
-    const workflowId = run.data.workflow_id;
+    const workflowId = run.workflow_id;
     this.logger.info(
       `scan: workflow=${workflowId} agents=[${bucket.agents.map((a) => a.slug).join(", ")}] profile=${converted.contentProfile}`,
     );

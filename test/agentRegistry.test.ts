@@ -5,7 +5,7 @@ import type { RawAgentRecord } from "../src/types.js";
 
 function makeClient(records: RawAgentRecord[]): MarkupAIClient {
   return {
-    listAgents: vi.fn(async () => ({ data: records })),
+    listAgents: vi.fn(async () => ({ agents: records })),
   } as unknown as MarkupAIClient;
 }
 
@@ -19,9 +19,9 @@ describe("normalize", () => {
     const a = normalize({
       id: "ag_2",
       name: "terminology",
+      input_schema: { properties: { text: {}, domain_ids: {} } },
       metadata: {
         ui: { title: "Terminology", description: "x", category: "brand" },
-        input_schema: { properties: { text: {}, domain_ids: {} } },
       },
     });
     expect(a?.displayName).toBe("Terminology");

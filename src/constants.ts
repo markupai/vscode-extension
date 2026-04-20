@@ -38,13 +38,23 @@ export const INTEGRATION_ID = "vscode_extension";
  * To disable an agent for a specific build, comment it out and recompile.
  */
 export const ENABLED_AGENT_SLUGS: readonly string[] = [
+  // brand & style
   "style_agent",
+  "brand_voice",
   "terminology",
-  "fact_check",
-  "compliance",
-  "ai_detection",
-  "filler_removal",
-  "geo_seo",
+  // integrity & AI detection
+  "ai_voice_detector",
+  "focus_agent",
+  "sentence_clarity",
+  // accuracy
+  "generic_claims",
+  "source_authority",
+  "freshness",
+  // generative / GEO
+  "snippet_readiness",
+  "answer_authority",
+  // personas
+  "persona",
 ];
 
 // ===================================================================
