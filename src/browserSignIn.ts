@@ -76,7 +76,7 @@ export async function runBrowserSignIn(opts: BrowserSignInOptions): Promise<Brow
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const pollIntervalMs = opts.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS;
 
-  const base = opts.apiBaseUrl.replace(/\/+$/, "");
+  const base = stripTrailingSlash(opts.apiBaseUrl);
   const provider = encodeURIComponent(opts.provider);
 
   const { readKey, authorizeUrl } = await startMediation(fetchImpl, base, provider);
@@ -178,4 +178,11 @@ async function exchangeCode(
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Remove any trailing `/` chars. Linear, no regex backtracking. */
+function stripTrailingSlash(s: string): string {
+  let end = s.length;
+  while (end > 0 && s[end - 1] === "/") end--;
+  return s.slice(0, end);
 }
