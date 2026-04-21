@@ -141,7 +141,7 @@
         {
           "id": "markupai",
           "title": "MarkupAI",
-          "icon": "$(sparkle)"
+          "icon": "assets/markup-icon-activitybar.svg"
         }
       ]
     }
@@ -164,5 +164,6 @@
   },
   "engines": {
     "vscode": "^1.95.0"
-  }
+  },
+  "icon": "assets/Markup AI Icon 128.png"
 }
