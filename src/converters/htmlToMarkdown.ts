@@ -23,10 +23,35 @@ export function htmlToMarkdown(html: string): ConvertedContent {
 }
 
 function stripScriptsAndStyles(html: string): string {
-  return html
-    .replaceAll(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "")
-    .replaceAll(/<style\b[^>]*>[\s\S]*?<\/style>/gi, "")
-    .replaceAll(/<!--[\s\S]*?-->/g, "");
+  let out = stripPaired(html, "<script", "</script>");
+  out = stripPaired(out, "<style", "</style>");
+  out = stripPaired(out, "<!--", "-->");
+  return out;
+}
+
+/**
+ * Remove every `<open…close>` block using indexOf scans — each byte is
+ * visited at most twice, so this is explicitly O(n). A regex with
+ * `[\s\S]*?` does the same thing but trips Sonar's ReDoS heuristics.
+ */
+function stripPaired(input: string, open: string, close: string): string {
+  const lowered = input.toLowerCase();
+  const openLower = open.toLowerCase();
+  const closeLower = close.toLowerCase();
+  let out = "";
+  let i = 0;
+  while (i < input.length) {
+    const start = lowered.indexOf(openLower, i);
+    if (start === -1) {
+      out += input.slice(i);
+      break;
+    }
+    out += input.slice(i, start);
+    const end = lowered.indexOf(closeLower, start + openLower.length);
+    if (end === -1) break;
+    i = end + closeLower.length;
+  }
+  return out;
 }
 
 interface Token {

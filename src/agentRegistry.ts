@@ -65,10 +65,12 @@ function deriveSlug(raw: RawAgentRecord): string {
   // UI's compile-time allowlist can match reliably.
   const name = raw.name.trim();
   if (!name) return "";
+  // Two anchored passes — no alternation, no backtracking ambiguity.
   return name
     .toLowerCase()
     .replaceAll(/[^a-z0-9]+/g, "_")
-    .replaceAll(/^_+|_+$/g, "");
+    .replace(/^_+/, "")
+    .replace(/_+$/, "");
 }
 
 function toCategory(value: string | undefined): AgentCategory {

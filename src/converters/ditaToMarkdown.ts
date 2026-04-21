@@ -11,22 +11,24 @@ import type { ConvertedContent } from "../types.js";
  * style_agent sees the raw DITA text via `dita` content profile instead.
  */
 export function ditaToMarkdown(dita: string): ConvertedContent {
+  // `[^>]*>` is a linear, ReDoS-safe pattern (character class excludes `>`).
+  // It matches either `<tag>` or `<tag attr=…>` in the same single pass.
   const pseudo = dita
-    .replaceAll(/<title(\s[^>]*)?>/g, "<h1>")
+    .replaceAll(/<title[^>]*>/g, "<h1>")
     .replaceAll("</title>", "</h1>")
-    .replaceAll(/<section(\s[^>]*)?>/g, "<section>")
+    .replaceAll(/<section[^>]*>/g, "<section>")
     .replaceAll("</section>", "</section>")
-    .replaceAll(/<codeblock(\s[^>]*)?>/g, "<pre><code>")
+    .replaceAll(/<codeblock[^>]*>/g, "<pre><code>")
     .replaceAll("</codeblock>", "</code></pre>")
-    .replaceAll(/<codeph(\s[^>]*)?>/g, "<code>")
+    .replaceAll(/<codeph[^>]*>/g, "<code>")
     .replaceAll("</codeph>", "</code>")
-    .replaceAll(/<ph(\s[^>]*)?>/g, "")
+    .replaceAll(/<ph[^>]*>/g, "")
     .replaceAll("</ph>", "")
-    .replaceAll(/<b(\s[^>]*)?>/g, "<strong>")
+    .replaceAll(/<b[^>]*>/g, "<strong>")
     .replaceAll("</b>", "</strong>")
-    .replaceAll(/<i(\s[^>]*)?>/g, "<em>")
+    .replaceAll(/<i[^>]*>/g, "<em>")
     .replaceAll("</i>", "</em>")
-    .replaceAll(/<note(\s[^>]*)?>/g, "<blockquote>")
+    .replaceAll(/<note[^>]*>/g, "<blockquote>")
     .replaceAll("</note>", "</blockquote>");
 
   const converted = htmlToMarkdown(pseudo);
