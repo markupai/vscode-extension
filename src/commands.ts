@@ -165,9 +165,10 @@ export async function scanDocument(doc: vscode.TextDocument, deps: CommandDeps):
             });
           },
         });
+        const issuePlural = result.totalIssues === 1 ? "" : "s";
         const msg = result.errors.length
           ? `${USER_MESSAGE_PREFIX}scan finished with errors: ${result.errors.join("; ")}`
-          : `${USER_MESSAGE_PREFIX}scan complete — ${result.totalIssues} issue${result.totalIssues === 1 ? "" : "s"}.`;
+          : `${USER_MESSAGE_PREFIX}scan complete — ${result.totalIssues} issue${issuePlural}.`;
         if (result.errors.length) void vscode.window.showWarningMessage(msg);
         else void vscode.window.showInformationMessage(msg);
       } catch (err) {

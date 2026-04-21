@@ -13,7 +13,9 @@ export function remapOffset(map: OffsetMap, mdOffset: number): number {
   const pairs = map.pairs;
   if (!pairs.length) return mdOffset;
   if (mdOffset <= pairs[0].md) return pairs[0].src;
-  if (mdOffset >= pairs[pairs.length - 1].md) return pairs[pairs.length - 1].src;
+  const last = pairs.at(-1);
+  if (last === undefined) return mdOffset;
+  if (mdOffset >= last.md) return last.src;
 
   let lo = 0;
   let hi = pairs.length - 1;

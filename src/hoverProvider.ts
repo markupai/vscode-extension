@@ -29,16 +29,9 @@ export class MarkupAIHoverProvider implements vscode.HoverProvider {
 
 function formatIssue(issue: IssueWithId): string {
   const agent = issue.agentName ?? issue.agent;
-  const lines: string[] = [];
-  lines.push(`**MarkupAI · ${agent}** _(${issue.severity})_`);
-  lines.push("");
-  lines.push(issue.explanation);
+  const lines: string[] = [`**MarkupAI · ${agent}** _(${issue.severity})_`, "", issue.explanation];
   if (issue.suggestion) {
-    lines.push("");
-    lines.push("**Suggestion:**");
-    lines.push("```");
-    lines.push(issue.suggestion);
-    lines.push("```");
+    lines.push("", "**Suggestion:**", "```", issue.suggestion, "```");
   }
   return lines.join("\n");
 }

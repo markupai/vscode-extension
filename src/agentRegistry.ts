@@ -67,8 +67,8 @@ function deriveSlug(raw: RawAgentRecord): string {
   if (!name) return "";
   return name
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
+    .replaceAll(/[^a-z0-9]+/g, "_")
+    .replaceAll(/^_+|_+$/g, "");
 }
 
 function toCategory(value: string | undefined): AgentCategory {

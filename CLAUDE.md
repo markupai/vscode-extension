@@ -42,12 +42,13 @@ If you change build-time env handling, update both `esbuild.mjs` and `src/consta
 **Compile-time agent allowlist.** `ENABLED_AGENT_SLUGS` in [src/constants.ts](src/constants.ts) is the upper bound of agents this build exposes. At runtime, [src/agentRegistry.ts](src/agentRegistry.ts) intersects the `/agents` response with this set — agents absent from the platform are silently dropped; agents removed from the allowlist never appear regardless of platform state. To enable a new agent, add its slug here AND ensure the platform exposes it.
 
 **Content-profile buckets.** [src/scanner.ts](src/scanner.ts) can split a single scan into multiple parallel requests, each with its own `content_profile_id`:
+
 - `style_agent` + `.dita` source → one bucket with `content_profile_id: "dita"`, raw XML as `text`
 - all other combinations → one bucket with `content_profile_id: "markdown"`, HTML/DITA first converted to markdown
 
 Each bucket gets its own SSE stream; results are merged.
 
-**Offset remapping.** When a converter (HTML→MD or DITA→MD) produces the text sent to an agent, it also emits an `OffsetMap` — a sparse list of `{md, src}` pairs. Agent-returned issue positions live in the *markdown* coordinate space; [src/issueRemapping.ts](src/issueRemapping.ts) binary-searches the map to project them back to *source* offsets before they're published as diagnostics. If you add a new converter, it MUST emit an accurate `OffsetMap`.
+**Offset remapping.** When a converter (HTML→MD or DITA→MD) produces the text sent to an agent, it also emits an `OffsetMap` — a sparse list of `{md, src}` pairs. Agent-returned issue positions live in the _markdown_ coordinate space; [src/issueRemapping.ts](src/issueRemapping.ts) binary-searches the map to project them back to _source_ offsets before they're published as diagnostics. If you add a new converter, it MUST emit an accurate `OffsetMap`.
 
 **Per-agent diagnostics index.** [src/diagnostics.ts](src/diagnostics.ts) stores issues in a `Map<uri, Map<agentSlug, issues[]>>`, publishing all agents' issues into a single `DiagnosticCollection`. Re-scanning one agent replaces only that agent's entries — the others persist. Hover and code-action lookups iterate the nested map to find all issues overlapping a cursor position.
 

@@ -36,4 +36,6 @@ export function convertForAgents(
   return markdownPassthrough(text);
 }
 
-export { htmlToMarkdown, ditaToMarkdown, ditaPassthrough, markdownPassthrough };
+export { ditaPassthrough, ditaToMarkdown } from "./ditaToMarkdown.js";
+export { htmlToMarkdown } from "./htmlToMarkdown.js";
+export { markdownPassthrough } from "./markdownPassthrough.js";

@@ -24,9 +24,9 @@ export function htmlToMarkdown(html: string): ConvertedContent {
 
 function stripScriptsAndStyles(html: string): string {
   return html
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "")
-    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, "")
-    .replace(/<!--[\s\S]*?-->/g, "");
+    .replaceAll(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "")
+    .replaceAll(/<style\b[^>]*>[\s\S]*?<\/style>/gi, "")
+    .replaceAll(/<!--[\s\S]*?-->/g, "");
 }
 
 interface Token {
@@ -79,18 +79,17 @@ function renderTokens(tokens: Token[]): { markdown: string; pairs: OffsetPair[] 
       handleTag(state, tok);
     }
   }
+  const lastToken = tokens.at(-1);
   state.pairs.push({
     md: state.out.length,
-    src: tokens.length
-      ? tokens[tokens.length - 1].offset + tokens[tokens.length - 1].value.length
-      : 0,
+    src: lastToken ? lastToken.offset + lastToken.value.length : 0,
   });
-  return { markdown: state.out.replace(/\n{3,}/g, "\n\n").trimEnd(), pairs: state.pairs };
+  return { markdown: state.out.replaceAll(/\n{3,}/g, "\n\n").trimEnd(), pairs: state.pairs };
 }
 
 function emitText(state: RenderState, text: string, srcOffset: number): void {
   if (!text) return;
-  const collapsed = state.inPre ? text : text.replace(/\s+/g, " ");
+  const collapsed = state.inPre ? text : text.replaceAll(/\s+/g, " ");
   if (!collapsed || (collapsed === " " && state.out.endsWith(" "))) return;
   state.pairs.push({ md: state.out.length, src: srcOffset });
   state.out += collapsed;
@@ -204,12 +203,14 @@ function emitAnchor(state: RenderState, raw: string, _name: string, closing: boo
 
 function decodeEntities(s: string): string {
   return s
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&#(\d+);/g, (_, n: string) => String.fromCodePoint(Number(n)))
-    .replace(/&#x([0-9a-f]+);/gi, (_, h: string) => String.fromCodePoint(Number.parseInt(h, 16)));
+    .replaceAll("&nbsp;", " ")
+    .replaceAll("&amp;", "&")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&#39;", "'")
+    .replaceAll(/&#(\d+);/g, (_, n: string) => String.fromCodePoint(Number(n)))
+    .replaceAll(/&#x([0-9a-f]+);/gi, (_, h: string) =>
+      String.fromCodePoint(Number.parseInt(h, 16)),
+    );
 }

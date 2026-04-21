@@ -46,8 +46,9 @@ function buildFix(doc: vscode.TextDocument, issue: IssueWithId): vscode.CodeActi
 }
 
 function buildIgnore(doc: vscode.TextDocument, issues: readonly IssueWithId[]): vscode.CodeAction {
+  const label = issues.length === 1 ? "issue" : `${issues.length} issues`;
   const action = new vscode.CodeAction(
-    `MarkupAI: dismiss ${issues.length === 1 ? "issue" : `${issues.length} issues`} at cursor`,
+    `MarkupAI: dismiss ${label} at cursor`,
     vscode.CodeActionKind.QuickFix,
   );
   action.command = {

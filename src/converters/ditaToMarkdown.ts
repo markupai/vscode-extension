@@ -12,22 +12,22 @@ import type { ConvertedContent } from "../types.js";
  */
 export function ditaToMarkdown(dita: string): ConvertedContent {
   const pseudo = dita
-    .replace(/<title(\s[^>]*)?>/g, "<h1>")
-    .replace(/<\/title>/g, "</h1>")
-    .replace(/<section(\s[^>]*)?>/g, "<section>")
-    .replace(/<\/section>/g, "</section>")
-    .replace(/<codeblock(\s[^>]*)?>/g, "<pre><code>")
-    .replace(/<\/codeblock>/g, "</code></pre>")
-    .replace(/<codeph(\s[^>]*)?>/g, "<code>")
-    .replace(/<\/codeph>/g, "</code>")
-    .replace(/<ph(\s[^>]*)?>/g, "")
-    .replace(/<\/ph>/g, "")
-    .replace(/<b(\s[^>]*)?>/g, "<strong>")
-    .replace(/<\/b>/g, "</strong>")
-    .replace(/<i(\s[^>]*)?>/g, "<em>")
-    .replace(/<\/i>/g, "</em>")
-    .replace(/<note(\s[^>]*)?>/g, "<blockquote>")
-    .replace(/<\/note>/g, "</blockquote>");
+    .replaceAll(/<title(\s[^>]*)?>/g, "<h1>")
+    .replaceAll("</title>", "</h1>")
+    .replaceAll(/<section(\s[^>]*)?>/g, "<section>")
+    .replaceAll("</section>", "</section>")
+    .replaceAll(/<codeblock(\s[^>]*)?>/g, "<pre><code>")
+    .replaceAll("</codeblock>", "</code></pre>")
+    .replaceAll(/<codeph(\s[^>]*)?>/g, "<code>")
+    .replaceAll("</codeph>", "</code>")
+    .replaceAll(/<ph(\s[^>]*)?>/g, "")
+    .replaceAll("</ph>", "")
+    .replaceAll(/<b(\s[^>]*)?>/g, "<strong>")
+    .replaceAll("</b>", "</strong>")
+    .replaceAll(/<i(\s[^>]*)?>/g, "<em>")
+    .replaceAll("</i>", "</em>")
+    .replaceAll(/<note(\s[^>]*)?>/g, "<blockquote>")
+    .replaceAll("</note>", "</blockquote>");
 
   const converted = htmlToMarkdown(pseudo);
   return {
