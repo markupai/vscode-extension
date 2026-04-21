@@ -49,6 +49,11 @@ export function remapIssue(issue: Issue, map: OffsetMap): Issue {
 /**
  * Build a deterministic id from issue content so the same issue from
  * a later scan replaces the previous one without causing duplicates.
+ *
+ * This is not a security-sensitive identifier — it's just a stable
+ * key for the DiagnosticsManager index. We concatenate the relevant
+ * fields with a delimiter so that any differing character produces a
+ * different id.
  */
 export function issueId(issue: Issue): string {
   const parts = [
@@ -57,21 +62,24 @@ export function issueId(issue: Issue): string {
     issue.severity,
     String(issue.position.start),
     String(issue.position.end),
-    hash32(issue.explanation),
-    hash32(issue.suggestion ?? ""),
+    compactKey(issue.explanation),
+    compactKey(issue.suggestion ?? ""),
   ];
-  return parts.join(":");
+  return parts.join("|");
 }
 
 export function withIds(issues: readonly Issue[]): IssueWithId[] {
   return issues.map((issue) => ({ ...issue, id: issueId(issue) }));
 }
 
-function hash32(s: string): string {
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return (h >>> 0).toString(36);
+/**
+ * Keep a bounded, unambiguous representation of a potentially long
+ * string. Not a hash — just normalisation + truncation so the id has
+ * a stable length without losing the discriminating characters.
+ */
+function compactKey(value: string): string {
+  const normalized = value.replaceAll(/\s+/g, " ").trim();
+  return normalized.length > 120
+    ? `${normalized.slice(0, 120)}~${normalized.length.toString(36)}`
+    : normalized;
 }

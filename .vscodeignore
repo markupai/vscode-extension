@@ -3,12 +3,15 @@
 .vscode/**
 .vscode-test/**
 .vscode-test-web/**
+.scannerwork/**
 coverage/**
 src/**
 test/**
 testdoc/**
 .editorconfig
 .eslintrc*
+.env
+.env.*
 .gitignore
 .npmrc
 .prettierignore

@@ -23,7 +23,7 @@
     "lint": "eslint src test",
     "lint:check": "eslint src test",
     "lint:fix": "eslint src test --fix",
-    "package": "vsce package --out dist/",
+    "package": "node -e \"require('fs').mkdirSync('dist',{recursive:true})\" && vsce package --out dist/",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",

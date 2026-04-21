@@ -88,6 +88,6 @@ describe("withIds", () => {
     ];
     const out = withIds(issues);
     expect(out).toHaveLength(1);
-    expect(out[0].id).toMatch(/^a:/);
+    expect(out[0].id).toMatch(/^a\|/);
   });
 });

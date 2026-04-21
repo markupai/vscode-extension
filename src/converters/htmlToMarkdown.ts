@@ -96,6 +96,37 @@ function emitText(state: RenderState, text: string, srcOffset: number): void {
   state.out += collapsed;
 }
 
+type TagHandler = (state: RenderState, raw: string, name: string, closing: boolean) => void;
+
+const LITERAL_EMIT = new Map<string, string>([
+  ["br", "\n"],
+  ["hr", "\n\n---\n\n"],
+  ["p", "\n\n"],
+  ["div", "\n\n"],
+  ["section", "\n\n"],
+  ["article", "\n\n"],
+  ["strong", "**"],
+  ["b", "**"],
+  ["em", "*"],
+  ["i", "*"],
+]);
+
+const TAG_HANDLERS = new Map<string, TagHandler>([
+  ["h1", emitHeading],
+  ["h2", emitHeading],
+  ["h3", emitHeading],
+  ["h4", emitHeading],
+  ["h5", emitHeading],
+  ["h6", emitHeading],
+  ["code", emitCode],
+  ["pre", emitPre],
+  ["blockquote", emitBlockquote],
+  ["ul", emitList],
+  ["ol", emitList],
+  ["li", emitListItem],
+  ["a", emitAnchor],
+]);
+
 function handleTag(state: RenderState, tok: Token): void {
   const raw = tok.value;
   const closing = raw.startsWith("</");
@@ -104,90 +135,71 @@ function handleTag(state: RenderState, tok: Token): void {
     .replace(/[\s>/].*$/, "")
     .toLowerCase();
 
-  switch (name) {
-    case "br":
-      state.out += "\n";
-      return;
-    case "hr":
-      state.out += "\n\n---\n\n";
-      return;
-    case "p":
-    case "div":
-    case "section":
-    case "article":
-      state.out += "\n\n";
-      return;
-    case "h1":
-    case "h2":
-    case "h3":
-    case "h4":
-    case "h5":
-    case "h6": {
-      if (closing) {
-        state.out += "\n\n";
-      } else {
-        const n = Number(name.slice(1));
-        state.out += "\n\n" + "#".repeat(n) + " ";
-      }
-      return;
-    }
-    case "strong":
-    case "b":
-      state.out += "**";
-      return;
-    case "em":
-    case "i":
-      state.out += "*";
-      return;
-    case "code":
-      if (!state.inPre) state.out += "`";
-      return;
-    case "pre":
-      state.inPre = !closing;
-      state.out += closing ? "\n```\n" : "\n```\n";
-      return;
-    case "blockquote":
-      state.out += closing ? "\n\n" : "\n\n> ";
-      return;
-    case "ul":
-    case "ol":
-      if (closing) {
-        state.lists.pop();
-        if (state.listDepth > 0) state.listDepth--;
-      } else {
-        state.lists.push({ kind: name, index: 0 });
-        state.listDepth++;
-      }
-      state.out += "\n";
-      return;
-    case "li": {
-      if (closing) {
-        state.out += "\n";
-        return;
-      }
-      const top = state.lists.at(-1);
-      const indent = "  ".repeat(Math.max(0, state.listDepth - 1));
-      if (top?.kind === "ol") {
-        top.index += 1;
-        state.out += `\n${indent}${top.index}. `;
-      } else {
-        state.out += `\n${indent}- `;
-      }
-      return;
-    }
-    case "a": {
-      if (!closing) {
-        const href = /href=["']([^"']+)["']/.exec(raw)?.[1];
-        if (href) state.out += "[";
-        return;
-      }
-      // naive: add empty link target; won't roundtrip but keeps offsets stable
-      state.out += "]()";
-      return;
-    }
-    default:
-      return;
+  const literal = LITERAL_EMIT.get(name);
+  if (literal !== undefined) {
+    state.out += literal;
+    return;
   }
+  const handler = TAG_HANDLERS.get(name);
+  if (handler) handler(state, raw, name, closing);
+}
+
+function emitHeading(state: RenderState, _raw: string, name: string, closing: boolean): void {
+  if (closing) {
+    state.out += "\n\n";
+    return;
+  }
+  const n = Number(name.slice(1));
+  state.out += "\n\n" + "#".repeat(n) + " ";
+}
+
+function emitCode(state: RenderState): void {
+  if (!state.inPre) state.out += "`";
+}
+
+function emitPre(state: RenderState, _raw: string, _name: string, closing: boolean): void {
+  state.inPre = !closing;
+  state.out += "\n```\n";
+}
+
+function emitBlockquote(state: RenderState, _raw: string, _name: string, closing: boolean): void {
+  state.out += closing ? "\n\n" : "\n\n> ";
+}
+
+function emitList(state: RenderState, _raw: string, name: string, closing: boolean): void {
+  if (name !== "ul" && name !== "ol") return;
+  if (closing) {
+    state.lists.pop();
+    if (state.listDepth > 0) state.listDepth--;
+  } else {
+    state.lists.push({ kind: name, index: 0 });
+    state.listDepth++;
+  }
+  state.out += "\n";
+}
+
+function emitListItem(state: RenderState, _raw: string, _name: string, closing: boolean): void {
+  if (closing) {
+    state.out += "\n";
+    return;
+  }
+  const top = state.lists.at(-1);
+  const indent = "  ".repeat(Math.max(0, state.listDepth - 1));
+  if (top?.kind === "ol") {
+    top.index += 1;
+    state.out += `\n${indent}${top.index}. `;
+  } else {
+    state.out += `\n${indent}- `;
+  }
+}
+
+function emitAnchor(state: RenderState, raw: string, _name: string, closing: boolean): void {
+  if (closing) {
+    state.out += "]()";
+    return;
+  }
+  const href = /href=["']([^"']+)["']/.exec(raw)?.[1];
+  if (href) state.out += "[";
 }
 
 function decodeEntities(s: string): string {
@@ -199,5 +211,5 @@ function decodeEntities(s: string): string {
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
     .replace(/&#(\d+);/g, (_, n: string) => String.fromCodePoint(Number(n)))
-    .replace(/&#x([0-9a-f]+);/gi, (_, h: string) => String.fromCodePoint(parseInt(h, 16)));
+    .replace(/&#x([0-9a-f]+);/gi, (_, h: string) => String.fromCodePoint(Number.parseInt(h, 16)));
 }
