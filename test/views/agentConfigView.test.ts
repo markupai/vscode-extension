@@ -95,8 +95,11 @@ describe("AgentConfigView", () => {
     } as unknown as AgentRegistry;
   }
 
-  function mkAuth(signed: boolean): AuthStore {
-    return { hasToken: async () => signed } as unknown as AuthStore;
+  function mkAuth(signed: boolean, hasAuthToken = false): AuthStore {
+    return {
+      hasToken: async () => signed,
+      hasAuthToken: async () => hasAuthToken,
+    } as unknown as AuthStore;
   }
 
   it("initial render includes the Sign in button when not signed in", async () => {

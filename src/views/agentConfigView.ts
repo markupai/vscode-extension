@@ -204,9 +204,10 @@ export class AgentConfigView implements vscode.WebviewViewProvider {
         return input ? input.value.trim() : '';
       }
 
-      document.querySelectorAll('button[data-action]').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const action = btn.getAttribute('data-action');
+      document.querySelectorAll('[data-action]').forEach((el) => {
+        el.addEventListener('click', (ev) => {
+          const action = el.getAttribute('data-action');
+          if (el.tagName === 'A') ev.preventDefault();
           if (action === 'saveTarget') {
             post('setTargetId', { id: currentTargetValue() });
           } else {
@@ -235,18 +236,22 @@ export class AgentConfigView implements vscode.WebviewViewProvider {
 
 function renderTargetPicker(state: AgentConfigState): string {
   if (state.targets.length > 0) {
-    const selected = state.styleGuideTargetId;
-    const options = [`<option value="">— none —</option>`];
-    for (const t of state.targets) {
-      const sel = t.id === selected ? "selected" : "";
-      const label = t.is_default ? `${t.display_name} (default)` : t.display_name;
-      options.push(`<option value="${escapeHtml(t.id)}" ${sel}>${escapeHtml(label)}</option>`);
-    }
-    return `<select id="targetSelect">${options.join("")}</select>`;
+    return renderTargetSelect(state);
   }
   const placeholder = "Style-guide target id (e.g. tgt_...)";
   const note = fallbackNote(state);
   return `${note}<input type="text" id="targetId" placeholder="${placeholder}" value="${escapeHtml(state.styleGuideTargetId)}" />`;
+}
+
+function renderTargetSelect(state: AgentConfigState): string {
+  const selected = state.styleGuideTargetId;
+  const options = [`<option value="">— none —</option>`];
+  for (const t of state.targets) {
+    const sel = t.id === selected ? "selected" : "";
+    const label = t.is_default ? `${t.display_name} (default)` : t.display_name;
+    options.push(`<option value="${escapeHtml(t.id)}" ${sel}>${escapeHtml(label)}</option>`);
+  }
+  return `<select id="targetSelect">${options.join("")}</select>`;
 }
 
 function fallbackNote(state: AgentConfigState): string {

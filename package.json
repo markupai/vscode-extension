@@ -33,7 +33,7 @@
     "commands": [
       {
         "command": "markupai.signIn",
-        "title": "MarkupAI: Sign In (set API token)"
+        "title": "MarkupAI: Sign In"
       },
       {
         "command": "markupai.signOut",

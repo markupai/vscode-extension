@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as vscode from "vscode";
-import { _registeredCommands, _resetVscodeMock, _configStore } from "./mocks/vscode.js";
+import { _configStore, _registeredCommands, _resetVscodeMock } from "./mocks/vscode.js";
 import { registerCommands, scanDocument } from "../src/commands.js";
 import { DiagnosticsManager } from "../src/diagnostics.js";
 import type { AgentRegistry } from "../src/agentRegistry.js";
@@ -117,12 +117,38 @@ describe("registerCommands", () => {
     expect(clearSpy).toHaveBeenCalled();
   });
 
-  it("signIn refreshes the registry after a successful prompt", async () => {
-    vi.spyOn(vscode.window, "showInputBox").mockResolvedValue("mat_xyz");
-    const h = makeHarness();
+  it("signIn runs the OAuth mediation flow and stores the access token", async () => {
+    // Stub the full mediation conversation: start → poll-complete → exchange.
+    const fetchStub = vi.spyOn(globalThis, "fetch").mockImplementation((async (input: string) => {
+      if (input.endsWith("/oauth/figma/start")) {
+        return new Response(
+          JSON.stringify({ read_key: "rk", authorize_url: "https://api.dev.markup.ai/x" }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (input.includes("/oauth/figma/poll")) {
+        return new Response(JSON.stringify({ status: "complete", code: "c" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (input.endsWith("/oauth/figma/exchange")) {
+        return new Response(JSON.stringify({ access_token: "eyJ.real" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return new Response("", { status: 404 });
+    }) as typeof fetch);
+    vi.spyOn(vscode.env, "openExternal").mockResolvedValue(true);
+
+    const config = {
+      getApiBaseUrl: () => "https://api.dev.markup.ai",
+    } as unknown as ExtensionConfig;
+    const h = makeHarness({ config });
     registerCommands(makeContext(), {
       auth: h.auth,
-      config: {} as ExtensionConfig,
+      config,
       registry: h.registry,
       scanner: h.scanner,
       diagnostics: h.diagnostics,
@@ -130,6 +156,8 @@ describe("registerCommands", () => {
       onAgentsRefreshed: h.refreshed,
     });
     await _registeredCommands.get("markupai.signIn")!();
+    expect(fetchStub).toHaveBeenCalled();
+    expect(h.auth.setToken).toHaveBeenCalledWith("eyJ.real");
     expect(h.registry.refresh).toHaveBeenCalled();
     expect(h.refreshed).toHaveBeenCalled();
   });

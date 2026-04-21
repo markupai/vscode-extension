@@ -17,6 +17,14 @@ export const API_BASE_URLS = {
 } as const;
 
 /**
+ * Integration name passed to the backend mediation endpoints
+ * (`/oauth/{OAUTH_PROVIDER}/start` etc.). Reuses the `figma` integration
+ * for now — once the server registers a dedicated `vscode` integration
+ * we'll swap this constant and rebuild.
+ */
+export const OAUTH_PROVIDER = "figma";
+
+/**
  * Default environment baked in at compile time. Esbuild's `define`
  * replaces `process.env.MARKUPAI_BUILD_ENV` with a literal, so the
  * value here is the bundle's default and cannot be changed at runtime

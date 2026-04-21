@@ -137,6 +137,22 @@ describe("MarkupAIClient", () => {
     for await (const ev of client.streamWorkflow("wf_1")) events.push(ev);
     expect(events.map((e) => e.type)).toEqual(["status", "agent_result", "completion"]);
   });
+
+  it("listTargets sends the stored bearer to /internal/targets", async () => {
+    const fetchSpy: typeof fetch = vi.fn(async () => jsonResponse([]));
+    const client = new MarkupAIClient(
+      makeConfig(),
+      makeAuth("eyJ.jwt"),
+      makeLogger(),
+      "0.0.1",
+      fetchSpy,
+    );
+    await client.listTargets();
+    const [url, init] = vi.mocked(fetchSpy).mock.calls[0];
+    expect(String(url)).toContain("/internal/targets");
+    const headers = init!.headers as Record<string, string>;
+    expect(headers.Authorization).toBe("Bearer eyJ.jwt");
+  });
 });
 
 describe("parseSSE", () => {

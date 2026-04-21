@@ -125,6 +125,16 @@ export enum ProgressLocation {
   Notification = 15,
 }
 
+export enum UIKind {
+  Desktop = 1,
+  Web = 2,
+}
+
+export const env = {
+  uiKind: UIKind.Desktop as UIKind,
+  openExternal: (_uri: Uri): Promise<boolean> => Promise.resolve(true),
+};
+
 // ---- channels, views, commands --------------------------------------
 
 export const _outputChannels: { name: string; lines: string[] }[] = [];
@@ -304,6 +314,8 @@ export default {
   Uri,
   ConfigurationTarget,
   ProgressLocation,
+  UIKind,
+  env,
   window,
   commands,
   workspace,

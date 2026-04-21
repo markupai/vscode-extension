@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
-import { USER_MESSAGE_PREFIX, SUPPORTED_EXTENSIONS } from "./constants.js";
+import { OAUTH_PROVIDER, SUPPORTED_EXTENSIONS, USER_MESSAGE_PREFIX } from "./constants.js";
 import { promptForToken } from "./auth.js";
+import { isBrowserSignInAvailable, runBrowserSignIn } from "./browserSignIn.js";
 import type { AgentRegistry } from "./agentRegistry.js";
 import type { AuthStore } from "./auth.js";
 import type { DiagnosticsManager } from "./diagnostics.js";
@@ -21,8 +22,8 @@ export interface CommandDeps {
 export function registerCommands(context: vscode.ExtensionContext, deps: CommandDeps): void {
   context.subscriptions.push(
     vscode.commands.registerCommand("markupai.signIn", async () => {
-      const ok = await promptForToken(deps.auth);
-      if (ok) {
+      const signedIn = await runSignIn(deps);
+      if (signedIn) {
         try {
           await deps.registry.refresh();
           await deps.onAgentsRefreshed();
@@ -178,4 +179,36 @@ export async function scanDocument(doc: vscode.TextDocument, deps: CommandDeps):
       }
     },
   );
+}
+
+/**
+ * Run the sign-in flow appropriate for the host:
+ *   - Desktop: open sidebar-app in the default browser and wait for the
+ *     Auth0 access token to come back over a one-shot localhost callback.
+ *   - Web (vscode.dev / github.dev): fall back to a paste prompt because
+ *     local callback servers aren't available there.
+ */
+async function runSignIn(deps: CommandDeps): Promise<boolean> {
+  if (!isBrowserSignInAvailable()) {
+    return promptForToken(deps.auth);
+  }
+  const apiBaseUrl = deps.config.getApiBaseUrl();
+  try {
+    const result = await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: `${USER_MESSAGE_PREFIX}waiting for browser sign-in…`,
+        cancellable: false,
+      },
+      async () => runBrowserSignIn({ apiBaseUrl, provider: OAUTH_PROVIDER }),
+    );
+    await deps.auth.setToken(result.accessToken);
+    void vscode.window.showInformationMessage(`${USER_MESSAGE_PREFIX}signed in.`);
+    return true;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    deps.logger.error("browser sign-in failed", msg);
+    void vscode.window.showErrorMessage(`${USER_MESSAGE_PREFIX}${msg}`);
+    return false;
+  }
 }

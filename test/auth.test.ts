@@ -64,7 +64,7 @@ describe("promptForToken", () => {
     expect(await auth.hasToken()).toBe(false);
   });
 
-  it("validates tokens must start with mat_", async () => {
+  it("rejects empty tokens at the input-box validator", async () => {
     let captured: ((v: string) => string | null) | undefined;
     vi.spyOn(vscode.window, "showInputBox").mockImplementation(
       async (opts?: vscode.InputBoxOptions) => {
@@ -75,7 +75,6 @@ describe("promptForToken", () => {
     await promptForToken(new AuthStore(makeSecrets()));
     expect(captured).toBeDefined();
     expect(captured!("")).toMatch(/not be empty/);
-    expect(captured!("abc")).toMatch(/mat_/);
-    expect(captured!("mat_ok")).toBeNull();
+    expect(captured!("eyJ.abc")).toBeNull();
   });
 });
