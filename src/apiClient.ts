@@ -154,7 +154,11 @@ export async function* parseSSE(stream: ReadableStream<Uint8Array>): AsyncGenera
       let sepIndex: number;
       while ((sepIndex = findEventEnd(buffer)) !== -1) {
         const raw = buffer.slice(0, sepIndex);
-        buffer = buffer.slice(sepIndex).replace(/^(\r?\n){1,2}/, "");
+        // findEventEnd returns the index of either "\n\n" (2 chars) or
+        // "\r\n\r\n" (4 chars). Skip exactly that many bytes — avoids the
+        // nested-quantifier regex Sonar flags as ReDoS-prone.
+        const sepLen = buffer.startsWith("\r\n\r\n", sepIndex) ? 4 : 2;
+        buffer = buffer.slice(sepIndex + sepLen);
         const ev = parseEventBlock(raw);
         if (ev) yield ev;
       }
