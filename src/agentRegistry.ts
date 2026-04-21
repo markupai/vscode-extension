@@ -65,12 +65,17 @@ function deriveSlug(raw: RawAgentRecord): string {
   // UI's compile-time allowlist can match reliably.
   const name = raw.name.trim();
   if (!name) return "";
-  // Two anchored passes — no alternation, no backtracking ambiguity.
-  return name
-    .toLowerCase()
-    .replaceAll(/[^a-z0-9]+/g, "_")
-    .replace(/^_+/, "")
-    .replace(/_+$/, "");
+  const collapsed = name.toLowerCase().replaceAll(/[^a-z0-9]+/g, "_");
+  return trimChar(collapsed, "_");
+}
+
+/** Strip leading and trailing occurrences of `ch`. Linear, no regex. */
+function trimChar(s: string, ch: string): string {
+  let start = 0;
+  let end = s.length;
+  while (start < end && s[start] === ch) start++;
+  while (end > start && s[end - 1] === ch) end--;
+  return s.slice(start, end);
 }
 
 function toCategory(value: string | undefined): AgentCategory {

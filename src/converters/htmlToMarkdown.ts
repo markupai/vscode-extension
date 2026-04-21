@@ -154,10 +154,7 @@ const TAG_HANDLERS = new Map<string, TagHandler>([
 function handleTag(state: RenderState, tok: Token): void {
   const raw = tok.value;
   const closing = raw.startsWith("</");
-  const name = raw
-    .slice(closing ? 2 : 1)
-    .replace(/[\s>/].*$/, "")
-    .toLowerCase();
+  const name = extractTagName(raw.slice(closing ? 2 : 1));
 
   const literal = LITERAL_EMIT.get(name);
   if (literal !== undefined) {
@@ -166,6 +163,23 @@ function handleTag(state: RenderState, tok: Token): void {
   }
   const handler = TAG_HANDLERS.get(name);
   if (handler) handler(state, raw, name, closing);
+}
+
+/**
+ * Return the lowercased tag name at the start of `rest` — everything up
+ * to the first whitespace, `/`, or `>`. Pure indexOf scan, no regex.
+ */
+const TAG_NAME_TERMINATORS = new Set(["\t", "\n", "\v", "\f", "\r", " ", "/", ">"]);
+
+function extractTagName(rest: string): string {
+  let end = rest.length;
+  for (let i = 0; i < rest.length; i++) {
+    if (TAG_NAME_TERMINATORS.has(rest[i])) {
+      end = i;
+      break;
+    }
+  }
+  return rest.slice(0, end).toLowerCase();
 }
 
 function emitHeading(state: RenderState, _raw: string, name: string, closing: boolean): void {
