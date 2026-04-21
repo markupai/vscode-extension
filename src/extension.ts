@@ -30,7 +30,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const diagnostics = new DiagnosticsManager();
   const scanner = new Scanner(client, registry, diagnostics, logger);
 
-  const agentConfigView = new AgentConfigView(config, auth, registry, logger);
+  const agentConfigView = new AgentConfigView(config, auth, registry, client, logger);
   const batchCheckView = new BatchCheckView(config, scanner, logger);
 
   context.subscriptions.push(

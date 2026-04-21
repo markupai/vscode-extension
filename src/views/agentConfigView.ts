@@ -1,14 +1,18 @@
 import * as vscode from "vscode";
 import type { AgentRegistry } from "../agentRegistry.js";
 import type { AuthStore } from "../auth.js";
+import type { MarkupAIClient } from "../apiClient.js";
 import type { ExtensionConfig } from "../config.js";
 import type { Logger } from "../logger.js";
+import type { Target } from "../types.js";
 import { escapeHtml, webviewScaffold } from "./webviewShared.js";
 
 interface AgentConfigState {
   readonly signedIn: boolean;
   readonly environment: "dev" | "prod";
   readonly agents: { slug: string; displayName: string; category: string; enabled: boolean }[];
+  readonly targets: readonly Target[];
+  readonly targetsError?: string;
   readonly styleGuideTargetId: string;
   readonly error?: string;
 }
@@ -17,19 +21,23 @@ interface AgentConfigState {
  * Sidebar webview for:
  *   - viewing sign-in status and current API environment
  *   - toggling which enabled-at-compile-time agents are active
- *   - setting the Style agent's target id
+ *   - selecting the Style agent's target from the live target list
  *
- * UI state is kept in sync with `ExtensionConfig` and refreshed whenever
- * the user opens the view or invokes "MarkupAI: Refresh Agents".
+ * If `/internal/targets` isn't reachable (some PAT scopes can't see it),
+ * the UI falls back to a free-text input so the user can still paste
+ * a target id by hand.
  */
 export class AgentConfigView implements vscode.WebviewViewProvider {
   static readonly viewId = "markupai.agentConfig";
   private view?: vscode.WebviewView;
+  private targets: readonly Target[] = [];
+  private targetsError?: string;
 
   constructor(
     private readonly config: ExtensionConfig,
     private readonly auth: AuthStore,
     private readonly registry: AgentRegistry,
+    private readonly client: MarkupAIClient,
     private readonly logger: Logger,
   ) {}
 
@@ -41,6 +49,7 @@ export class AgentConfigView implements vscode.WebviewViewProvider {
       if (view.visible) void this.render();
     });
     void this.render();
+    void this.fetchTargets();
   }
 
   async refresh(): Promise<void> {
@@ -50,6 +59,37 @@ export class AgentConfigView implements vscode.WebviewViewProvider {
       this.logger.error("agent refresh failed", err);
       await this.render(err instanceof Error ? err.message : String(err));
       return;
+    }
+    await this.fetchTargets();
+    await this.render();
+  }
+
+  /**
+   * Fetch the current user's targets and seed the default selection
+   * when one hasn't been chosen yet:
+   *   1. a target named "main" wins (case-insensitive)
+   *   2. else the server-marked `is_default` target
+   */
+  private async fetchTargets(): Promise<void> {
+    if (!(await this.auth.hasToken())) {
+      this.targets = [];
+      delete this.targetsError;
+      return;
+    }
+    try {
+      const all = await this.client.listTargets();
+      this.targets = all.filter((t) => t.enabled);
+      delete this.targetsError;
+      if (!this.config.getStyleGuideTargetId().trim()) {
+        const main = this.targets.find((t) => t.display_name.toLowerCase() === "main");
+        const fallback = this.targets.find((t) => t.is_default);
+        const picked = main ?? fallback;
+        if (picked) await this.config.setStyleGuideTargetId(picked.id);
+      }
+    } catch (err) {
+      this.targets = [];
+      this.targetsError = err instanceof Error ? err.message : String(err);
+      this.logger.warn("listTargets failed — falling back to text input:", this.targetsError);
     }
     await this.render();
   }
@@ -65,6 +105,8 @@ export class AgentConfigView implements vscode.WebviewViewProvider {
         category: a.category,
         enabled: this.config.getEnabledAgents().includes(a.slug),
       })),
+      targets: this.targets,
+      ...(this.targetsError ? { targetsError: this.targetsError } : {}),
       styleGuideTargetId: this.config.getStyleGuideTargetId(),
       ...(error ? { error } : {}),
     };
@@ -80,10 +122,13 @@ export class AgentConfigView implements vscode.WebviewViewProvider {
         return;
       case "signIn":
         await vscode.commands.executeCommand("markupai.signIn");
+        await this.fetchTargets();
         await this.render();
         return;
       case "signOut":
         await vscode.commands.executeCommand("markupai.signOut");
+        this.targets = [];
+        delete this.targetsError;
         await this.render();
         return;
       case "setEnabledAgents": {
@@ -142,7 +187,7 @@ export class AgentConfigView implements vscode.WebviewViewProvider {
       }
 
       <h3>Style Agent &middot; target</h3>
-      <input type="text" id="targetId" placeholder="Style-guide target id (e.g. tgt_...)" value="${escapeHtml(state.styleGuideTargetId)}" />
+      ${renderTargetPicker(state)}
       <div class="row">
         <button data-action="saveTarget">Save target</button>
       </div>
@@ -152,17 +197,28 @@ export class AgentConfigView implements vscode.WebviewViewProvider {
       const vscode = acquireVsCodeApi();
       function post(type, extra) { vscode.postMessage({ type, ...(extra || {}) }); }
 
+      function currentTargetValue() {
+        const select = document.getElementById('targetSelect');
+        if (select) return select.value.trim();
+        const input = document.getElementById('targetId');
+        return input ? input.value.trim() : '';
+      }
+
       document.querySelectorAll('button[data-action]').forEach((btn) => {
         btn.addEventListener('click', () => {
           const action = btn.getAttribute('data-action');
           if (action === 'saveTarget') {
-            const id = document.getElementById('targetId').value.trim();
-            post('setTargetId', { id });
+            post('setTargetId', { id: currentTargetValue() });
           } else {
             post(action);
           }
         });
       });
+
+      const select = document.getElementById('targetSelect');
+      if (select) {
+        select.addEventListener('change', () => post('setTargetId', { id: select.value }));
+      }
 
       const boxes = Array.from(document.querySelectorAll('input[type="checkbox"][data-slug]'));
       boxes.forEach((box) => {
@@ -175,6 +231,32 @@ export class AgentConfigView implements vscode.WebviewViewProvider {
 
     return webviewScaffold(webview, "MarkupAI Agents", body, script);
   }
+}
+
+function renderTargetPicker(state: AgentConfigState): string {
+  if (state.targets.length > 0) {
+    const selected = state.styleGuideTargetId;
+    const options = [`<option value="">— none —</option>`];
+    for (const t of state.targets) {
+      const sel = t.id === selected ? "selected" : "";
+      const label = t.is_default ? `${t.display_name} (default)` : t.display_name;
+      options.push(`<option value="${escapeHtml(t.id)}" ${sel}>${escapeHtml(label)}</option>`);
+    }
+    return `<select id="targetSelect">${options.join("")}</select>`;
+  }
+  const placeholder = "Style-guide target id (e.g. tgt_...)";
+  const note = fallbackNote(state);
+  return `${note}<input type="text" id="targetId" placeholder="${placeholder}" value="${escapeHtml(state.styleGuideTargetId)}" />`;
+}
+
+function fallbackNote(state: AgentConfigState): string {
+  if (state.targetsError) {
+    return `<div class="muted">Could not load targets (${escapeHtml(state.targetsError)}). Enter one manually.</div>`;
+  }
+  if (state.signedIn) {
+    return `<div class="muted">No targets available. Enter one manually if you have the id.</div>`;
+  }
+  return `<div class="muted">Sign in to load available targets.</div>`;
 }
 
 function isRecord(v: unknown): v is Record<string, unknown> {

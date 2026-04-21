@@ -2,7 +2,13 @@ import { INTEGRATION_ID, PARALLEL_EXECUTOR_AGENT_ID, USER_MESSAGE_PREFIX } from 
 import type { AuthStore } from "./auth.js";
 import type { ExtensionConfig } from "./config.js";
 import type { Logger } from "./logger.js";
-import type { AgentConfig, AgentListResponse, AgentRunResponse, SSEEvent } from "./types.js";
+import type {
+  AgentConfig,
+  AgentListResponse,
+  AgentRunResponse,
+  SSEEvent,
+  Target,
+} from "./types.js";
 
 export interface RunAgentsRequest {
   readonly internalIds: readonly string[];
@@ -69,6 +75,23 @@ export class MarkupAIClient {
       signal,
     });
     return this.handleJson<AgentListResponse>(res);
+  }
+
+  /**
+   * Fetch the user's language-service targets. Some token scopes
+   * (e.g. bare PATs) may not have access to this endpoint — in that
+   * case the caller should present the manual target-id input instead.
+   */
+  async listTargets(signal?: AbortSignal): Promise<readonly Target[]> {
+    const url = `${this.config.getApiBaseUrl()}/internal/targets`;
+    const headers = await this.authHeaders();
+    this.logger.debug("GET", url);
+    const res = await this.fetchImpl(url, {
+      method: "GET",
+      headers: { ...headers, Accept: "application/json" },
+      signal,
+    });
+    return this.handleJson<readonly Target[]>(res);
   }
 
   async runAgents(req: RunAgentsRequest, signal?: AbortSignal): Promise<AgentRunResponse> {

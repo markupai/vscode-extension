@@ -4,11 +4,22 @@ import { _resetVscodeMock, _configStore } from "../mocks/vscode.js";
 import { AgentConfigView } from "../../src/views/agentConfigView.js";
 import { ExtensionConfig } from "../../src/config.js";
 import type { AgentRegistry } from "../../src/agentRegistry.js";
+import type { MarkupAIClient } from "../../src/apiClient.js";
 import type { AuthStore } from "../../src/auth.js";
 import type { Logger } from "../../src/logger.js";
+import type { Target } from "../../src/types.js";
 
 function makeLogger(): Logger {
   return { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } as unknown as Logger;
+}
+
+function mkClient(targets: readonly Target[] = [], listThrows?: Error): MarkupAIClient {
+  return {
+    listTargets: vi.fn(async () => {
+      if (listThrows) throw listThrows;
+      return targets;
+    }),
+  } as unknown as MarkupAIClient;
 }
 
 function fakeView(): {
@@ -94,6 +105,7 @@ describe("AgentConfigView", () => {
       new ExtensionConfig(),
       mkAuth(false),
       mkRegistry(),
+      mkClient(),
       makeLogger(),
     );
     view.resolveWebviewView(f.view);
@@ -107,7 +119,7 @@ describe("AgentConfigView", () => {
   it("setTargetId message writes to config and re-renders", async () => {
     const f = fakeView();
     const cfg = new ExtensionConfig();
-    const view = new AgentConfigView(cfg, mkAuth(true), mkRegistry(), makeLogger());
+    const view = new AgentConfigView(cfg, mkAuth(true), mkRegistry(), mkClient(), makeLogger());
     view.resolveWebviewView(f.view);
     await new Promise((r) => setTimeout(r, 0));
     await f.postMessage({ type: "setTargetId", id: "tgt_42" });
@@ -117,7 +129,7 @@ describe("AgentConfigView", () => {
   it("setEnabledAgents message persists the selection", async () => {
     const f = fakeView();
     const cfg = new ExtensionConfig();
-    const view = new AgentConfigView(cfg, mkAuth(true), mkRegistry(), makeLogger());
+    const view = new AgentConfigView(cfg, mkAuth(true), mkRegistry(), mkClient(), makeLogger());
     view.resolveWebviewView(f.view);
     await new Promise((r) => setTimeout(r, 0));
     await f.postMessage({ type: "setEnabledAgents", slugs: ["style_agent"] });
@@ -127,7 +139,13 @@ describe("AgentConfigView", () => {
   it("refresh message triggers registry.refresh", async () => {
     const registry = mkRegistry();
     const f = fakeView();
-    const view = new AgentConfigView(new ExtensionConfig(), mkAuth(true), registry, makeLogger());
+    const view = new AgentConfigView(
+      new ExtensionConfig(),
+      mkAuth(true),
+      registry,
+      mkClient(),
+      makeLogger(),
+    );
     view.resolveWebviewView(f.view);
     await new Promise((r) => setTimeout(r, 0));
     await f.postMessage({ type: "refresh" });
@@ -142,11 +160,17 @@ describe("AgentConfigView", () => {
       }),
     } as unknown as AgentRegistry;
     const f = fakeView();
-    const view = new AgentConfigView(new ExtensionConfig(), mkAuth(true), registry, makeLogger());
+    const view = new AgentConfigView(
+      new ExtensionConfig(),
+      mkAuth(true),
+      registry,
+      mkClient(),
+      makeLogger(),
+    );
     view.resolveWebviewView(f.view);
     await view.refresh();
-    const html = (f.setHtml.mock.calls.at(-1)?.[0] ?? "") as string;
-    expect(html).toContain("offline");
+    const renders = f.setHtml.mock.calls.map((c) => String(c[0]));
+    expect(renders.some((html) => html.includes("offline"))).toBe(true);
   });
 
   it("signIn and signOut messages forward to commands", async () => {
@@ -156,6 +180,7 @@ describe("AgentConfigView", () => {
       new ExtensionConfig(),
       mkAuth(true),
       mkRegistry(),
+      mkClient(),
       makeLogger(),
     );
     view.resolveWebviewView(f.view);
@@ -166,12 +191,112 @@ describe("AgentConfigView", () => {
     expect(execSpy).toHaveBeenCalledWith("markupai.signOut");
   });
 
+  it("renders a dropdown of enabled targets when /internal/targets succeeds", async () => {
+    const targets: Target[] = [
+      { id: "t1", display_name: "main", is_default: false, enabled: true },
+      { id: "t2", display_name: "legacy", is_default: true, enabled: true },
+      { id: "t3", display_name: "disabled", is_default: false, enabled: false },
+    ];
+    const f = fakeView();
+    const view = new AgentConfigView(
+      new ExtensionConfig(),
+      mkAuth(true),
+      mkRegistry(),
+      mkClient(targets),
+      makeLogger(),
+    );
+    view.resolveWebviewView(f.view);
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+    const html = (f.setHtml.mock.calls.at(-1)?.[0] ?? "") as string;
+    expect(html).toContain('<select id="targetSelect"');
+    expect(html).toContain("main");
+    expect(html).toContain("legacy (default)");
+    expect(html).not.toContain(">disabled<");
+  });
+
+  it("auto-selects the target named 'main' when no id is saved", async () => {
+    const targets: Target[] = [
+      { id: "t1", display_name: "Main", is_default: false, enabled: true },
+      { id: "t2", display_name: "legacy", is_default: true, enabled: true },
+    ];
+    const f = fakeView();
+    const view = new AgentConfigView(
+      new ExtensionConfig(),
+      mkAuth(true),
+      mkRegistry(),
+      mkClient(targets),
+      makeLogger(),
+    );
+    view.resolveWebviewView(f.view);
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(_configStore["markupai.styleGuideTargetId"]).toBe("t1");
+  });
+
+  it("falls back to is_default when no target is named 'main'", async () => {
+    const targets: Target[] = [
+      { id: "t1", display_name: "legacy", is_default: true, enabled: true },
+      { id: "t2", display_name: "experimental", is_default: false, enabled: true },
+    ];
+    const f = fakeView();
+    const view = new AgentConfigView(
+      new ExtensionConfig(),
+      mkAuth(true),
+      mkRegistry(),
+      mkClient(targets),
+      makeLogger(),
+    );
+    view.resolveWebviewView(f.view);
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(_configStore["markupai.styleGuideTargetId"]).toBe("t1");
+  });
+
+  it("preserves a saved target id across refreshes", async () => {
+    _configStore["markupai.styleGuideTargetId"] = "already-set";
+    const targets: Target[] = [
+      { id: "t1", display_name: "main", is_default: false, enabled: true },
+    ];
+    const f = fakeView();
+    const view = new AgentConfigView(
+      new ExtensionConfig(),
+      mkAuth(true),
+      mkRegistry(),
+      mkClient(targets),
+      makeLogger(),
+    );
+    view.resolveWebviewView(f.view);
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(_configStore["markupai.styleGuideTargetId"]).toBe("already-set");
+  });
+
+  it("falls back to a text input when listTargets fails (401-style)", async () => {
+    const f = fakeView();
+    const view = new AgentConfigView(
+      new ExtensionConfig(),
+      mkAuth(true),
+      mkRegistry(),
+      mkClient([], new Error("Not authenticated")),
+      makeLogger(),
+    );
+    view.resolveWebviewView(f.view);
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+    const html = (f.setHtml.mock.calls.at(-1)?.[0] ?? "") as string;
+    expect(html).toContain("Could not load targets");
+    expect(html).toContain("Not authenticated");
+    expect(html).toContain('id="targetId"');
+  });
+
   it("ignores unknown messages gracefully", async () => {
     const f = fakeView();
     const view = new AgentConfigView(
       new ExtensionConfig(),
       mkAuth(true),
       mkRegistry(),
+      mkClient(),
       makeLogger(),
     );
     view.resolveWebviewView(f.view);

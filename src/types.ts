@@ -100,6 +100,22 @@ export interface AgentListResponse {
 }
 
 // ===================================================================
+// Targets (style-guide / language-service targets)
+// ===================================================================
+
+/**
+ * Shape returned by `GET /internal/targets`. A "target" is a
+ * style-guide binding in the language service — `id` is what the
+ * style agent expects as `target_id`.
+ */
+export interface Target {
+  readonly id: string;
+  readonly display_name: string;
+  readonly is_default: boolean;
+  readonly enabled: boolean;
+}
+
+// ===================================================================
 // SSE events streamed by `/agents/workflows/{wf}/stream`
 // ===================================================================
 
