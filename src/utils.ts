@@ -37,7 +37,7 @@ export function hasApiToken(): boolean {
  * Get the selected dialect
  */
 export function getDialect(): MarkupAI.Dialects {
-  return getConfig().get("dialect", "american_english") as MarkupAI.Dialects;
+  return getConfig().get("dialect", "american_english");
 }
 
 /**

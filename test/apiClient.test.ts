@@ -8,15 +8,15 @@ vi.mock("@markupai/api", () => ({
 
 import { MarkupAIContentChecker } from "../src/apiClient";
 import { MarkupAIClient } from "@markupai/api";
-import type { MarkupAI } from "@markupai/api";
+import type { Mock } from "vitest";
 
 interface MockClientInstance {
   styleGuides: {
-    listStyleGuides: ReturnType<typeof vi.fn>;
+    listStyleGuides: Mock;
   };
   styleSuggestions: {
-    createStyleSuggestion: ReturnType<typeof vi.fn>;
-    getStyleSuggestion: ReturnType<typeof vi.fn>;
+    createStyleSuggestion: Mock;
+    getStyleSuggestion: Mock;
   };
 }
 
@@ -39,9 +39,10 @@ describe("MarkupAIContentChecker", () => {
     };
 
     // Make MarkupAIClient constructor return our mock instance
-    vi.mocked(MarkupAIClient).mockImplementation(
-      () => mockClientInstance as unknown as MarkupAIClient,
-    );
+    // (must be a `function`, not an arrow, so vitest can `new` it)
+    vi.mocked(MarkupAIClient).mockImplementation(function () {
+      return mockClientInstance as unknown as MarkupAIClient;
+    });
 
     checker = new MarkupAIContentChecker("test-api-token");
   });
@@ -145,11 +146,7 @@ describe("MarkupAIContentChecker", () => {
         },
       });
 
-      const result = await checker.checkContent(
-        "Test content",
-        "american_english" as MarkupAI.Dialects,
-        "ap",
-      );
+      const result = await checker.checkContent("Test content", "american_english", "ap");
 
       expect(result.issues).toHaveLength(0);
       expect(result.scores.overall).toBe(95);
@@ -188,11 +185,7 @@ describe("MarkupAIContentChecker", () => {
         },
       });
 
-      const result = await checker.checkContent(
-        "test content",
-        "american_english" as MarkupAI.Dialects,
-        "ap",
-      );
+      const result = await checker.checkContent("test content", "american_english", "ap");
 
       expect(result.issues).toHaveLength(1);
       expect(result.issues[0].type).toBe("grammar");
@@ -209,9 +202,9 @@ describe("MarkupAIContentChecker", () => {
         workflow: { status: "failed" },
       });
 
-      await expect(
-        checker.checkContent("test", "american_english" as MarkupAI.Dialects, "ap"),
-      ).rejects.toThrow("Content check failed");
+      await expect(checker.checkContent("test", "american_english", "ap")).rejects.toThrow(
+        "Content check failed",
+      );
     });
 
     // Note: Timeout test removed to avoid test suite hanging
@@ -245,11 +238,7 @@ describe("MarkupAIContentChecker", () => {
         });
       });
 
-      const result = await checker.checkContent(
-        "test",
-        "american_english" as MarkupAI.Dialects,
-        "ap",
-      );
+      const result = await checker.checkContent("test", "american_english", "ap");
       expect(result).toBeDefined();
       expect(result.scores.overall).toBe(100);
     });
@@ -282,11 +271,7 @@ describe("MarkupAIContentChecker", () => {
         },
       });
 
-      const result = await checker.checkContent(
-        "test",
-        "american_english" as MarkupAI.Dialects,
-        "ap",
-      );
+      const result = await checker.checkContent("test", "american_english", "ap");
       expect(result.issues[0].type).toBe("grammar");
       expect(result.issues[0].category).toBe("grammar");
     });
@@ -319,11 +304,7 @@ describe("MarkupAIContentChecker", () => {
         },
       });
 
-      const result = await checker.checkContent(
-        "test",
-        "american_english" as MarkupAI.Dialects,
-        "ap",
-      );
+      const result = await checker.checkContent("test", "american_english", "ap");
       expect(result.issues[0].type).toBe("clarity");
     });
 
@@ -340,11 +321,7 @@ describe("MarkupAIContentChecker", () => {
         },
       });
 
-      const result = await checker.checkContent(
-        "test",
-        "american_english" as MarkupAI.Dialects,
-        "ap",
-      );
+      const result = await checker.checkContent("test", "american_english", "ap");
 
       expect(result.scores.overall).toBe(100);
       expect(result.scores.grammar).toBe(100);

@@ -11,7 +11,7 @@ function createMockConfig(
     update: vi.fn(),
     has: vi.fn(() => true),
     inspect: vi.fn(),
-  } as unknown as vscode.WorkspaceConfiguration;
+  };
 }
 
 describe("utils", () => {

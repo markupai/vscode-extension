@@ -22,7 +22,7 @@ describe("FolderScannerTreeDataProvider", () => {
       const mockUri = vscode.Uri.file("/workspace");
       vi.mocked(vscode.workspace).workspaceFolders = [
         { uri: mockUri, name: "workspace", index: 0 },
-      ] as unknown as readonly vscode.WorkspaceFolder[];
+      ];
 
       const result = provider.initializeFromWorkspace();
 
@@ -41,8 +41,7 @@ describe("FolderScannerTreeDataProvider", () => {
     });
 
     it("should return false for empty workspace folders array", () => {
-      vi.mocked(vscode.workspace).workspaceFolders =
-        [] as unknown as readonly vscode.WorkspaceFolder[];
+      vi.mocked(vscode.workspace).workspaceFolders = [];
 
       const result = provider.initializeFromWorkspace();
 
