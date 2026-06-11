@@ -4,9 +4,9 @@
 
 ### 🔍 Real-time Content Analysis
 
-- Automatically checks your documents for grammar, spelling, consistency, and terminology issues
-- Underlines issues directly in the editor with different severity levels
-- Shows detailed scores in the status bar
+- Automatically checks your documents with the MarkupAI Style Agent
+- Underlines issues directly in the editor with high / medium / low risk levels
+- Shows a risk summary (or quality score, when enabled) in the status bar
 
 ### 💡 Smart Suggestions
 
@@ -14,13 +14,11 @@
 - One-click "Apply Fix" to instantly correct issues
 - Quick-fix actions available via the lightbulb menu (Ctrl+. / Cmd+.)
 
-### 📊 Content Quality Scores
+### 📊 Risk Assessment
 
-- View overall content quality score in the status bar
-- Click the score to see detailed breakdown:
-  - Grammar score
-  - Consistency score
-  - Terminology score
+- View the risk summary for the current document in the status bar (e.g. `2H 3M 11L`)
+- Click it for a detailed breakdown by risk level
+- Organizations with numeric scoring enabled also see a quality score (0–100)
 
 ### 📁 Folder Scanner (NEW!)
 
@@ -32,8 +30,7 @@
 
 ### ⚙️ Configurable
 
-- Choose your preferred English dialect (American, British, Canadian)
-- Select from built-in style guides (AP, Chicago, Microsoft) or use custom style guides
+- Select any style guide from your organization, or use the organization default
 - Enable/disable checking on file open or on content change
 - Easily toggle MarkupAI issues on/off via context menu
 
@@ -43,11 +40,11 @@
 
 Install from the VS Code Marketplace or build from source.
 
-### 2. Configure Your API Token
+### 2. Sign In
 
-1. Get your API token from [MarkupAI](https://markup.ai)
-2. Click the "Add API Token" prompt in the status bar, or
-3. Open Command Palette (Ctrl+Shift+P / Cmd+Shift+P) and run `MarkupAI: Configure API Token`
+1. Click the "MarkupAI: Sign in" prompt in the status bar, or run `MarkupAI: Sign In` from the Command Palette (Ctrl+Shift+P / Cmd+Shift+P)
+2. Choose **Sign in with browser** — complete the sign-in at markup.ai and return to VS Code
+3. Alternatively, choose **Paste access token or API key** to use a token obtained elsewhere
 
 ### 3. Start Writing
 
@@ -58,10 +55,10 @@ Open any text document and MarkupAI will automatically analyze your content!
 | Command                           | Description                               |
 | --------------------------------- | ----------------------------------------- |
 | `Markup AI: Check Content`        | Manually trigger a content check          |
-| `Markup AI: Configure API Token`  | Set or update your API token              |
+| `Markup AI: Sign In`              | Sign in via browser or paste a token      |
+| `Markup AI: Sign Out`             | Sign out and clear the stored session     |
 | `Markup AI: Select Style Guide`   | Choose a style guide for content analysis |
-| `Markup AI: Select Dialect`       | Choose your preferred English dialect     |
-| `Markup AI: Show Content Scores`  | View detailed quality scores              |
+| `Markup AI: Show Content Scores`  | View the risk assessment breakdown        |
 | `MarkupAI: Toggle Enable/Disable` | Enable or disable the extension           |
 | `MarkupAI: Select Folder to Scan` | Choose a folder to check multiple files   |
 | `MarkupAI: Check All Files`       | Check all files in selected folder        |
@@ -78,28 +75,29 @@ Right-click in any editor to access:
 
 Access settings via `File > Preferences > Settings` and search for "MarkupAI":
 
-| Setting                  | Description                                                            | Default            |
-| ------------------------ | ---------------------------------------------------------------------- | ------------------ |
-| `markupai.apiToken`      | Your Markup AI API token                                               | -                  |
-| `markupai.enabled`       | Enable/disable Markup AI checking                                      | `true`             |
-| `markupai.dialect`       | Language dialect (american_english, british_english, canadian_english) | `american_english` |
-| `markupai.styleGuide`    | Style guide to use (ap, chicago, microsoft, or custom ID)              | `ap`               |
-| `markupai.checkOnOpen`   | Automatically check when a file is opened                              | `true`             |
-| `markupai.checkOnChange` | Automatically check when content changes                               | `true`             |
-| `markupai.checkDelay`    | Delay (ms) before checking after a change                              | `2000`             |
+| Setting                  | Description                                                   | Default |
+| ------------------------ | ------------------------------------------------------------- | ------- |
+| `markupai.enabled`       | Enable/disable Markup AI checking                             | `true`  |
+| `markupai.styleGuide`    | Style guide ID (empty = organization default; use the picker) | `""`    |
+| `markupai.environment`   | API environment (`prod` or `dev`)                             | `prod`  |
+| `markupai.checkOnOpen`   | Automatically check when a file is opened                     | `true`  |
+| `markupai.checkOnChange` | Automatically check when content changes                      | `false` |
+| `markupai.checkDelay`    | Delay (ms) before checking after a change                     | `2000`  |
+
+Sign-in tokens are stored securely in VS Code Secret Storage, not in settings.
 
 ## Issue Severity Levels
 
 Issues are highlighted with different colors based on severity:
 
-- 🔴 **Error** (red underline): High severity issues
-- 🟡 **Warning** (yellow underline): Medium severity issues
-- 🔵 **Information** (blue underline): Low severity suggestions
+- 🔴 **Error** (red underline): High risk issues
+- 🟡 **Warning** (yellow underline): Medium risk issues
+- 🔵 **Information** (blue underline): Low risk suggestions
 
 ## Requirements
 
-- VS Code 1.108.1 or higher (Desktop or Remote)
-- MarkupAI API token (get one at [markup.ai](https://markup.ai))
+- VS Code 1.120.0 or higher (Desktop or Remote)
+- A MarkupAI account ([markup.ai](https://markup.ai))
 
 ## Platform Support
 
@@ -112,7 +110,7 @@ Issues are highlighted with different colors based on severity:
 
 The extension codebase is web-compatible — no Node.js built-in modules are used, and all file operations go through VS Code's `workspace.fs` API. A browser-targeted bundle is built and validated in CI to prevent regressions.
 
-However, the extension is currently **published for desktop only** because the MarkupAI API does not yet support browser CORS requests. Once CORS is enabled on the API server, web support can be activated by adding `"browser"` back to `package.json`.
+However, the extension currently **works on desktop only** because the MarkupAI API does not yet allow browser CORS requests from the web extension host. Once the API CORS allowlist is updated, the existing web bundle (wired up via the `browser` entry in `package.json`) will work as-is.
 
 ## Testing
 

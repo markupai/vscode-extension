@@ -377,7 +377,6 @@
     "onStartupFinished"
   ],
   "dependencies": {
-    "@markupai/api": "^1.5.0",
     "diff-match-patch-ts": "^0.8.0"
   },
   "devDependencies": {
