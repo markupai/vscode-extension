@@ -9,7 +9,7 @@ This is a sample markdown file demonstrating basic markdown syntax. it dont have
 - **Bold text** for emphasis
 - _Italic text_ for subtle emphasis
 - `Code snippets` for inline code
-- this feature are very importent
+- this feature is very important
 
 ### Code Block Example
 
@@ -59,4 +59,4 @@ This demonstrates basic markdown formatting capabilities. We hopes this will hel
 
 Remember to always check you're code before submiting it. Lot of developer forget this step and then they has to fix things later which take more time then doing it correctly from begining.
 
-**PRO TIP**: dont use depreciated methods!!
+**PRO TIP**: dont use depreciated methods!

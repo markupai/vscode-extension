@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { DocumentAssessment, FolderScannerItem } from "./types";
 import { SUPPORTED_FILE_EXTENSIONS } from "./constants";
-import { formatRiskSummary, getScoreEmoji, getSeverityEmoji } from "./utils";
+import { formatRiskSummary, getLeadSeverity, getScoreEmoji, getSeverityEmoji } from "./utils";
 
 const IGNORED_DIRECTORIES = new Set(["node_modules", "dist", "build"]);
 
@@ -141,14 +141,7 @@ export class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<Fo
       const docKey = element.uri.toString();
       const assessment = this.getDocumentAssessments().get(docKey);
       if (assessment) {
-        if (typeof assessment.score === "number") {
-          treeItem.description = `${getScoreEmoji(assessment.score)} ${String(assessment.score)}`;
-        } else {
-          const { risk } = assessment;
-          const lead = risk.high > 0 ? "high" : risk.medium > 0 ? "medium" : "low";
-          treeItem.description =
-            risk.total === 0 ? "✅" : `${getSeverityEmoji(lead)} ${formatRiskSummary(risk)}`;
-        }
+        treeItem.description = describeAssessment(assessment);
       }
 
       treeItem.command = {
@@ -231,4 +224,15 @@ export class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<Fo
 
     return items;
   }
+}
+
+function describeAssessment(assessment: DocumentAssessment): string {
+  if (typeof assessment.score === "number") {
+    return `${getScoreEmoji(assessment.score)} ${String(assessment.score)}`;
+  }
+  const { risk } = assessment;
+  if (risk.total === 0) {
+    return "✅";
+  }
+  return `${getSeverityEmoji(getLeadSeverity(risk))} ${formatRiskSummary(risk)}`;
 }

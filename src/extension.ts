@@ -11,6 +11,8 @@ import {
   getApiBaseUrl,
   getStyleGuideId,
   getScoreEmoji,
+  getSeverityEmoji,
+  getLeadSeverity,
   formatRiskSummary,
   isWebEnvironment,
   isSupportedScheme,
@@ -260,36 +262,39 @@ async function checkDocument(
   }
 }
 
-async function showCheckCompleteNotification(assessment: DocumentAssessment): Promise<void> {
+function scoreStatusLabel(score: number): string {
+  if (score >= 90) {
+    return "Excellent!";
+  }
+  if (score >= 70) {
+    return "Good";
+  }
+  if (score >= 50) {
+    return "Needs Improvement";
+  }
+  return "Needs Attention";
+}
+
+function buildCheckCompleteMessage(assessment: DocumentAssessment): string {
   const { risk, score } = assessment;
-  let message: string;
+  const issueCount = `${String(risk.total)} issue${risk.total === 1 ? "" : "s"}`;
 
   if (typeof score === "number") {
-    let statusMessage: string;
-    if (score >= 90) {
-      statusMessage = "Excellent!";
-    } else if (score >= 70) {
-      statusMessage = "Good";
-    } else if (score >= 50) {
-      statusMessage = "Needs Improvement";
-    } else {
-      statusMessage = "Needs Attention";
-    }
-    message =
-      `${getScoreEmoji(score)} MarkupAI Check Complete — ${statusMessage} | ` +
-      `Score: ${String(score)} | ` +
-      `${String(risk.total)} issue${risk.total === 1 ? "" : "s"} found`;
-  } else if (risk.total === 0) {
-    message = "✅ MarkupAI Check Complete — no issues found";
-  } else {
-    const emoji = risk.high > 0 ? "🔴" : risk.medium > 0 ? "🟡" : "🔵";
-    message =
-      `${emoji} MarkupAI Check Complete — ` +
-      `${String(risk.total)} issue${risk.total === 1 ? "" : "s"} (${formatRiskSummary(risk)})`;
+    return (
+      `${getScoreEmoji(score)} MarkupAI Check Complete — ${scoreStatusLabel(score)} | ` +
+      `Score: ${String(score)} | ${issueCount} found`
+    );
   }
+  if (risk.total === 0) {
+    return "✅ MarkupAI Check Complete — no issues found";
+  }
+  const emoji = getSeverityEmoji(getLeadSeverity(risk));
+  return `${emoji} MarkupAI Check Complete — ${issueCount} (${formatRiskSummary(risk)})`;
+}
 
+async function showCheckCompleteNotification(assessment: DocumentAssessment): Promise<void> {
   const action = await vscode.window.showInformationMessage(
-    message,
+    buildCheckCompleteMessage(assessment),
     "View Details",
     "Show Findings",
   );
@@ -322,62 +327,65 @@ function scheduleCheck(document: vscode.TextDocument): void {
 // Authentication Commands
 // ============================================================================
 
+async function pickSignInMethod(): Promise<"browser" | "paste" | undefined> {
+  if (!isBrowserSignInAvailable()) {
+    return "paste";
+  }
+
+  const items: vscode.QuickPickItem[] = [
+    {
+      label: "$(globe) Sign in with browser",
+      detail: "Opens markup.ai in your browser to sign in",
+    },
+    {
+      label: "$(key) Paste access token or API key",
+      detail: "For tokens obtained elsewhere (JWT or mat_… API key)",
+    },
+  ];
+  const selected = await vscode.window.showQuickPick(items, {
+    title: "MarkupAI Sign In",
+    placeHolder: "Choose how to sign in",
+  });
+  if (!selected) {
+    return undefined;
+  }
+  return selected.label.includes("browser") ? "browser" : "paste";
+}
+
+async function browserSignIn(): Promise<boolean> {
+  try {
+    return await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: "MarkupAI: Complete the sign-in in your browser…",
+        cancellable: false,
+      },
+      async () => {
+        const result = await runBrowserSignIn({
+          apiBaseUrl: getApiBaseUrl(),
+          provider: OAUTH_PROVIDER,
+        });
+        await auth.setSession(result);
+        return true;
+      },
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "sign-in failed.";
+    const action = await vscode.window.showErrorMessage(message, "Paste token instead");
+    if (action === "Paste token instead") {
+      return promptForToken(auth);
+    }
+    return false;
+  }
+}
+
 async function signIn(): Promise<void> {
-  const browserAvailable = isBrowserSignInAvailable();
-
-  let method: string | undefined;
-  if (browserAvailable) {
-    const items: vscode.QuickPickItem[] = [
-      {
-        label: "$(globe) Sign in with browser",
-        detail: "Opens markup.ai in your browser to sign in",
-      },
-      {
-        label: "$(key) Paste access token or API key",
-        detail: "For tokens obtained elsewhere (JWT or mat_… API key)",
-      },
-    ];
-    const selected = await vscode.window.showQuickPick(items, {
-      title: "MarkupAI Sign In",
-      placeHolder: "Choose how to sign in",
-    });
-    if (!selected) {
-      return;
-    }
-    method = selected.label.includes("browser") ? "browser" : "paste";
-  } else {
-    method = "paste";
+  const method = await pickSignInMethod();
+  if (!method) {
+    return;
   }
 
-  let signedIn = false;
-  if (method === "browser") {
-    try {
-      signedIn = await vscode.window.withProgress(
-        {
-          location: vscode.ProgressLocation.Notification,
-          title: "MarkupAI: Complete the sign-in in your browser…",
-          cancellable: false,
-        },
-        async () => {
-          const result = await runBrowserSignIn({
-            apiBaseUrl: getApiBaseUrl(),
-            provider: OAUTH_PROVIDER,
-          });
-          await auth.setSession(result);
-          return true;
-        },
-      );
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "sign-in failed.";
-      const action = await vscode.window.showErrorMessage(message, "Paste token instead");
-      if (action === "Paste token instead") {
-        signedIn = await promptForToken(auth);
-      }
-    }
-  } else {
-    signedIn = await promptForToken(auth);
-  }
-
+  const signedIn = method === "browser" ? await browserSignIn() : await promptForToken(auth);
   if (!signedIn) {
     return;
   }
@@ -1015,9 +1023,10 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("markupai.showScores", showScoresDialog),
   );
 
-  context.subscriptions.push(vscode.commands.registerCommand("markupai.signIn", signIn));
-
-  context.subscriptions.push(vscode.commands.registerCommand("markupai.signOut", signOut));
+  context.subscriptions.push(
+    vscode.commands.registerCommand("markupai.signIn", signIn),
+    vscode.commands.registerCommand("markupai.signOut", signOut),
+  );
 
   context.subscriptions.push(
     vscode.commands.registerCommand("markupai.selectStyleGuide", selectStyleGuide),

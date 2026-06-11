@@ -23,11 +23,12 @@ export function toCheckResult(workflow: StyleAgentWorkflow, text: string): Check
     }
   }
 
+  const score = extractScore(result);
   return {
     issues,
     assessment: {
       risk: summarizeRisk(issues),
-      ...(extractScore(result) !== undefined ? { score: extractScore(result) } : {}),
+      ...(score === undefined ? {} : { score }),
     },
   };
 }

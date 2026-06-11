@@ -85,6 +85,19 @@ export function getScoreEmoji(score: number): string {
 }
 
 /**
+ * Highest severity present in a risk summary.
+ */
+export function getLeadSeverity(risk: RiskSummary): ContentIssue["severity"] {
+  if (risk.high > 0) {
+    return "high";
+  }
+  if (risk.medium > 0) {
+    return "medium";
+  }
+  return "low";
+}
+
+/**
  * Get emoji for an issue severity
  */
 export function getSeverityEmoji(severity: ContentIssue["severity"]): string {

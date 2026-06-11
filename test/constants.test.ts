@@ -59,7 +59,10 @@ describe("constants", () => {
     });
 
     it("should only contain prod and dev environments", () => {
-      expect(Object.keys(ENVIRONMENT_URLS).sort()).toEqual(["dev", "prod"]);
+      expect(Object.keys(ENVIRONMENT_URLS).sort((a, b) => a.localeCompare(b))).toEqual([
+        "dev",
+        "prod",
+      ]);
     });
 
     it("should use https for all environments", () => {

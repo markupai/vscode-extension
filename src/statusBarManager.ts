@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { DocumentAssessment } from "./types";
-import { formatRiskSummary, getScoreEmoji, getSeverityEmoji } from "./utils";
+import { formatRiskSummary, getLeadSeverity, getScoreEmoji, getSeverityEmoji } from "./utils";
 
 /**
  * Manages the status bar item for MarkupAI risk / score display.
@@ -20,7 +20,7 @@ export class StatusBarManager {
     } else if (risk.total === 0) {
       this.statusBarItem.text = "$(check) MarkupAI: No issues";
     } else {
-      const lead = risk.high > 0 ? "high" : risk.medium > 0 ? "medium" : "low";
+      const lead = getLeadSeverity(risk);
       this.statusBarItem.text = `${getSeverityEmoji(lead)} MarkupAI: ${formatRiskSummary(risk)}`;
     }
 
