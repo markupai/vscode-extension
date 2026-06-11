@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { OffsetTranslator, TextOffsetMapper } from "./offsetMapper";
-import { ContentIssue, ContentScores, MarkupAIDiagnostic } from "./types";
+import { ContentIssue, DocumentAssessment, MarkupAIDiagnostic } from "./types";
 import { indexToPosition, getSeverityForIssue } from "./utils";
 
 /**
@@ -9,7 +9,7 @@ import { indexToPosition, getSeverityForIssue } from "./utils";
 export class DiagnosticsManager {
   private readonly diagnosticCollection: vscode.DiagnosticCollection;
   private readonly documentIssues: Map<string, ContentIssue[]> = new Map();
-  private readonly documentScores: Map<string, ContentScores> = new Map();
+  private readonly documentAssessments: Map<string, DocumentAssessment> = new Map();
   private readonly disabledCategories: Set<string> = new Set();
 
   constructor(diagnosticCollection: vscode.DiagnosticCollection) {
@@ -36,12 +36,12 @@ export class DiagnosticsManager {
     this.documentIssues.set(docKey, issues);
   }
 
-  getScores(docKey: string): ContentScores | undefined {
-    return this.documentScores.get(docKey);
+  getAssessment(docKey: string): DocumentAssessment | undefined {
+    return this.documentAssessments.get(docKey);
   }
 
-  setScores(docKey: string, scores: ContentScores): void {
-    this.documentScores.set(docKey, scores);
+  setAssessment(docKey: string, assessment: DocumentAssessment): void {
+    this.documentAssessments.set(docKey, assessment);
   }
 
   getDisabledCategories(): Set<string> {
@@ -76,7 +76,7 @@ export class DiagnosticsManager {
     const adjustedIssues: ContentIssue[] = [];
 
     for (const issue of issues) {
-      if (issue.category && this.disabledCategories.has(issue.category.toLowerCase())) {
+      if (this.disabledCategories.has(issue.category.toLowerCase())) {
         continue;
       }
 
@@ -174,9 +174,8 @@ export class DiagnosticsManager {
     diagnostic.source = "MarkupAI";
     diagnostic.markupaiSuggestion = issue.suggestion;
     diagnostic.markupaiOriginalText = issue.originalText;
-    diagnostic.markupaiIssueType = issue.type;
-    diagnostic.markupaiCategory = issue.category ?? "";
-    diagnostic.markupaiSubcategory = issue.subcategory;
+    diagnostic.markupaiCategory = issue.category;
+    diagnostic.markupaiGuidelineName = issue.guidelineName;
     diagnostic.markupaiSeverity = issue.severity;
 
     return diagnostic;
@@ -199,12 +198,12 @@ export class DiagnosticsManager {
   clearForDocument(uri: vscode.Uri): void {
     this.diagnosticCollection.delete(uri);
     this.documentIssues.delete(uri.toString());
-    this.documentScores.delete(uri.toString());
+    this.documentAssessments.delete(uri.toString());
   }
 
   clearAll(): void {
     this.diagnosticCollection.clear();
     this.documentIssues.clear();
-    this.documentScores.clear();
+    this.documentAssessments.clear();
   }
 }

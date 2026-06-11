@@ -77,10 +77,10 @@ export class FindingsTreeDataProvider implements vscode.TreeDataProvider<Finding
         );
       }
 
-      treeItem.description = issue.category || issue.type;
+      treeItem.description = issue.category;
 
       const tooltip = new vscode.MarkdownString();
-      tooltip.appendMarkdown(`**${issue.category || issue.type}**\n\n`);
+      tooltip.appendMarkdown(`**${issue.category}**\n\n`);
       tooltip.appendMarkdown(`${issue.message}\n\n`);
       if (issue.suggestion) {
         tooltip.appendMarkdown(`**Suggestion:** \`${issue.suggestion}\``);
@@ -132,9 +132,7 @@ export class FindingsTreeDataProvider implements vscode.TreeDataProvider<Finding
         issues = issues.filter((i) => i.severity === this.severityFilter);
       }
       if (this.categoryFilter) {
-        issues = issues.filter(
-          (i) => i.category === this.categoryFilter || i.type === this.categoryFilter,
-        );
+        issues = issues.filter((i) => i.category === this.categoryFilter);
       }
 
       if (issues.length === 0) {
@@ -184,9 +182,7 @@ export class FindingsTreeDataProvider implements vscode.TreeDataProvider<Finding
         filtered = filtered.filter((i) => i.severity === this.severityFilter);
       }
       if (this.categoryFilter) {
-        filtered = filtered.filter(
-          (i) => i.category === this.categoryFilter || i.type === this.categoryFilter,
-        );
+        filtered = filtered.filter((i) => i.category === this.categoryFilter);
       }
       count += filtered.length;
     });
@@ -198,10 +194,7 @@ export class FindingsTreeDataProvider implements vscode.TreeDataProvider<Finding
     const documentIssues = this.getDocumentIssues();
     documentIssues.forEach((issues) => {
       issues.forEach((issue) => {
-        if (issue.category) {
-          categories.add(issue.category);
-        }
-        categories.add(issue.type);
+        categories.add(issue.category);
       });
     });
     return Array.from(categories);

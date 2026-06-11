@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import * as vscode from "vscode";
 import * as utils from "../src/utils";
-import { ContentIssue } from "../src/types";
+import { ContentIssue, RiskSummary } from "../src/types";
 
 function createMockConfig(
   getter: (key: string, defaultValue?: unknown) => unknown,
@@ -11,6 +11,19 @@ function createMockConfig(
     update: vi.fn(),
     has: vi.fn(() => true),
     inspect: vi.fn(),
+  };
+}
+
+function createIssue(severity: ContentIssue["severity"]): ContentIssue {
+  return {
+    id: "1",
+    startIndex: 0,
+    endIndex: 5,
+    category: "Grammar",
+    message: "Test",
+    suggestion: "Test",
+    originalText: "test",
+    severity,
   };
 }
 
@@ -28,83 +41,67 @@ describe("utils", () => {
     });
   });
 
-  describe("getApiToken", () => {
-    it("should return API token from configuration", () => {
+  describe("getEnvironment", () => {
+    it("should return configured dev environment", () => {
       vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(
-        createMockConfig((key, defaultValue) => (key === "apiToken" ? "test-token" : defaultValue)),
+        createMockConfig((key, defaultValue) => (key === "environment" ? "dev" : defaultValue)),
       );
 
-      const token = utils.getApiToken();
-      expect(token).toBe("test-token");
+      expect(utils.getEnvironment()).toBe("dev");
     });
 
-    it("should return empty string if no token configured", () => {
+    it("should return default prod if not configured", () => {
       vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(
         createMockConfig((_key, defaultValue) => defaultValue),
       );
 
-      const token = utils.getApiToken();
-      expect(token).toBe("");
+      expect(utils.getEnvironment()).toBe("prod");
     });
-  });
 
-  describe("hasApiToken", () => {
-    it("should return true when token is configured", () => {
+    it("should fall back to prod for unknown values", () => {
       vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(
-        createMockConfig(() => "test-token"),
+        createMockConfig((key, defaultValue) => (key === "environment" ? "staging" : defaultValue)),
       );
 
-      expect(utils.hasApiToken()).toBe(true);
-    });
-
-    it("should return false when token is empty", () => {
-      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(createMockConfig(() => ""));
-
-      expect(utils.hasApiToken()).toBe(false);
-    });
-
-    it("should return false when token is only whitespace", () => {
-      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(createMockConfig(() => "   "));
-
-      expect(utils.hasApiToken()).toBe(false);
+      expect(utils.getEnvironment()).toBe("prod");
     });
   });
 
-  describe("getDialect", () => {
-    it("should return configured dialect", () => {
+  describe("getApiBaseUrl", () => {
+    it("should return prod URL by default", () => {
+      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(
+        createMockConfig((_key, defaultValue) => defaultValue),
+      );
+
+      expect(utils.getApiBaseUrl()).toBe("https://api.markup.ai");
+    });
+
+    it("should return dev URL when dev environment is configured", () => {
+      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(
+        createMockConfig((key, defaultValue) => (key === "environment" ? "dev" : defaultValue)),
+      );
+
+      expect(utils.getApiBaseUrl()).toBe("https://api.dev.markup.ai");
+    });
+  });
+
+  describe("getStyleGuideId", () => {
+    it("should return configured style guide ID", () => {
       vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(
         createMockConfig((key, defaultValue) =>
-          key === "dialect" ? "british_english" : defaultValue,
+          key === "styleGuide" ? "guide-123" : defaultValue,
         ),
       );
 
-      expect(utils.getDialect()).toBe("british_english");
+      expect(utils.getStyleGuideId()).toBe("guide-123");
     });
 
-    it("should return default american_english if not configured", () => {
+    it("should return empty string (organization default) if not configured", () => {
       vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(
         createMockConfig((_key, defaultValue) => defaultValue),
       );
 
-      expect(utils.getDialect()).toBe("american_english");
-    });
-  });
-
-  describe("getStyleGuide", () => {
-    it("should return configured style guide", () => {
-      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(
-        createMockConfig((key, defaultValue) => (key === "styleGuide" ? "chicago" : defaultValue)),
-      );
-
-      expect(utils.getStyleGuide()).toBe("chicago");
-    });
-
-    it("should return default ap if not configured", () => {
-      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(
-        createMockConfig((_key, defaultValue) => defaultValue),
-      );
-
-      expect(utils.getStyleGuide()).toBe("ap");
+      expect(utils.getStyleGuideId()).toBe("");
     });
   });
 
@@ -123,48 +120,19 @@ describe("utils", () => {
 
   describe("getSeverityForIssue", () => {
     it("should return Error severity for high severity issues", () => {
-      const issue: ContentIssue = {
-        id: "1",
-        startIndex: 0,
-        endIndex: 5,
-        type: "grammar",
-        message: "Test",
-        suggestion: "Test",
-        originalText: "test",
-        severity: "high",
-      };
-
-      expect(utils.getSeverityForIssue(issue)).toBe(vscode.DiagnosticSeverity.Error);
+      expect(utils.getSeverityForIssue(createIssue("high"))).toBe(vscode.DiagnosticSeverity.Error);
     });
 
     it("should return Warning severity for medium severity issues", () => {
-      const issue: ContentIssue = {
-        id: "1",
-        startIndex: 0,
-        endIndex: 5,
-        type: "grammar",
-        message: "Test",
-        suggestion: "Test",
-        originalText: "test",
-        severity: "medium",
-      };
-
-      expect(utils.getSeverityForIssue(issue)).toBe(vscode.DiagnosticSeverity.Warning);
+      expect(utils.getSeverityForIssue(createIssue("medium"))).toBe(
+        vscode.DiagnosticSeverity.Warning,
+      );
     });
 
     it("should return Information severity for low severity issues", () => {
-      const issue: ContentIssue = {
-        id: "1",
-        startIndex: 0,
-        endIndex: 5,
-        type: "grammar",
-        message: "Test",
-        suggestion: "Test",
-        originalText: "test",
-        severity: "low",
-      };
-
-      expect(utils.getSeverityForIssue(issue)).toBe(vscode.DiagnosticSeverity.Information);
+      expect(utils.getSeverityForIssue(createIssue("low"))).toBe(
+        vscode.DiagnosticSeverity.Information,
+      );
     });
   });
 
@@ -191,6 +159,37 @@ describe("utils", () => {
       expect(utils.getScoreEmoji(0)).toBe("🔴");
       expect(utils.getScoreEmoji(25)).toBe("🔴");
       expect(utils.getScoreEmoji(49)).toBe("🔴");
+    });
+  });
+
+  describe("getSeverityEmoji", () => {
+    it("should return red circle for high severity", () => {
+      expect(utils.getSeverityEmoji("high")).toBe("🔴");
+    });
+
+    it("should return yellow circle for medium severity", () => {
+      expect(utils.getSeverityEmoji("medium")).toBe("🟡");
+    });
+
+    it("should return blue circle for low severity", () => {
+      expect(utils.getSeverityEmoji("low")).toBe("🔵");
+    });
+  });
+
+  describe("formatRiskSummary", () => {
+    it("should format all risk levels when present", () => {
+      const risk: RiskSummary = { high: 2, medium: 3, low: 11, total: 16 };
+      expect(utils.formatRiskSummary(risk)).toBe("2H 3M 11L");
+    });
+
+    it("should omit risk levels with zero count", () => {
+      expect(utils.formatRiskSummary({ high: 0, medium: 3, low: 1, total: 4 })).toBe("3M 1L");
+      expect(utils.formatRiskSummary({ high: 1, medium: 0, low: 0, total: 1 })).toBe("1H");
+      expect(utils.formatRiskSummary({ high: 0, medium: 0, low: 5, total: 5 })).toBe("5L");
+    });
+
+    it("should return 'No issues' when total is zero", () => {
+      expect(utils.formatRiskSummary({ high: 0, medium: 0, low: 0, total: 0 })).toBe("No issues");
     });
   });
 
@@ -275,36 +274,6 @@ describe("utils", () => {
     it("should be case-insensitive", () => {
       expect(utils.isCorsOrNetworkError(new Error("FAILED TO FETCH"))).toBe(true);
       expect(utils.isCorsOrNetworkError(new Error("cors error"))).toBe(true);
-    });
-  });
-
-  describe("getTypeEmoji", () => {
-    it("should return correct emoji for grammar type", () => {
-      expect(utils.getTypeEmoji("grammar")).toBe("📖");
-    });
-
-    it("should return correct emoji for spelling type", () => {
-      expect(utils.getTypeEmoji("spelling")).toBe("📝");
-    });
-
-    it("should return correct emoji for consistency type", () => {
-      expect(utils.getTypeEmoji("consistency")).toBe("🔄");
-    });
-
-    it("should return correct emoji for clarity type", () => {
-      expect(utils.getTypeEmoji("clarity")).toBe("💡");
-    });
-
-    it("should return correct emoji for terminology type", () => {
-      expect(utils.getTypeEmoji("terminology")).toBe("📚");
-    });
-
-    it("should return correct emoji for tone type", () => {
-      expect(utils.getTypeEmoji("tone")).toBe("🎭");
-    });
-
-    it("should return default emoji for unknown type", () => {
-      expect(utils.getTypeEmoji("unknown" as ContentIssue["type"])).toBe("📝");
     });
   });
 });

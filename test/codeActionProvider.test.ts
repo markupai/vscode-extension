@@ -23,7 +23,6 @@ function createMarkupDiagnostic(overrides: Partial<MarkupAIDiagnostic> = {}): Ma
   diag.source = "MarkupAI";
   diag.markupaiSuggestion = "Hi";
   diag.markupaiOriginalText = "Hello";
-  diag.markupaiIssueType = "grammar";
   diag.markupaiCategory = "grammar";
   diag.markupaiSeverity = "medium";
 

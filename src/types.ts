@@ -4,29 +4,41 @@ import * as vscode from "vscode";
 // Content Issue Types
 // ============================================================================
 
+export type IssueSeverity = "high" | "medium" | "low";
+
 export interface ContentIssue {
   id: string;
   startIndex: number;
   endIndex: number;
-  type: "spelling" | "grammar" | "consistency" | "clarity" | "terminology" | "tone";
-  category?: string;
-  subcategory?: string;
+  /** Free-form category from the Style Agent (e.g. "Spelling and Grammar"). */
+  category: string;
+  guidelineName?: string;
   message: string;
+  /** Empty string when the issue has no replacement suggestion. */
   suggestion: string;
   originalText: string;
-  severity: "high" | "medium" | "low";
+  severity: IssueSeverity;
 }
 
-export interface ContentScores {
-  overall: number;
-  grammar: number;
-  consistency: number;
-  terminology: number;
+/** Issue counts by risk level — the primary signal for organizations
+ *  without numeric scoring. */
+export interface RiskSummary {
+  high: number;
+  medium: number;
+  low: number;
+  total: number;
+}
+
+export interface DocumentAssessment {
+  risk: RiskSummary;
+  /** Numeric quality score (0–100); only present when the organization
+   *  has numeric scoring enabled. */
+  score?: number;
 }
 
 export interface CheckResult {
   issues: ContentIssue[];
-  scores: ContentScores;
+  assessment: DocumentAssessment;
 }
 
 // ============================================================================
@@ -36,7 +48,8 @@ export interface CheckResult {
 export interface StyleGuideOption {
   id: string;
   name: string;
-  isBuiltIn: boolean;
+  isDefault: boolean;
+  language?: string;
 }
 
 // ============================================================================
@@ -67,8 +80,7 @@ export interface FolderScannerItem {
 export interface MarkupAIDiagnostic extends vscode.Diagnostic {
   markupaiSuggestion: string;
   markupaiOriginalText: string;
-  markupaiIssueType: string;
   markupaiCategory: string;
-  markupaiSubcategory?: string;
+  markupaiGuidelineName?: string;
   markupaiSeverity: string;
 }

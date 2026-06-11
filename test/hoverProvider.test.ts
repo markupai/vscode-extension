@@ -22,9 +22,8 @@ function createMarkupDiagnostic(overrides: Partial<MarkupAIDiagnostic> = {}): Ma
   diag.source = "MarkupAI";
   diag.markupaiSuggestion = "Hi";
   diag.markupaiOriginalText = "Hello";
-  diag.markupaiIssueType = "grammar";
-  diag.markupaiCategory = "grammar";
-  diag.markupaiSubcategory = "subject-verb";
+  diag.markupaiCategory = "Grammar";
+  diag.markupaiGuidelineName = "Subject-verb agreement";
   diag.markupaiSeverity = "medium";
 
   return Object.assign(diag, overrides);
@@ -83,7 +82,7 @@ describe("MarkupAIHoverProvider", () => {
   });
 
   it("should include category header in hover content", () => {
-    const diagnostic = createMarkupDiagnostic({ markupaiCategory: "grammar" });
+    const diagnostic = createMarkupDiagnostic({ markupaiCategory: "Grammar" });
     const provider = new MarkupAIHoverProvider(() => [diagnostic]);
     const doc = createMockDocument();
     const position = new vscode.Position(0, 2);
@@ -91,8 +90,7 @@ describe("MarkupAIHoverProvider", () => {
     const hover = provider.provideHover(doc, position, mockToken);
 
     const markdown = getHoverMarkdown(hover);
-    expect(markdown.value).toContain("Grammar");
-    expect(markdown.value).toContain("📖");
+    expect(markdown.value).toContain("### Grammar");
   });
 
   it("should include suggestion and Apply Fix link", () => {
@@ -128,8 +126,10 @@ describe("MarkupAIHoverProvider", () => {
     expect(markdown.value).not.toContain("Apply Fix");
   });
 
-  it("should include subcategory when present", () => {
-    const diagnostic = createMarkupDiagnostic({ markupaiSubcategory: "subject-verb" });
+  it("should include guideline when present", () => {
+    const diagnostic = createMarkupDiagnostic({
+      markupaiGuidelineName: "Subject-verb agreement",
+    });
     const provider = new MarkupAIHoverProvider(() => [diagnostic]);
     const doc = createMockDocument();
     const position = new vscode.Position(0, 2);
@@ -137,11 +137,11 @@ describe("MarkupAIHoverProvider", () => {
     const hover = provider.provideHover(doc, position, mockToken);
     const markdown = getHoverMarkdown(hover);
 
-    expect(markdown.value).toContain("**Subcategory:** Subject-verb");
+    expect(markdown.value).toContain("**Guideline:** Subject-verb agreement");
   });
 
-  it("should not include subcategory when absent", () => {
-    const diagnostic = createMarkupDiagnostic({ markupaiSubcategory: undefined });
+  it("should not include guideline when absent", () => {
+    const diagnostic = createMarkupDiagnostic({ markupaiGuidelineName: undefined });
     const provider = new MarkupAIHoverProvider(() => [diagnostic]);
     const doc = createMockDocument();
     const position = new vscode.Position(0, 2);
@@ -149,7 +149,22 @@ describe("MarkupAIHoverProvider", () => {
     const hover = provider.provideHover(doc, position, mockToken);
     const markdown = getHoverMarkdown(hover);
 
-    expect(markdown.value).not.toContain("**Subcategory:**");
+    expect(markdown.value).not.toContain("**Guideline:**");
+  });
+
+  it("should not repeat guideline when it matches the category", () => {
+    const diagnostic = createMarkupDiagnostic({
+      markupaiCategory: "Grammar",
+      markupaiGuidelineName: "Grammar",
+    });
+    const provider = new MarkupAIHoverProvider(() => [diagnostic]);
+    const doc = createMockDocument();
+    const position = new vscode.Position(0, 2);
+
+    const hover = provider.provideHover(doc, position, mockToken);
+    const markdown = getHoverMarkdown(hover);
+
+    expect(markdown.value).not.toContain("**Guideline:**");
   });
 
   it("should show red emoji for high severity", () => {
@@ -205,7 +220,7 @@ describe("MarkupAIHoverProvider", () => {
   });
 
   it("should return hover for the first matching diagnostic", () => {
-    const diag1 = createMarkupDiagnostic({ markupaiCategory: "grammar" });
+    const diag1 = createMarkupDiagnostic({ markupaiCategory: "Grammar" });
     const diag2Range = new vscode.Range(new vscode.Position(0, 3), new vscode.Position(0, 8));
     const diag2 = new vscode.Diagnostic(
       diag2Range,
@@ -214,7 +229,7 @@ describe("MarkupAIHoverProvider", () => {
     ) as MarkupAIDiagnostic;
     diag2.markupaiSuggestion = "fixed";
     diag2.markupaiOriginalText = "lo wo";
-    diag2.markupaiCategory = "consistency";
+    diag2.markupaiCategory = "Consistency";
     diag2.markupaiSeverity = "low";
 
     const provider = new MarkupAIHoverProvider(() => [diag1, diag2]);

@@ -37,6 +37,16 @@
   "contributes": {
     "commands": [
       {
+        "command": "markupai.signIn",
+        "title": "Sign In",
+        "category": "MarkupAI"
+      },
+      {
+        "command": "markupai.signOut",
+        "title": "Sign Out",
+        "category": "MarkupAI"
+      },
+      {
         "command": "markupai.checkContent",
         "title": "MarkupAI - Check Content",
         "category": "MarkupAI"
@@ -72,18 +82,8 @@
         "category": "MarkupAI"
       },
       {
-        "command": "markupai.configureApiToken",
-        "title": "Configure API Token",
-        "category": "MarkupAI"
-      },
-      {
         "command": "markupai.selectStyleGuide",
         "title": "Select Style Guide",
-        "category": "MarkupAI"
-      },
-      {
-        "command": "markupai.selectDialect",
-        "title": "Select Dialect",
         "category": "MarkupAI"
       },
       {
@@ -166,51 +166,43 @@
     "configuration": {
       "title": "MarkupAI",
       "properties": {
-        "markupai.apiToken": {
-          "type": "string",
-          "default": "",
-          "description": "Your MarkupAI API token. Get one at https://markup.ai",
-          "scope": "application"
-        },
-        "markupai.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable or disable MarkupAI checking"
-        },
-        "markupai.dialect": {
-          "type": "string",
-          "default": "american_english",
-          "enum": [
-            "american_english",
-            "british_english",
-            "canadian_english"
-          ],
-          "enumDescriptions": [
-            "American English",
-            "British English",
-            "Canadian English"
-          ],
-          "description": "The language dialect to use for checking"
-        },
-        "markupai.styleGuide": {
-          "type": "string",
-          "default": "ap",
-          "description": "The style guide to use. Built-in options: 'ap', 'chicago', 'microsoft', or a custom style guide ID"
-        },
-        "markupai.checkOnOpen": {
-          "type": "boolean",
-          "default": true,
-          "description": "Automatically check content when a file is opened"
+        "markupai.checkDelay": {
+          "type": "number",
+          "default": 2000,
+          "description": "Delay in milliseconds before checking after a document change"
         },
         "markupai.checkOnChange": {
           "type": "boolean",
           "default": false,
           "description": "Automatically re-check content when the document changes. Enable this for real-time score updates while editing. Disable to save API calls (recommended)."
         },
-        "markupai.checkDelay": {
-          "type": "number",
-          "default": 2000,
-          "description": "Delay in milliseconds before checking after a document change"
+        "markupai.checkOnOpen": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically check content when a file is opened"
+        },
+        "markupai.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable or disable MarkupAI checking"
+        },
+        "markupai.environment": {
+          "type": "string",
+          "default": "prod",
+          "enum": [
+            "prod",
+            "dev"
+          ],
+          "enumDescriptions": [
+            "Production (api.markup.ai)",
+            "Development (api.dev.markup.ai)"
+          ],
+          "description": "MarkupAI API environment."
+        },
+        "markupai.styleGuide": {
+          "type": "string",
+          "default": "",
+          "description": "Style guide ID to check against. Leave empty to use your organization's default. Use the 'MarkupAI: Select Style Guide' command to pick one."
         }
       }
     },
@@ -325,17 +317,17 @@
           "when": "editorIsOpen"
         },
         {
-          "command": "markupai.configureApiToken"
-        },
-        {
           "command": "markupai.selectStyleGuide"
-        },
-        {
-          "command": "markupai.selectDialect"
         },
         {
           "command": "markupai.goToIssue",
           "when": "false"
+        },
+        {
+          "command": "markupai.signIn"
+        },
+        {
+          "command": "markupai.signOut"
         }
       ]
     },

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import * as vscode from "vscode";
 import { StatusBarManager } from "../src/statusBarManager";
-import { ContentScores } from "../src/types";
+import { DocumentAssessment } from "../src/types";
 
 function createMockStatusBarItem() {
   return {
@@ -25,10 +25,13 @@ describe("StatusBarManager", () => {
     statusBar = new StatusBarManager(mockItem as unknown as vscode.StatusBarItem);
   });
 
-  describe("showScore", () => {
+  describe("showAssessment", () => {
     it("should display green emoji for scores >= 90", () => {
-      const scores: ContentScores = { overall: 95, grammar: 90, consistency: 100, terminology: 95 };
-      statusBar.showScore(scores);
+      const assessment: DocumentAssessment = {
+        risk: { high: 0, medium: 1, low: 2, total: 3 },
+        score: 95,
+      };
+      statusBar.showAssessment(assessment);
 
       expect(mockItem.text).toBe("🟢 MarkupAI: 95");
       expect(mockItem.command).toBe("markupai.showScores");
@@ -37,42 +40,101 @@ describe("StatusBarManager", () => {
     });
 
     it("should display yellow emoji for scores >= 70 and < 90", () => {
-      const scores: ContentScores = { overall: 75, grammar: 70, consistency: 80, terminology: 75 };
-      statusBar.showScore(scores);
+      const assessment: DocumentAssessment = {
+        risk: { high: 0, medium: 2, low: 3, total: 5 },
+        score: 75,
+      };
+      statusBar.showAssessment(assessment);
 
       expect(mockItem.text).toBe("🟡 MarkupAI: 75");
     });
 
     it("should display orange emoji for scores >= 50 and < 70", () => {
-      const scores: ContentScores = { overall: 55, grammar: 50, consistency: 60, terminology: 55 };
-      statusBar.showScore(scores);
+      const assessment: DocumentAssessment = {
+        risk: { high: 1, medium: 2, low: 3, total: 6 },
+        score: 55,
+      };
+      statusBar.showAssessment(assessment);
 
       expect(mockItem.text).toBe("🟠 MarkupAI: 55");
     });
 
     it("should display red emoji for scores < 50", () => {
-      const scores: ContentScores = { overall: 30, grammar: 20, consistency: 40, terminology: 30 };
-      statusBar.showScore(scores);
+      const assessment: DocumentAssessment = {
+        risk: { high: 5, medium: 4, low: 3, total: 12 },
+        score: 30,
+      };
+      statusBar.showAssessment(assessment);
 
       expect(mockItem.text).toBe("🔴 MarkupAI: 30");
     });
 
-    it("should include detailed tooltip with all scores", () => {
-      const scores: ContentScores = { overall: 85, grammar: 90, consistency: 80, terminology: 85 };
-      statusBar.showScore(scores);
+    it("should display 'No issues' when there is no score and zero issues", () => {
+      const assessment: DocumentAssessment = {
+        risk: { high: 0, medium: 0, low: 0, total: 0 },
+      };
+      statusBar.showAssessment(assessment);
 
-      expect(mockItem.tooltip).toContain("Grammar: 90");
-      expect(mockItem.tooltip).toContain("Consistency: 80");
-      expect(mockItem.tooltip).toContain("Terminology: 85");
+      expect(mockItem.text).toBe("$(check) MarkupAI: No issues");
+      expect(mockItem.command).toBe("markupai.showScores");
+      expect(mockItem.show).toHaveBeenCalled();
+    });
+
+    it("should display risk summary with high severity emoji when high risks exist", () => {
+      const assessment: DocumentAssessment = {
+        risk: { high: 2, medium: 3, low: 11, total: 16 },
+      };
+      statusBar.showAssessment(assessment);
+
+      expect(mockItem.text).toBe("🔴 MarkupAI: 2H 3M 11L");
+    });
+
+    it("should display risk summary with medium severity emoji when medium is highest", () => {
+      const assessment: DocumentAssessment = {
+        risk: { high: 0, medium: 3, low: 1, total: 4 },
+      };
+      statusBar.showAssessment(assessment);
+
+      expect(mockItem.text).toBe("🟡 MarkupAI: 3M 1L");
+    });
+
+    it("should display risk summary with low severity emoji when only low risks exist", () => {
+      const assessment: DocumentAssessment = {
+        risk: { high: 0, medium: 0, low: 5, total: 5 },
+      };
+      statusBar.showAssessment(assessment);
+
+      expect(mockItem.text).toBe("🔵 MarkupAI: 5L");
+    });
+
+    it("should include detailed tooltip with risk counts", () => {
+      const assessment: DocumentAssessment = {
+        risk: { high: 1, medium: 2, low: 3, total: 6 },
+      };
+      statusBar.showAssessment(assessment);
+
+      expect(mockItem.tooltip).toContain("High risk: 1");
+      expect(mockItem.tooltip).toContain("Medium risk: 2");
+      expect(mockItem.tooltip).toContain("Low risk: 3");
+    });
+
+    it("should include quality score in tooltip when present", () => {
+      const assessment: DocumentAssessment = {
+        risk: { high: 1, medium: 2, low: 3, total: 6 },
+        score: 85,
+      };
+      statusBar.showAssessment(assessment);
+
+      expect(mockItem.tooltip).toContain("Quality score: 85");
     });
   });
 
-  describe("showNoToken", () => {
-    it("should display token prompt with warning background", () => {
-      statusBar.showNoToken();
+  describe("showSignedOut", () => {
+    it("should display sign-in prompt with warning background", () => {
+      statusBar.showSignedOut();
 
-      expect(mockItem.text).toBe("$(key) MarkupAI: Add API Token");
-      expect(mockItem.command).toBe("markupai.configureApiToken");
+      expect(mockItem.text).toBe("$(key) MarkupAI: Sign in");
+      expect(mockItem.command).toBe("markupai.signIn");
       expect(mockItem.backgroundColor).toBeInstanceOf(vscode.ThemeColor);
       expect(mockItem.show).toHaveBeenCalled();
     });
@@ -89,8 +151,8 @@ describe("StatusBarManager", () => {
       expect(mockItem.show).toHaveBeenCalled();
     });
 
-    it("should reset stale state from showNoToken", () => {
-      statusBar.showNoToken();
+    it("should reset stale state from showSignedOut", () => {
+      statusBar.showSignedOut();
       statusBar.showChecking();
 
       expect(mockItem.command).toBeUndefined();
@@ -120,8 +182,8 @@ describe("StatusBarManager", () => {
       expect(mockItem.show).toHaveBeenCalled();
     });
 
-    it("should reset stale state from showNoToken", () => {
-      statusBar.showNoToken();
+    it("should reset stale state from showSignedOut", () => {
+      statusBar.showSignedOut();
       statusBar.showError();
 
       expect(mockItem.command).toBeUndefined();
@@ -138,15 +200,18 @@ describe("StatusBarManager", () => {
   });
 
   describe("update", () => {
-    it("should hide when scores are null", () => {
+    it("should hide when assessment is null", () => {
       statusBar.update(null);
 
       expect(mockItem.hide).toHaveBeenCalled();
     });
 
-    it("should show score when scores are provided", () => {
-      const scores: ContentScores = { overall: 85, grammar: 90, consistency: 80, terminology: 85 };
-      statusBar.update(scores);
+    it("should show assessment when one is provided", () => {
+      const assessment: DocumentAssessment = {
+        risk: { high: 0, medium: 1, low: 2, total: 3 },
+        score: 85,
+      };
+      statusBar.update(assessment);
 
       expect(mockItem.text).toContain("MarkupAI: 85");
       expect(mockItem.show).toHaveBeenCalled();

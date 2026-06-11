@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
-import { MarkupAI } from "@markupai/api";
-import { ContentIssue } from "./types";
+import { ContentIssue, RiskSummary } from "./types";
+import { ENVIRONMENT_URLS, MarkupAIEnvironment } from "./constants";
 
 export const SUPPORTED_SCHEMES = [
   "file",
@@ -20,31 +20,25 @@ export function getConfig(): vscode.WorkspaceConfiguration {
 }
 
 /**
- * Get the API token from configuration
+ * Selected API environment (prod unless overridden).
  */
-export function getApiToken(): string {
-  return getConfig().get("apiToken", "");
+export function getEnvironment(): MarkupAIEnvironment {
+  const env = getConfig().get<string>("environment", "prod");
+  return env === "dev" ? "dev" : "prod";
 }
 
 /**
- * Check if API token is configured
+ * Base URL of the MarkupAI API for the selected environment.
  */
-export function hasApiToken(): boolean {
-  return getApiToken().trim().length > 0;
+export function getApiBaseUrl(): string {
+  return ENVIRONMENT_URLS[getEnvironment()];
 }
 
 /**
- * Get the selected dialect
+ * Selected style guide ID; empty string means the organization default.
  */
-export function getDialect(): MarkupAI.Dialects {
-  return getConfig().get("dialect", "american_english");
-}
-
-/**
- * Get the selected style guide
- */
-export function getStyleGuide(): string {
-  return getConfig().get("styleGuide", "ap");
+export function getStyleGuideId(): string {
+  return getConfig().get("styleGuide", "");
 }
 
 /**
@@ -87,6 +81,40 @@ export function getScoreEmoji(score: number): string {
 }
 
 /**
+ * Get emoji for an issue severity
+ */
+export function getSeverityEmoji(severity: ContentIssue["severity"]): string {
+  switch (severity) {
+    case "high":
+      return "🔴";
+    case "medium":
+      return "🟡";
+    default:
+      return "🔵";
+  }
+}
+
+/**
+ * Compact risk summary, e.g. "2H 3M 11L" or "No issues".
+ */
+export function formatRiskSummary(risk: RiskSummary): string {
+  if (risk.total === 0) {
+    return "No issues";
+  }
+  const parts: string[] = [];
+  if (risk.high > 0) {
+    parts.push(`${String(risk.high)}H`);
+  }
+  if (risk.medium > 0) {
+    parts.push(`${String(risk.medium)}M`);
+  }
+  if (risk.low > 0) {
+    parts.push(`${String(risk.low)}L`);
+  }
+  return parts.join(" ");
+}
+
+/**
  * Whether the extension is running in a web (browser) extension host.
  */
 export function isWebEnvironment(): boolean {
@@ -116,26 +144,4 @@ export function isCorsOrNetworkError(error: unknown): boolean {
     msg.includes("cors") ||
     msg.includes("load failed")
   );
-}
-
-/**
- * Get emoji for an issue type
- */
-export function getTypeEmoji(type: ContentIssue["type"]): string {
-  switch (type) {
-    case "grammar":
-      return "📖";
-    case "spelling":
-      return "📝";
-    case "consistency":
-      return "🔄";
-    case "clarity":
-      return "💡";
-    case "terminology":
-      return "📚";
-    case "tone":
-      return "🎭";
-    default:
-      return "📝";
-  }
 }

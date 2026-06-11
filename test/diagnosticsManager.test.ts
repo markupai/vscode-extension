@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import * as vscode from "vscode";
 import { DiagnosticsManager } from "../src/diagnosticsManager";
-import { ContentIssue, MarkupAIDiagnostic } from "../src/types";
+import { ContentIssue, DocumentAssessment, MarkupAIDiagnostic } from "../src/types";
 
 function createMockDiagnosticCollection() {
   const store = new Map<string, vscode.Diagnostic[]>();
@@ -54,7 +54,6 @@ function createIssue(overrides: Partial<ContentIssue> = {}): ContentIssue {
     id: "issue-1",
     startIndex: 0,
     endIndex: 5,
-    type: "grammar",
     category: "grammar",
     message: "Test issue",
     suggestion: "fixed",
@@ -73,7 +72,7 @@ describe("DiagnosticsManager", () => {
     manager = new DiagnosticsManager(mockCollection as unknown as vscode.DiagnosticCollection);
   });
 
-  describe("issue and score management", () => {
+  describe("issue and assessment management", () => {
     it("should store and retrieve issues", () => {
       const issues = [createIssue()];
       manager.setIssues("doc-1", issues);
@@ -85,15 +84,18 @@ describe("DiagnosticsManager", () => {
       expect(manager.getIssues("unknown")).toBeUndefined();
     });
 
-    it("should store and retrieve scores", () => {
-      const scores = { overall: 85, grammar: 90, consistency: 80, terminology: 85 };
-      manager.setScores("doc-1", scores);
+    it("should store and retrieve assessments", () => {
+      const assessment: DocumentAssessment = {
+        risk: { high: 1, medium: 2, low: 0, total: 3 },
+        score: 85,
+      };
+      manager.setAssessment("doc-1", assessment);
 
-      expect(manager.getScores("doc-1")).toEqual(scores);
+      expect(manager.getAssessment("doc-1")).toEqual(assessment);
     });
 
-    it("should return undefined for unknown document scores", () => {
-      expect(manager.getScores("unknown")).toBeUndefined();
+    it("should return undefined for unknown document assessments", () => {
+      expect(manager.getAssessment("unknown")).toBeUndefined();
     });
 
     it("should return all issues map", () => {
@@ -148,8 +150,8 @@ describe("DiagnosticsManager", () => {
         createIssue({
           suggestion: "Hi",
           originalText: "Hello",
-          type: "grammar",
           category: "grammar",
+          guidelineName: "Use informal greetings",
           severity: "high",
         }),
       ];
@@ -161,8 +163,8 @@ describe("DiagnosticsManager", () => {
 
       expect(diagnostic.markupaiSuggestion).toBe("Hi");
       expect(diagnostic.markupaiOriginalText).toBe("Hello");
-      expect(diagnostic.markupaiIssueType).toBe("grammar");
       expect(diagnostic.markupaiCategory).toBe("grammar");
+      expect(diagnostic.markupaiGuidelineName).toBe("Use informal greetings");
       expect(diagnostic.markupaiSeverity).toBe("high");
     });
 
@@ -172,7 +174,7 @@ describe("DiagnosticsManager", () => {
 
       const issues = [
         createIssue({ category: "grammar" }),
-        createIssue({ id: "issue-2", category: "consistency", type: "consistency" }),
+        createIssue({ id: "issue-2", category: "consistency" }),
       ];
 
       manager.updateDiagnostics(doc, issues);
@@ -192,7 +194,7 @@ describe("DiagnosticsManager", () => {
 
     it("should handle issues with empty category", () => {
       const doc = createMockDocument("Hello world");
-      const issues = [createIssue({ category: undefined })];
+      const issues = [createIssue({ category: "" })];
 
       manager.updateDiagnostics(doc, issues);
 
@@ -267,7 +269,7 @@ describe("DiagnosticsManager", () => {
       const doc = createMockDocument("Hello world");
       const issues = [
         createIssue({ category: "grammar" }),
-        createIssue({ id: "issue-2", category: "consistency", type: "consistency" }),
+        createIssue({ id: "issue-2", category: "consistency" }),
       ];
 
       manager.updateDiagnostics(doc, issues);
@@ -279,32 +281,32 @@ describe("DiagnosticsManager", () => {
   });
 
   describe("clearForDocument", () => {
-    it("should clear diagnostics, issues, and scores for a document", () => {
+    it("should clear diagnostics, issues, and assessments for a document", () => {
       const uri = vscode.Uri.file("/test/file.md");
       const docKey = uri.toString();
 
       manager.setIssues(docKey, [createIssue()]);
-      manager.setScores(docKey, { overall: 85, grammar: 90, consistency: 80, terminology: 85 });
+      manager.setAssessment(docKey, { risk: { high: 1, medium: 2, low: 0, total: 3 }, score: 85 });
 
       manager.clearForDocument(uri);
 
       expect(mockCollection.delete).toHaveBeenCalledWith(uri);
       expect(manager.getIssues(docKey)).toBeUndefined();
-      expect(manager.getScores(docKey)).toBeUndefined();
+      expect(manager.getAssessment(docKey)).toBeUndefined();
     });
   });
 
   describe("clearAll", () => {
     it("should clear everything", () => {
       manager.setIssues("doc-1", [createIssue()]);
-      manager.setScores("doc-1", { overall: 85, grammar: 90, consistency: 80, terminology: 85 });
+      manager.setAssessment("doc-1", { risk: { high: 1, medium: 2, low: 0, total: 3 }, score: 85 });
       manager.setIssues("doc-2", [createIssue({ id: "2" })]);
 
       manager.clearAll();
 
       expect(mockCollection.clear).toHaveBeenCalled();
       expect(manager.getAllIssues().size).toBe(0);
-      expect(manager.getScores("doc-1")).toBeUndefined();
+      expect(manager.getAssessment("doc-1")).toBeUndefined();
     });
   });
 

@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 import type {
   ContentIssue,
-  ContentScores,
+  RiskSummary,
+  DocumentAssessment,
   CheckResult,
   StyleGuideOption,
   FindingTreeItem,
@@ -16,7 +17,7 @@ describe("types", () => {
         id: "test-1",
         startIndex: 0,
         endIndex: 10,
-        type: "grammar",
+        category: "Spelling and Grammar",
         message: "Test message",
         suggestion: "Test suggestion",
         originalText: "test text",
@@ -24,32 +25,25 @@ describe("types", () => {
       };
 
       expect(issue.id).toBe("test-1");
-      expect(issue.type).toBe("grammar");
+      expect(issue.category).toBe("Spelling and Grammar");
       expect(issue.severity).toBe("high");
     });
 
-    it("should support all issue types", () => {
-      const types: ContentIssue["type"][] = [
-        "spelling",
-        "grammar",
-        "consistency",
-        "clarity",
-        "terminology",
-        "tone",
-      ];
+    it("should support free-form categories", () => {
+      const categories = ["Spelling and Grammar", "Terminology", "Tone of Voice", "Clarity"];
 
-      types.forEach((type) => {
+      categories.forEach((category) => {
         const issue: ContentIssue = {
           id: "1",
           startIndex: 0,
           endIndex: 5,
-          type,
+          category,
           message: "test",
           suggestion: "test",
           originalText: "test",
           severity: "medium",
         };
-        expect(issue.type).toBe(type);
+        expect(issue.category).toBe(category);
       });
     });
 
@@ -61,7 +55,7 @@ describe("types", () => {
           id: "1",
           startIndex: 0,
           endIndex: 5,
-          type: "grammar",
+          category: "Grammar",
           message: "test",
           suggestion: "test",
           originalText: "test",
@@ -71,119 +65,133 @@ describe("types", () => {
       });
     });
 
-    it("should allow optional category and subcategory", () => {
+    it("should allow optional guidelineName", () => {
       const issue: ContentIssue = {
         id: "1",
         startIndex: 0,
         endIndex: 5,
-        type: "grammar",
-        category: "test-category",
-        subcategory: "test-subcategory",
+        category: "Grammar",
+        guidelineName: "Use active voice",
         message: "test",
         suggestion: "test",
         originalText: "test",
         severity: "medium",
       };
 
-      expect(issue.category).toBe("test-category");
-      expect(issue.subcategory).toBe("test-subcategory");
+      expect(issue.category).toBe("Grammar");
+      expect(issue.guidelineName).toBe("Use active voice");
     });
   });
 
-  describe("ContentScores", () => {
-    it("should allow creating a valid ContentScores object", () => {
-      const scores: ContentScores = {
-        overall: 85,
-        grammar: 90,
-        consistency: 80,
-        terminology: 85,
+  describe("RiskSummary", () => {
+    it("should allow creating a valid RiskSummary object", () => {
+      const risk: RiskSummary = {
+        high: 1,
+        medium: 2,
+        low: 3,
+        total: 6,
       };
 
-      expect(scores.overall).toBe(85);
-      expect(scores.grammar).toBe(90);
-      expect(scores.consistency).toBe(80);
-      expect(scores.terminology).toBe(85);
+      expect(risk.high).toBe(1);
+      expect(risk.medium).toBe(2);
+      expect(risk.low).toBe(3);
+      expect(risk.total).toBe(6);
     });
 
-    it("should accept scores in valid range 0-100", () => {
-      const scores: ContentScores = {
-        overall: 0,
-        grammar: 50,
-        consistency: 100,
-        terminology: 75,
+    it("should allow a zero-issue summary", () => {
+      const risk: RiskSummary = {
+        high: 0,
+        medium: 0,
+        low: 0,
+        total: 0,
       };
 
-      expect(scores.overall).toBe(0);
-      expect(scores.grammar).toBe(50);
-      expect(scores.consistency).toBe(100);
-      expect(scores.terminology).toBe(75);
+      expect(risk.total).toBe(0);
+    });
+  });
+
+  describe("DocumentAssessment", () => {
+    it("should allow assessment without a score", () => {
+      const assessment: DocumentAssessment = {
+        risk: { high: 1, medium: 2, low: 0, total: 3 },
+      };
+
+      expect(assessment.risk.total).toBe(3);
+      expect(assessment.score).toBeUndefined();
+    });
+
+    it("should allow assessment with a numeric score", () => {
+      const assessment: DocumentAssessment = {
+        risk: { high: 0, medium: 1, low: 2, total: 3 },
+        score: 85,
+      };
+
+      expect(assessment.score).toBe(85);
     });
   });
 
   describe("CheckResult", () => {
-    it("should combine issues and scores", () => {
+    it("should combine issues and assessment", () => {
       const result: CheckResult = {
         issues: [
           {
             id: "1",
             startIndex: 0,
             endIndex: 5,
-            type: "grammar",
+            category: "Grammar",
             message: "test",
             suggestion: "test",
             originalText: "test",
             severity: "high",
           },
         ],
-        scores: {
-          overall: 85,
-          grammar: 90,
-          consistency: 80,
-          terminology: 85,
+        assessment: {
+          risk: { high: 1, medium: 0, low: 0, total: 1 },
+          score: 85,
         },
       };
 
       expect(result.issues).toHaveLength(1);
-      expect(result.scores.overall).toBe(85);
+      expect(result.assessment.risk.high).toBe(1);
+      expect(result.assessment.score).toBe(85);
     });
 
     it("should allow empty issues array", () => {
       const result: CheckResult = {
         issues: [],
-        scores: {
-          overall: 100,
-          grammar: 100,
-          consistency: 100,
-          terminology: 100,
+        assessment: {
+          risk: { high: 0, medium: 0, low: 0, total: 0 },
         },
       };
 
       expect(result.issues).toHaveLength(0);
-      expect(result.scores.overall).toBe(100);
+      expect(result.assessment.risk.total).toBe(0);
     });
   });
 
   describe("StyleGuideOption", () => {
-    it("should allow creating built-in style guide", () => {
+    it("should allow creating a default style guide", () => {
       const guide: StyleGuideOption = {
-        id: "ap",
-        name: "AP Style Guide",
-        isBuiltIn: true,
+        id: "guide-1",
+        name: "Organization Default",
+        isDefault: true,
       };
 
-      expect(guide.id).toBe("ap");
-      expect(guide.isBuiltIn).toBe(true);
+      expect(guide.id).toBe("guide-1");
+      expect(guide.isDefault).toBe(true);
     });
 
-    it("should allow creating custom style guide", () => {
+    it("should allow creating a non-default style guide with language", () => {
       const guide: StyleGuideOption = {
         id: "custom-123",
         name: "My Custom Guide",
-        isBuiltIn: false,
+        isDefault: false,
+        language: "en-US",
       };
 
       expect(guide.id).toBe("custom-123");
-      expect(guide.isBuiltIn).toBe(false);
+      expect(guide.isDefault).toBe(false);
+      expect(guide.language).toBe("en-US");
     });
   });
 
@@ -208,7 +216,7 @@ describe("types", () => {
         id: "1",
         startIndex: 0,
         endIndex: 5,
-        type: "grammar",
+        category: "Grammar",
         message: "test",
         suggestion: "test",
         originalText: "test",
@@ -232,7 +240,7 @@ describe("types", () => {
         id: "1",
         startIndex: 0,
         endIndex: 5,
-        type: "grammar",
+        category: "Grammar",
         message: "test",
         suggestion: "test",
         originalText: "test",

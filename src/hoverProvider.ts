@@ -1,6 +1,5 @@
 import * as vscode from "vscode";
-import { ContentIssue, MarkupAIDiagnostic } from "./types";
-import { getTypeEmoji } from "./utils";
+import { MarkupAIDiagnostic } from "./types";
 
 /**
  * Provides hover information for MarkupAI diagnostics.
@@ -26,16 +25,14 @@ export class MarkupAIHoverProvider implements vscode.HoverProvider {
         const suggestion = markupDiagnostic.markupaiSuggestion;
         const originalText = markupDiagnostic.markupaiOriginalText;
         const category = markupDiagnostic.markupaiCategory;
-        const subcategory = markupDiagnostic.markupaiSubcategory;
+        const guidelineName = markupDiagnostic.markupaiGuidelineName;
         const severity = markupDiagnostic.markupaiSeverity;
 
         const markdown = new vscode.MarkdownString();
         markdown.isTrusted = { enabledCommands: ["markupai.applyFix"] };
 
         if (category) {
-          const categoryLabel = category.charAt(0).toUpperCase() + category.slice(1);
-          const categoryEmoji = getTypeEmoji(category as ContentIssue["type"]);
-          markdown.appendMarkdown(`### ${categoryEmoji} ${categoryLabel}\n\n`);
+          markdown.appendMarkdown(`### ${category}\n\n`);
         }
 
         if (suggestion && suggestion !== originalText) {
@@ -60,16 +57,15 @@ export class MarkupAIHoverProvider implements vscode.HoverProvider {
           markdown.appendMarkdown(`[Apply Fix](command:markupai.applyFix?${args})\n\n`);
         }
 
-        if (subcategory) {
-          const subcategoryLabel = subcategory.charAt(0).toUpperCase() + subcategory.slice(1);
-          markdown.appendMarkdown(`**Subcategory:** ${subcategoryLabel}\n\n`);
+        if (guidelineName && guidelineName !== category) {
+          markdown.appendMarkdown(`**Guideline:** ${guidelineName}\n\n`);
         }
 
         if (severity) {
           const severityEmojiMap: Record<string, string> = { high: "🔴", medium: "🟡", low: "🔵" };
           const severityEmoji = severityEmojiMap[severity] ?? "🔵";
           const severityLabel = severity.charAt(0).toUpperCase() + severity.slice(1);
-          markdown.appendMarkdown(`**Severity:** ${severityEmoji} ${severityLabel}\n\n`);
+          markdown.appendMarkdown(`**Risk:** ${severityEmoji} ${severityLabel}\n\n`);
         }
 
         return new vscode.Hover(markdown, diagnostic.range);

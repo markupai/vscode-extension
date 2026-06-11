@@ -1,82 +1,16 @@
 import { describe, it, expect } from "vitest";
 import {
-  DIALECTS,
-  BUILT_IN_STYLE_GUIDES,
   POLL_INTERVAL_MS,
-  MAX_POLL_ATTEMPTS,
+  POLL_TIMEOUT_MS,
+  MAX_TEXT_LENGTH,
+  ENVIRONMENT_URLS,
+  OAUTH_PROVIDER,
+  INTEGRATION_ID,
+  USER_MESSAGE_PREFIX,
   SUPPORTED_FILE_EXTENSIONS,
 } from "../src/constants";
 
 describe("constants", () => {
-  describe("DIALECTS", () => {
-    it("should contain American English", () => {
-      const american = DIALECTS.find((d) => d.value === "american_english");
-      expect(american).toBeDefined();
-      expect(american?.label).toBe("American English");
-    });
-
-    it("should contain British English", () => {
-      const british = DIALECTS.find((d) => d.value === "british_english");
-      expect(british).toBeDefined();
-      expect(british?.label).toBe("British English");
-    });
-
-    it("should contain Canadian English", () => {
-      const canadian = DIALECTS.find((d) => d.value === "canadian_english");
-      expect(canadian).toBeDefined();
-      expect(canadian?.label).toBe("Canadian English");
-    });
-
-    it("should contain exactly 3 dialects", () => {
-      expect(DIALECTS).toHaveLength(3);
-    });
-
-    it("should have unique values", () => {
-      const values = DIALECTS.map((d) => d.value);
-      const uniqueValues = new Set(values);
-      expect(uniqueValues.size).toBe(DIALECTS.length);
-    });
-  });
-
-  describe("BUILT_IN_STYLE_GUIDES", () => {
-    it("should contain AP Style Guide", () => {
-      const ap = BUILT_IN_STYLE_GUIDES.find((g) => g.id === "ap");
-      expect(ap).toBeDefined();
-      expect(ap?.name).toBe("AP Style Guide");
-      expect(ap?.isBuiltIn).toBe(true);
-    });
-
-    it("should contain Chicago Manual of Style", () => {
-      const chicago = BUILT_IN_STYLE_GUIDES.find((g) => g.id === "chicago");
-      expect(chicago).toBeDefined();
-      expect(chicago?.name).toBe("Chicago Manual of Style");
-      expect(chicago?.isBuiltIn).toBe(true);
-    });
-
-    it("should contain Microsoft Style Guide", () => {
-      const microsoft = BUILT_IN_STYLE_GUIDES.find((g) => g.id === "microsoft");
-      expect(microsoft).toBeDefined();
-      expect(microsoft?.name).toBe("Microsoft Style Guide");
-      expect(microsoft?.isBuiltIn).toBe(true);
-    });
-
-    it("should contain exactly 3 style guides", () => {
-      expect(BUILT_IN_STYLE_GUIDES).toHaveLength(3);
-    });
-
-    it("should mark all as built-in", () => {
-      BUILT_IN_STYLE_GUIDES.forEach((guide) => {
-        expect(guide.isBuiltIn).toBe(true);
-      });
-    });
-
-    it("should have unique IDs", () => {
-      const ids = BUILT_IN_STYLE_GUIDES.map((g) => g.id);
-      const uniqueIds = new Set(ids);
-      expect(uniqueIds.size).toBe(BUILT_IN_STYLE_GUIDES.length);
-    });
-  });
-
   describe("POLL_INTERVAL_MS", () => {
     it("should be defined", () => {
       expect(POLL_INTERVAL_MS).toBeDefined();
@@ -91,23 +25,65 @@ describe("constants", () => {
     });
   });
 
-  describe("MAX_POLL_ATTEMPTS", () => {
+  describe("POLL_TIMEOUT_MS", () => {
     it("should be defined", () => {
-      expect(MAX_POLL_ATTEMPTS).toBeDefined();
+      expect(POLL_TIMEOUT_MS).toBeDefined();
     });
 
     it("should be a positive number", () => {
-      expect(MAX_POLL_ATTEMPTS).toBeGreaterThan(0);
-    });
-
-    it("should be 60 attempts", () => {
-      expect(MAX_POLL_ATTEMPTS).toBe(60);
+      expect(POLL_TIMEOUT_MS).toBeGreaterThan(0);
     });
 
     it("should allow for 2 minutes of polling", () => {
-      const totalTimeMs = POLL_INTERVAL_MS * MAX_POLL_ATTEMPTS;
-      const totalTimeMinutes = totalTimeMs / 1000 / 60;
-      expect(totalTimeMinutes).toBe(2);
+      expect(POLL_TIMEOUT_MS).toBe(120000);
+    });
+
+    it("should allow multiple poll attempts within the timeout", () => {
+      expect(POLL_TIMEOUT_MS / POLL_INTERVAL_MS).toBeGreaterThanOrEqual(2);
+    });
+  });
+
+  describe("MAX_TEXT_LENGTH", () => {
+    it("should be 100000 characters", () => {
+      expect(MAX_TEXT_LENGTH).toBe(100000);
+    });
+  });
+
+  describe("ENVIRONMENT_URLS", () => {
+    it("should define the prod API URL", () => {
+      expect(ENVIRONMENT_URLS.prod).toBe("https://api.markup.ai");
+    });
+
+    it("should define the dev API URL", () => {
+      expect(ENVIRONMENT_URLS.dev).toBe("https://api.dev.markup.ai");
+    });
+
+    it("should only contain prod and dev environments", () => {
+      expect(Object.keys(ENVIRONMENT_URLS).sort()).toEqual(["dev", "prod"]);
+    });
+
+    it("should use https for all environments", () => {
+      Object.values(ENVIRONMENT_URLS).forEach((url) => {
+        expect(url.startsWith("https://")).toBe(true);
+      });
+    });
+  });
+
+  describe("OAUTH_PROVIDER", () => {
+    it("should be the figma integration", () => {
+      expect(OAUTH_PROVIDER).toBe("figma");
+    });
+  });
+
+  describe("INTEGRATION_ID", () => {
+    it("should identify the VS Code extension", () => {
+      expect(INTEGRATION_ID).toBe("vscode_extension");
+    });
+  });
+
+  describe("USER_MESSAGE_PREFIX", () => {
+    it("should prefix messages with MarkupAI", () => {
+      expect(USER_MESSAGE_PREFIX).toBe("MarkupAI: ");
     });
   });
 

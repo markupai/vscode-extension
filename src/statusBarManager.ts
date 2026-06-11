@@ -1,9 +1,9 @@
 import * as vscode from "vscode";
-import { ContentScores } from "./types";
-import { getScoreEmoji } from "./utils";
+import { DocumentAssessment } from "./types";
+import { formatRiskSummary, getScoreEmoji, getSeverityEmoji } from "./utils";
 
 /**
- * Manages the status bar item for MarkupAI score display.
+ * Manages the status bar item for MarkupAI risk / score display.
  */
 export class StatusBarManager {
   private readonly statusBarItem: vscode.StatusBarItem;
@@ -12,19 +12,38 @@ export class StatusBarManager {
     this.statusBarItem = statusBarItem;
   }
 
-  showScore(scores: ContentScores): void {
-    const emoji = getScoreEmoji(scores.overall);
-    this.statusBarItem.text = `${emoji} MarkupAI: ${String(scores.overall)}`;
-    this.statusBarItem.tooltip = `Click to see detailed scores\n\nGrammar: ${String(scores.grammar)}\nConsistency: ${String(scores.consistency)}\nTerminology: ${String(scores.terminology)}`;
+  showAssessment(assessment: DocumentAssessment): void {
+    const { risk, score } = assessment;
+
+    if (typeof score === "number") {
+      this.statusBarItem.text = `${getScoreEmoji(score)} MarkupAI: ${String(score)}`;
+    } else if (risk.total === 0) {
+      this.statusBarItem.text = "$(check) MarkupAI: No issues";
+    } else {
+      const lead = risk.high > 0 ? "high" : risk.medium > 0 ? "medium" : "low";
+      this.statusBarItem.text = `${getSeverityEmoji(lead)} MarkupAI: ${formatRiskSummary(risk)}`;
+    }
+
+    const tooltipLines = [
+      "Click for details",
+      "",
+      `High risk: ${String(risk.high)}`,
+      `Medium risk: ${String(risk.medium)}`,
+      `Low risk: ${String(risk.low)}`,
+    ];
+    if (typeof score === "number") {
+      tooltipLines.splice(1, 0, `Quality score: ${String(score)}`);
+    }
+    this.statusBarItem.tooltip = tooltipLines.join("\n");
     this.statusBarItem.command = "markupai.showScores";
     this.statusBarItem.backgroundColor = undefined;
     this.statusBarItem.show();
   }
 
-  showNoToken(): void {
-    this.statusBarItem.text = "$(key) MarkupAI: Add API Token";
-    this.statusBarItem.tooltip = "Click to configure your MarkupAI API token";
-    this.statusBarItem.command = "markupai.configureApiToken";
+  showSignedOut(): void {
+    this.statusBarItem.text = "$(key) MarkupAI: Sign in";
+    this.statusBarItem.tooltip = "Click to sign in to MarkupAI";
+    this.statusBarItem.command = "markupai.signIn";
     this.statusBarItem.backgroundColor = new vscode.ThemeColor("statusBarItem.warningBackground");
     this.statusBarItem.show();
   }
@@ -57,11 +76,11 @@ export class StatusBarManager {
     this.statusBarItem.hide();
   }
 
-  update(scores: ContentScores | null): void {
-    if (!scores) {
+  update(assessment: DocumentAssessment | null): void {
+    if (!assessment) {
       this.hide();
       return;
     }
-    this.showScore(scores);
+    this.showAssessment(assessment);
   }
 }

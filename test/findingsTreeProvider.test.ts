@@ -8,7 +8,6 @@ function createIssue(overrides: Partial<ContentIssue> = {}): ContentIssue {
     id: "issue-1",
     startIndex: 0,
     endIndex: 5,
-    type: "grammar",
     category: "grammar",
     message: "Test grammar issue",
     suggestion: "fixed",
@@ -217,8 +216,8 @@ describe("FindingsTreeDataProvider", () => {
     it("should filter by category", () => {
       const uri = vscode.Uri.file("/test/file.md");
       issuesMap.set(uri.toString(), [
-        createIssue({ id: "1", category: "grammar", type: "grammar" }),
-        createIssue({ id: "2", category: "consistency", type: "consistency" }),
+        createIssue({ id: "1", category: "grammar" }),
+        createIssue({ id: "2", category: "consistency" }),
       ]);
 
       provider.setCategoryFilter("grammar");
@@ -226,24 +225,24 @@ describe("FindingsTreeDataProvider", () => {
       expect(provider.getTotalIssueCount()).toBe(1);
     });
 
-    it("should filter by type when category does not match", () => {
+    it("should exclude all issues when no category matches", () => {
       const uri = vscode.Uri.file("/test/file.md");
       issuesMap.set(uri.toString(), [
-        createIssue({ id: "1", category: undefined, type: "grammar" }),
-        createIssue({ id: "2", category: "consistency", type: "consistency" }),
+        createIssue({ id: "1", category: "grammar" }),
+        createIssue({ id: "2", category: "consistency" }),
       ]);
 
-      provider.setCategoryFilter("grammar");
+      provider.setCategoryFilter("terminology");
 
-      expect(provider.getTotalIssueCount()).toBe(1);
+      expect(provider.getTotalIssueCount()).toBe(0);
     });
 
     it("should combine severity and category filters", () => {
       const uri = vscode.Uri.file("/test/file.md");
       issuesMap.set(uri.toString(), [
-        createIssue({ id: "1", severity: "high", category: "grammar", type: "grammar" }),
-        createIssue({ id: "2", severity: "low", category: "grammar", type: "grammar" }),
-        createIssue({ id: "3", severity: "high", category: "consistency", type: "consistency" }),
+        createIssue({ id: "1", severity: "high", category: "grammar" }),
+        createIssue({ id: "2", severity: "low", category: "grammar" }),
+        createIssue({ id: "3", severity: "high", category: "consistency" }),
       ]);
 
       provider.setSeverityFilter("high");
@@ -280,25 +279,16 @@ describe("FindingsTreeDataProvider", () => {
     it("should return unique categories from all issues", () => {
       const uri = vscode.Uri.file("/test/file.md");
       issuesMap.set(uri.toString(), [
-        createIssue({ category: "grammar", type: "grammar" }),
-        createIssue({ id: "2", category: "consistency", type: "consistency" }),
-        createIssue({ id: "3", category: "grammar", type: "grammar" }),
+        createIssue({ category: "grammar" }),
+        createIssue({ id: "2", category: "consistency" }),
+        createIssue({ id: "3", category: "grammar" }),
       ]);
 
       const categories = provider.getAvailableCategories();
 
       expect(categories).toContain("grammar");
       expect(categories).toContain("consistency");
-    });
-
-    it("should include issue types", () => {
-      const uri = vscode.Uri.file("/test/file.md");
-      issuesMap.set(uri.toString(), [createIssue({ category: "grammar", type: "spelling" })]);
-
-      const categories = provider.getAvailableCategories();
-
-      expect(categories).toContain("grammar");
-      expect(categories).toContain("spelling");
+      expect(categories).toHaveLength(2);
     });
 
     it("should return empty array when no issues", () => {
