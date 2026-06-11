@@ -108,6 +108,21 @@ async function ensureStyleAgentAvailable(): Promise<boolean> {
   return true;
 }
 
+/**
+ * Configured style guide ID, or the organization's default style guide
+ * (is_default in the style guide list, e.g. "Main") when none is set.
+ */
+async function resolveStyleGuideId(): Promise<string | undefined> {
+  const configured = getStyleGuideId();
+  if (configured) {
+    return configured;
+  }
+  if (cachedStyleGuides.length === 0) {
+    await refreshStyleGuides();
+  }
+  return cachedStyleGuides.find((g) => g.isDefault)?.id;
+}
+
 async function runContentCheck(
   text: string,
   document: vscode.TextDocument,
@@ -115,11 +130,12 @@ async function runContentCheck(
 ): Promise<{ issues: ContentIssue[]; assessment: DocumentAssessment }> {
   const client = createClient();
   const fileName = document.uri.path.split("/").pop() || document.uri.path;
+  const styleGuideId = await resolveStyleGuideId();
 
   const check = async () => {
     const workflow = await client.runCheck({
       text,
-      styleGuideId: getStyleGuideId() || undefined,
+      ...(styleGuideId ? { styleGuideId } : {}),
       documentName: fileName,
       documentRef: document.uri.toString(),
     });
@@ -456,23 +472,18 @@ async function selectStyleGuide(): Promise<void> {
     },
   );
 
-  const currentStyleGuideId = getStyleGuideId();
-
-  const items: vscode.QuickPickItem[] = [
-    {
-      label: "Organization default",
-      description: currentStyleGuideId === "" ? "✓ Selected" : "",
-      detail: "Let MarkupAI pick the default style guide",
-    },
-  ];
-
-  for (const guide of cachedStyleGuides) {
-    items.push({
-      label: guide.name + (guide.isDefault ? " (default)" : ""),
-      description: guide.id === currentStyleGuideId ? "✓ Selected" : (guide.language ?? ""),
-      detail: guide.id,
-    });
+  if (cachedStyleGuides.length === 0) {
+    vscode.window.showWarningMessage(`${USER_MESSAGE_PREFIX}no style guides available.`);
+    return;
   }
+
+  const currentStyleGuideId = getStyleGuideId() || cachedStyleGuides.find((g) => g.isDefault)?.id;
+
+  const items: vscode.QuickPickItem[] = cachedStyleGuides.map((guide) => ({
+    label: guide.name + (guide.isDefault ? " (default)" : ""),
+    description: guide.id === currentStyleGuideId ? "✓ Selected" : (guide.language ?? ""),
+    detail: guide.id,
+  }));
 
   const selected = await vscode.window.showQuickPick(items, {
     title: "Select Style Guide",
@@ -482,12 +493,11 @@ async function selectStyleGuide(): Promise<void> {
     matchOnDetail: true,
   });
 
-  if (!selected) {
+  if (!selected?.detail) {
     return;
   }
 
-  const newValue = selected.label === "Organization default" ? "" : (selected.detail ?? "");
-  await getConfig().update("styleGuide", newValue, vscode.ConfigurationTarget.Global);
+  await getConfig().update("styleGuide", selected.detail, vscode.ConfigurationTarget.Global);
   vscode.window.showInformationMessage(`MarkupAI: Style guide set to "${selected.label}"`);
 
   const editor = vscode.window.activeTextEditor;
@@ -510,10 +520,11 @@ async function showScoresDialog(): Promise<void> {
   }
 
   const { risk, score } = assessment;
-  const currentStyleGuideId = getStyleGuideId();
+  const currentStyleGuideId = getStyleGuideId() || cachedStyleGuides.find((g) => g.isDefault)?.id;
   const styleGuideLabel =
     cachedStyleGuides.find((g) => g.id === currentStyleGuideId)?.name ||
-    (currentStyleGuideId === "" ? "Organization default" : currentStyleGuideId);
+    currentStyleGuideId ||
+    "Default";
 
   const items: vscode.QuickPickItem[] = [];
 

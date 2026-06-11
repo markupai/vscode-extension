@@ -153,7 +153,18 @@ export class StyleAgentClient {
   }
 
   async listStyleGuides(): Promise<StyleGuideSummary[]> {
-    const guides = (await this.request("/style-agent/style-guides")) as StyleGuideSummary[];
+    let guides: StyleGuideSummary[];
+    try {
+      guides = (await this.request("/style-agent/style-guides")) as StyleGuideSummary[];
+    } catch (error) {
+      // Prod does not serve /style-agent/style-guides yet; fall back to
+      // the older /style-agent/targets endpoint (same response shape).
+      if (error instanceof ApiError && error.status === 404 && !(error instanceof AuthError)) {
+        guides = (await this.request("/style-agent/targets")) as StyleGuideSummary[];
+      } else {
+        throw error;
+      }
+    }
     return guides.filter((g) => g.enabled);
   }
 
@@ -171,7 +182,10 @@ export class StyleAgentClient {
 
     const body: Record<string, unknown> = { text: req.text };
     if (req.styleGuideId) {
-      body.style_guide_id = req.styleGuideId;
+      // `target_id` is the deprecated alias of `style_guide_id`, but it is
+      // the only name the prod API accepts today (dev accepts both, prod
+      // 422s on style_guide_id). Switch once prod supports the new name.
+      body.target_id = req.styleGuideId;
     }
     if (req.documentName) {
       body.document_name = req.documentName;

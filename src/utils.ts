@@ -34,11 +34,15 @@ export function getApiBaseUrl(): string {
   return ENVIRONMENT_URLS[getEnvironment()];
 }
 
+/** Values the pre-style-agent extension stored; not valid style guide IDs. */
+const LEGACY_STYLE_GUIDE_IDS = new Set(["ap", "chicago", "microsoft"]);
+
 /**
  * Selected style guide ID; empty string means the organization default.
  */
 export function getStyleGuideId(): string {
-  return getConfig().get("styleGuide", "");
+  const value = getConfig().get("styleGuide", "");
+  return LEGACY_STYLE_GUIDE_IDS.has(value) ? "" : value;
 }
 
 /**
