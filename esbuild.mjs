@@ -3,6 +3,30 @@ import * as esbuild from "esbuild";
 const isWatch = process.argv.includes("--watch");
 const isProduction = process.argv.includes("--production");
 
+/**
+ * Emits the begin/end markers and error format that the background
+ * problemMatcher in .vscode/tasks.json watches for, so VS Code knows
+ * when the watch build is ready and can launch the extension host.
+ * @type {import('esbuild').Plugin}
+ */
+const problemMatcherPlugin = {
+  name: "problem-matcher",
+  setup(build) {
+    build.onStart(() => {
+      console.log("[watch] build started");
+    });
+    build.onEnd((result) => {
+      for (const { text, location } of result.errors) {
+        console.error(`✘ [ERROR] ${text}`);
+        if (location) {
+          console.error(`    ${location.file}:${location.line}:${location.column}:`);
+        }
+      }
+      console.log("[watch] build finished");
+    });
+  },
+};
+
 /** @type {import('esbuild').BuildOptions} */
 const sharedOptions = {
   entryPoints: ["src/extension.ts"],
@@ -11,6 +35,7 @@ const sharedOptions = {
   sourcemap: !isProduction,
   minify: isProduction,
   target: "ES2022",
+  plugins: isWatch ? [problemMatcherPlugin] : [],
 };
 
 /** @type {import('esbuild').BuildOptions} */
