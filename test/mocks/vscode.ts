@@ -364,8 +364,12 @@ export const languages = {
 };
 
 // Mock env
-export const env: { uiKind: UIKind } = {
+export const env: {
+  uiKind: UIKind;
+  openExternal: (uri: Uri) => Thenable<boolean>;
+} = {
   uiKind: UIKind.Desktop,
+  openExternal: vi.fn(() => Promise.resolve(true)),
 };
 
 // Mock commands
