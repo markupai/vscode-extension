@@ -122,7 +122,6 @@ export interface StyleAgentClientOptions {
   baseUrl: string;
   /** Resolves the current bearer token (access token or API key). */
   getToken: () => Promise<string | undefined>;
-  integrationVersion?: string;
   /** Exposed for tests — defaults to the platform `fetch`. */
   fetchImpl?: typeof fetch;
   pollIntervalMs?: number;
@@ -136,7 +135,6 @@ export interface StyleAgentClientOptions {
 export class StyleAgentClient {
   private readonly baseUrl: string;
   private readonly getToken: () => Promise<string | undefined>;
-  private readonly integrationVersion?: string;
   private readonly fetchImpl: typeof fetch;
   private readonly pollIntervalMs: number;
   private readonly pollTimeoutMs: number;
@@ -144,7 +142,6 @@ export class StyleAgentClient {
   constructor(options: StyleAgentClientOptions) {
     this.baseUrl = stripTrailingSlash(options.baseUrl);
     this.getToken = options.getToken;
-    this.integrationVersion = options.integrationVersion;
     this.fetchImpl = options.fetchImpl ?? fetch;
     this.pollIntervalMs = options.pollIntervalMs ?? POLL_INTERVAL_MS;
     this.pollTimeoutMs = options.pollTimeoutMs ?? POLL_TIMEOUT_MS;
@@ -235,14 +232,14 @@ export class StyleAgentClient {
       throw new AuthError(`${USER_MESSAGE_PREFIX}not signed in.`, 401);
     }
 
+    // Note: no x-integration-version header — the API enforces a global
+    // minimum version (426) that predates this integration. Reintroduce it
+    // once a dedicated vscode integration is registered server-side.
     const headers: Record<string, string> = {
       Authorization: `Bearer ${token}`,
       Accept: "application/json",
       "x-integration-id": INTEGRATION_ID,
     };
-    if (this.integrationVersion) {
-      headers["x-integration-version"] = this.integrationVersion;
-    }
     if (init?.body) {
       headers["Content-Type"] = "application/json";
     }

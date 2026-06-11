@@ -13,7 +13,6 @@ function createClient(fetchImpl: typeof fetch, token: string | null = "tok-123")
   return new StyleAgentClient({
     baseUrl: "https://api.example.com/",
     getToken: () => Promise.resolve(token ?? undefined),
-    integrationVersion: "1.2.3",
     fetchImpl,
     pollIntervalMs: 1,
     pollTimeoutMs: 200,
@@ -41,7 +40,6 @@ describe("StyleAgentClient", () => {
           headers: expect.objectContaining({
             Authorization: "Bearer tok-123",
             "x-integration-id": "vscode_extension",
-            "x-integration-version": "1.2.3",
           }) as Record<string, string>,
         }),
       );

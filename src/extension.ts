@@ -46,7 +46,6 @@ let statusBar: StatusBarManager;
 let findingsTreeDataProvider: FindingsTreeDataProvider;
 let folderScannerTreeDataProvider: FolderScannerTreeDataProvider;
 let auth: AuthManager;
-let extensionVersion = "";
 const checkDebounceTimers: Map<string, NodeJS.Timeout> = new Map();
 let isEnabled = true;
 let cachedStyleGuides: StyleGuideOption[] = [];
@@ -68,7 +67,6 @@ function createClient(): StyleAgentClient {
   return new StyleAgentClient({
     baseUrl: getApiBaseUrl(),
     getToken: () => auth.getValidToken(),
-    integrationVersion: extensionVersion,
   });
 }
 
@@ -649,8 +647,6 @@ async function checkMultipleFiles(files: vscode.Uri[]): Promise<void> {
 
 export function activate(context: vscode.ExtensionContext) {
   console.log("MarkupAI extension is now active!");
-
-  extensionVersion = (context.extension.packageJSON as { version?: string }).version ?? "";
 
   // Initialize auth
   auth = new AuthManager(context.secrets, () => ({
