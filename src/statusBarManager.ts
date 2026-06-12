@@ -40,6 +40,14 @@ export class StatusBarManager {
     this.statusBarItem.show();
   }
 
+  showSidebarMode(): void {
+    this.statusBarItem.text = "$(layout-sidebar-left) MarkupAI";
+    this.statusBarItem.tooltip = "Open the MarkupAI sidebar";
+    this.statusBarItem.command = "markupai.sidebar.focus";
+    this.statusBarItem.backgroundColor = undefined;
+    this.statusBarItem.show();
+  }
+
   showSignedOut(): void {
     this.statusBarItem.text = "$(key) MarkupAI: Sign in";
     this.statusBarItem.tooltip = "Click to sign in to MarkupAI";

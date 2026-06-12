@@ -129,6 +129,16 @@ describe("StatusBarManager", () => {
     });
   });
 
+  describe("showSidebarMode", () => {
+    it("shows the sidebar shortcut", () => {
+      statusBar.showSidebarMode();
+
+      expect(mockItem.text).toBe("$(layout-sidebar-left) MarkupAI");
+      expect(mockItem.command).toBe("markupai.sidebar.focus");
+      expect(mockItem.show).toHaveBeenCalled();
+    });
+  });
+
   describe("showSignedOut", () => {
     it("should display sign-in prompt with warning background", () => {
       statusBar.showSignedOut();

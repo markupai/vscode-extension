@@ -37,6 +37,11 @@
   "contributes": {
     "commands": [
       {
+        "command": "markupai.switchMode",
+        "title": "Switch Between Sidebar and Native Mode",
+        "category": "MarkupAI"
+      },
+      {
         "command": "markupai.signIn",
         "title": "Sign In",
         "category": "MarkupAI"
@@ -288,38 +293,39 @@
         {
           "command": "markupai.checkContent",
           "group": "markupai@1",
-          "when": "editorTextFocus && markupai.enabled"
+          "when": "config.markupai.mode == 'native' && editorTextFocus && markupai.enabled"
         },
         {
           "command": "markupai.disableIssues",
           "group": "markupai@2",
-          "when": "editorTextFocus && markupai.enabled"
+          "when": "config.markupai.mode == 'native' && editorTextFocus && markupai.enabled"
         },
         {
           "command": "markupai.enableIssues",
           "group": "markupai@2",
-          "when": "editorTextFocus && !markupai.enabled"
+          "when": "config.markupai.mode == 'native' && editorTextFocus && !markupai.enabled"
         }
       ],
       "commandPalette": [
         {
           "command": "markupai.checkContent",
-          "when": "editorIsOpen"
+          "when": "config.markupai.mode == 'native' && editorIsOpen"
         },
         {
-          "command": "markupai.toggleEnabled"
+          "command": "markupai.toggleEnabled",
+          "when": "config.markupai.mode == 'native'"
         },
         {
           "command": "markupai.enableIssues",
-          "when": "!markupai.enabled"
+          "when": "config.markupai.mode == 'native' && !markupai.enabled"
         },
         {
           "command": "markupai.disableIssues",
-          "when": "markupai.enabled"
+          "when": "config.markupai.mode == 'native' && markupai.enabled"
         },
         {
           "command": "markupai.enableCategory",
-          "when": "markupai.enabled"
+          "when": "config.markupai.mode == 'native' && markupai.enabled"
         },
         {
           "command": "markupai.disableCategory",
@@ -327,20 +333,26 @@
         },
         {
           "command": "markupai.showScores",
-          "when": "editorIsOpen"
+          "when": "config.markupai.mode == 'native' && editorIsOpen"
         },
         {
-          "command": "markupai.selectStyleGuide"
+          "command": "markupai.selectStyleGuide",
+          "when": "config.markupai.mode == 'native'"
         },
         {
           "command": "markupai.goToIssue",
           "when": "false"
         },
         {
-          "command": "markupai.signIn"
+          "command": "markupai.signIn",
+          "when": "config.markupai.mode == 'native'"
         },
         {
-          "command": "markupai.signOut"
+          "command": "markupai.signOut",
+          "when": "config.markupai.mode == 'native'"
+        },
+        {
+          "command": "markupai.switchMode"
         }
       ]
     },
@@ -366,7 +378,8 @@
           "id": "markupai.findings",
           "name": "Findings",
           "type": "tree",
-          "contextualTitle": "MarkupAI Findings"
+          "contextualTitle": "MarkupAI Findings",
+          "when": "config.markupai.mode == 'native'"
         }
       ]
     },

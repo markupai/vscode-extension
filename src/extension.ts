@@ -10,6 +10,7 @@ import {
   getConfig,
   getApiBaseUrl,
   getStyleGuideId,
+  isSidebarMode,
   getScoreEmoji,
   getSeverityEmoji,
   getLeadSeverity,
@@ -207,6 +208,10 @@ async function checkDocument(
   showProgress: boolean = false,
   showCompletionNotification: boolean = true,
 ): Promise<void> {
+  if (isSidebarMode()) {
+    return;
+  }
+
   if (!isExtensionEnabled()) {
     diagnosticsManager.clearForDocument(document.uri);
     statusBar.update(null);
@@ -1043,6 +1048,11 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.commands.registerCommand("markupai.signIn", signIn),
     vscode.commands.registerCommand("markupai.signOut", signOut),
+    vscode.commands.registerCommand("markupai.switchMode", async () => {
+      const next = isSidebarMode() ? "native" : "sidebar";
+      await getConfig().update("mode", next, vscode.ConfigurationTarget.Global);
+      vscode.window.showInformationMessage(`MarkupAI: switched to ${next} mode.`);
+    }),
   );
 
   context.subscriptions.push(
@@ -1159,6 +1169,10 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.window.onDidChangeActiveTextEditor((editor) => {
       sidebarBridge.trackEditor(editor);
       void (async () => {
+        if (isSidebarMode()) {
+          statusBar.showSidebarMode();
+          return;
+        }
         if (editor) {
           const assessment = diagnosticsManager.getAssessment(editor.document.uri.toString());
           if (assessment) {
@@ -1200,11 +1214,38 @@ export function activate(context: vscode.ExtensionContext) {
         resetSessionCaches();
         void refreshStyleGuides();
       }
+
+      if (event.affectsConfiguration("markupai.mode")) {
+        if (isSidebarMode()) {
+          // Native artifacts are meaningless in sidebar mode.
+          diagnosticsManager.clearAll();
+          findingsTreeDataProvider.refresh();
+          statusBar.showSidebarMode();
+        } else {
+          void (async () => {
+            if (await auth.isSignedIn()) {
+              void refreshStyleGuides();
+              const editor = vscode.window.activeTextEditor;
+              if (editor) {
+                void checkDocument(editor.document);
+              } else {
+                statusBar.hide();
+              }
+            } else {
+              statusBar.showSignedOut();
+            }
+          })();
+        }
+      }
     }),
   );
 
   // Initial setup
   void (async () => {
+    if (isSidebarMode()) {
+      statusBar.showSidebarMode();
+      return;
+    }
     if (await auth.isSignedIn()) {
       void refreshStyleGuides();
       if (vscode.window.activeTextEditor) {

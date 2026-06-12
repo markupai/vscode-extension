@@ -34,6 +34,18 @@ export function getApiBaseUrl(): string {
   return ENVIRONMENT_URLS[getEnvironment()];
 }
 
+/** Presentation mode: hosted sidebar panel vs native inline checking. */
+export type MarkupAIMode = "sidebar" | "native";
+
+export function getMode(): MarkupAIMode {
+  const mode = getConfig().get<string>("mode", "sidebar");
+  return mode === "native" ? "native" : "sidebar";
+}
+
+export function isSidebarMode(): boolean {
+  return getMode() === "sidebar";
+}
+
 /** Values the pre-style-agent extension stored; not valid style guide IDs. */
 const LEGACY_STYLE_GUIDE_IDS = new Set(["ap", "chicago", "microsoft"]);
 

@@ -41,6 +41,34 @@ describe("utils", () => {
     });
   });
 
+  describe("getMode", () => {
+    it("defaults to sidebar mode", () => {
+      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(
+        createMockConfig((_key, defaultValue) => defaultValue),
+      );
+
+      expect(utils.getMode()).toBe("sidebar");
+      expect(utils.isSidebarMode()).toBe(true);
+    });
+
+    it("returns native when configured", () => {
+      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(
+        createMockConfig((key, defaultValue) => (key === "mode" ? "native" : defaultValue)),
+      );
+
+      expect(utils.getMode()).toBe("native");
+      expect(utils.isSidebarMode()).toBe(false);
+    });
+
+    it("falls back to sidebar for unknown values", () => {
+      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(
+        createMockConfig((key, defaultValue) => (key === "mode" ? "banana" : defaultValue)),
+      );
+
+      expect(utils.getMode()).toBe("sidebar");
+    });
+  });
+
   describe("getEnvironment", () => {
     it("should return configured dev environment", () => {
       vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(
