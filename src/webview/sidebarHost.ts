@@ -124,6 +124,33 @@ function buildPlugin(boot: SidebarBootstrap): PluginInterface {
 // Mount
 // ============================================================================
 
+// ============================================================================
+// Theme sync
+// ============================================================================
+
+/**
+ * Mirror VS Code's theme into the sidebar. The sidebar's default theme
+ * mode is "system" (prefers-color-scheme), and Chromium derives a
+ * cross-origin iframe's preferred color scheme from the embedder's
+ * color-scheme — so setting it here flips the sidebar between light and
+ * dark with the editor. An explicit light/dark choice made inside the
+ * sidebar still wins, as it should.
+ */
+function syncVsCodeTheme(iframe: HTMLIFrameElement): void {
+  const apply = () => {
+    const kind = document.body.dataset.vscodeThemeKind ?? "";
+    const scheme = kind === "vscode-dark" || kind === "vscode-high-contrast" ? "dark" : "light";
+    document.documentElement.style.colorScheme = scheme;
+    iframe.style.colorScheme = scheme;
+  };
+
+  new MutationObserver(apply).observe(document.body, {
+    attributes: true,
+    attributeFilter: ["class", "data-vscode-theme-kind"],
+  });
+  apply();
+}
+
 function mount(): void {
   if (!bootstrap) {
     document.body.textContent = "MarkupAI: failed to initialize the sidebar view.";
@@ -134,7 +161,7 @@ function mount(): void {
   // CSS (same shell the Figma plugin UI uses).
   const container = ensureSidebarHostShell();
 
-  createSidebarHost({
+  const host = createSidebarHost({
     plugin: buildPlugin(bootstrap),
     iframeMount: {
       container,
@@ -145,6 +172,8 @@ function mount(): void {
       targetOrigin: sidebarPostMessageTargetOrigin(bootstrap.sidebarUrl),
     },
   });
+
+  syncVsCodeTheme(host.iframe);
 }
 
 mount();
