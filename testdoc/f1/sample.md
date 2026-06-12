@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This is a sample markdown file demonstrating basic markdown syntax. it dont has proper grammer or speling.
+This is a sample markdown file demonstrating basic markdown syntax. it dont have proper grammer or speling.
 
 ## Features
 

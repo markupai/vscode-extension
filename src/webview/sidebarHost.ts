@@ -124,37 +124,6 @@ function buildPlugin(boot: SidebarBootstrap): PluginInterface {
 // Mount
 // ============================================================================
 
-// ============================================================================
-// Theme sync
-// ============================================================================
-
-/**
- * Mirror VS Code's theme into the sidebar. The sidebar's default theme
- * mode is "system" (prefers-color-scheme), and Chromium derives a
- * cross-origin iframe's preferred color scheme from the embedder's
- * color-scheme — so setting it here flips the sidebar between light and
- * dark with the editor. An explicit light/dark choice made inside the
- * sidebar still wins, as it should.
- */
-function syncVsCodeTheme(iframe: HTMLIFrameElement): void {
-  const apply = () => {
-    // VS Code stamps the theme kind on the webview body as both a class
-    // (vscode-dark / vscode-high-contrast) and data-vscode-theme-kind.
-    const kind = document.body.dataset.vscodeThemeKind ?? "";
-    const classes = document.body.classList;
-    const dark =
-      kind === "vscode-dark" ||
-      kind === "vscode-high-contrast" ||
-      (kind === "" && (classes.contains("vscode-dark") || classes.contains("vscode-high-contrast")));
-    const scheme = dark ? "dark" : "light";
-    document.documentElement.style.colorScheme = scheme;
-    iframe.style.colorScheme = scheme;
-  };
-
-  new MutationObserver(apply).observe(document.body, { attributes: true });
-  apply();
-}
-
 function mount(): void {
   if (!bootstrap) {
     document.body.textContent = "MarkupAI: failed to initialize the sidebar view.";
@@ -165,7 +134,7 @@ function mount(): void {
   // CSS (same shell the Figma plugin UI uses).
   const container = ensureSidebarHostShell();
 
-  const host = createSidebarHost({
+  createSidebarHost({
     plugin: buildPlugin(bootstrap),
     iframeMount: {
       container,
@@ -176,8 +145,6 @@ function mount(): void {
       targetOrigin: sidebarPostMessageTargetOrigin(bootstrap.sidebarUrl),
     },
   });
-
-  syncVsCodeTheme(host.iframe);
 }
 
 mount();
