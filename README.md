@@ -1,5 +1,14 @@
 # MarkupAI VSCode Extension
 
+## Modes
+
+The extension has two mutually exclusive presentation modes, controlled by the `markupai.mode` setting:
+
+- **Sidebar** (default) — the MarkupAI sidebar panel opens from the activity bar. It has its own sign-in and check configuration, checks the active document (whole document or just your selection), and clicking an issue card highlights the corresponding text in the editor. Suggestions apply directly to the document.
+- **Native** — inline diagnostics with underlines, the findings panel, batch folder checking, quick fixes, and the status bar risk summary.
+
+Switch any time with the `MarkupAI: Switch Between Sidebar and Native Mode` command. The feature sets below describe native mode unless noted.
+
 ## Features
 
 ### 🔍 Real-time Content Analysis
