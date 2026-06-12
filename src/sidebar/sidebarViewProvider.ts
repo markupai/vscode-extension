@@ -92,8 +92,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
   <title>MarkupAI</title>
   <style nonce="${nonce}"></style>
 </head>
-<body style="margin:0;padding:0;height:100vh;overflow:hidden;">
-  <div id="sidebar-container" style="position:relative;width:100%;height:100vh;"></div>
+<body>
   <script nonce="${nonce}">window.__MARKUPAI_BOOTSTRAP__ = ${JSON.stringify(bootstrap)};</script>
   <script nonce="${nonce}" src="${scriptUri.toString()}"></script>
 </body>

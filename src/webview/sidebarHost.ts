@@ -8,6 +8,7 @@
  */
 import {
   createSidebarHost,
+  ensureSidebarHostShell,
   sidebarPostMessageTargetOrigin,
   reconstructError,
   type ContentInfo,
@@ -124,11 +125,14 @@ function buildPlugin(boot: SidebarBootstrap): PluginInterface {
 // ============================================================================
 
 function mount(): void {
-  const container = document.getElementById("sidebar-container");
-  if (!bootstrap || !container) {
+  if (!bootstrap) {
     document.body.textContent = "MarkupAI: failed to initialize the sidebar view.";
     return;
   }
+
+  // Creates the container and injects the adapter's full-viewport shell
+  // CSS (same shell the Figma plugin UI uses).
+  const container = ensureSidebarHostShell();
 
   createSidebarHost({
     plugin: buildPlugin(bootstrap),
