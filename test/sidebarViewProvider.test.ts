@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import * as vscode from "vscode";
 import { TextLookupError } from "@markupai/sidebar-adapter";
 import { SidebarViewProvider, type SidebarRpcHandler } from "../src/sidebar/sidebarViewProvider";
@@ -34,11 +34,12 @@ function flush(): Promise<void> {
 }
 
 describe("SidebarViewProvider", () => {
-  let handler: SidebarRpcHandler & { handle: ReturnType<typeof vi.fn> };
+  type HandleMock = Mock<(method: string, args: unknown[]) => Promise<unknown>>;
+  let handler: SidebarRpcHandler & { handle: HandleMock };
   let provider: SidebarViewProvider;
 
   beforeEach(() => {
-    handler = { handle: vi.fn() };
+    handler = { handle: vi.fn<(method: string, args: unknown[]) => Promise<unknown>>() };
     provider = new SidebarViewProvider(vscode.Uri.file("/ext"), "1.2.3", handler);
   });
 
