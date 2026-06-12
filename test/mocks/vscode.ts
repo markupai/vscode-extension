@@ -50,6 +50,13 @@ export enum UIKind {
   Web = 2,
 }
 
+export enum OverviewRulerLane {
+  Left = 1,
+  Center = 2,
+  Right = 4,
+  Full = 7,
+}
+
 export class Range {
   start: Position;
   end: Position;
@@ -335,6 +342,15 @@ export const window = {
     title: "",
     dispose: vi.fn(),
   })),
+
+  createTextEditorDecorationType: vi.fn(() => ({
+    key: "mock-decoration",
+    dispose: vi.fn(),
+  })),
+
+  registerWebviewViewProvider: vi.fn(() => ({ dispose: vi.fn() })),
+
+  visibleTextEditors: [] as unknown[],
 
   withProgress: vi.fn(
     (_options: unknown, task: (progress: { report: ReturnType<typeof vi.fn> }) => unknown) => {

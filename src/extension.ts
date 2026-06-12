@@ -674,7 +674,9 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Sidebar mode: webview view hosting the MarkupAI sidebar app
   const sidebarBridge = new SidebarBridge();
+  sidebarBridge.trackEditor(vscode.window.activeTextEditor);
   context.subscriptions.push(
+    sidebarBridge,
     vscode.window.registerWebviewViewProvider(
       SidebarViewProvider.viewType,
       new SidebarViewProvider(context.extensionUri, extensionVersion, sidebarBridge),
@@ -1142,6 +1144,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.workspace.onDidCloseTextDocument((document) => {
+      sidebarBridge.handleDocumentClosed(document.uri);
       diagnosticsManager.clearForDocument(document.uri);
       findingsTreeDataProvider.refresh();
       const timer = checkDebounceTimers.get(document.uri.toString());
@@ -1154,6 +1157,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.window.onDidChangeActiveTextEditor((editor) => {
+      sidebarBridge.trackEditor(editor);
       void (async () => {
         if (editor) {
           const assessment = diagnosticsManager.getAssessment(editor.document.uri.toString());

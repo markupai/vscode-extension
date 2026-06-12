@@ -8,11 +8,8 @@ export default defineConfig({
     include: ["test/**/*.{test,spec}.ts"],
     exclude: ["node_modules", "out", "dist", ".vscode-test"],
     pool: "forks",
-    poolOptions: {
-      forks: {
-        singleFork: true,
-      },
-    },
+    maxWorkers: 1,
+    fileParallelism: false,
     testTimeout: 5000,
     hookTimeout: 5000,
     coverage: {
