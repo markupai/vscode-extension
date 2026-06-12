@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This is a sample markdown file demonstrating basic markdown syntax. it dont have proper grammer or speling.
+This is a sample markdown file demonstrating basic markdown syntax. it dont has proper grammar or spelling.
 
 ## Features
 
@@ -19,7 +19,7 @@ function greet(name) {
 }
 ```
 
-The above code its working fine and dont need no changes at all. we was testing it yesterday.
+The above code its working fine and Don't need no changes at all. we was testing it yesterday.
 
 ### List Items
 
@@ -57,6 +57,6 @@ This demonstrates basic markdown formatting capabilities. We hopes this will hel
 
 ### Additional Notes
 
-Remember to always check you're code before submiting it. Lot of developer forget this step and then they has to fix things later which take more time then doing it correctly from begining.
+Remember to always check you're code before submiting it. Lot of developer forgets this step and then they has to fix things later which take more time then doing it correctly from the beginning.
 
-**PRO TIP**: dont use depreciated methods!
+**PRO TIP**: Don't use depreciated methods.

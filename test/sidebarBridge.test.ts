@@ -284,6 +284,73 @@ describe("SidebarBridge", () => {
     });
   });
 
+  describe("uncovered branches", () => {
+    it("maps unknown extensions to text/plain", async () => {
+      const editor = makeEditor(TEXT, "/notes.xyz");
+      setActiveEditor(editor);
+      const info = (await bridge.handle("getContent", [])) as { mimeType: string };
+      expect(info.mimeType).toBe("text/plain");
+    });
+
+    it("ignores editors with unsupported schemes when tracking", async () => {
+      const editor = makeEditor();
+      (editor.document.uri as { scheme: string }).scheme = "output";
+      bridge.trackEditor(editor as unknown as vscode.TextEditor);
+      await expect(bridge.handle("getContent", [])).rejects.toThrow("Open a document");
+    });
+
+    it("keeps the tracked editor when an unrelated document closes", async () => {
+      const editor = makeEditor();
+      bridge.trackEditor(editor as unknown as vscode.TextEditor);
+      (vscode.window as unknown as { visibleTextEditors: unknown[] }).visibleTextEditors = [editor];
+
+      bridge.handleDocumentClosed(vscode.Uri.file("/other.md"));
+
+      const info = (await bridge.handle("getContent", [])) as { content: string };
+      expect(info.content).toBe(TEXT);
+    });
+
+    it("throws when no batch replacement can be located", async () => {
+      const editor = makeEditor();
+      setActiveEditor(editor);
+      stubEditorReopen(editor);
+      vi.mocked(vscode.workspace.applyEdit).mockResolvedValue(true);
+      await bridge.handle("getContent", []);
+
+      editor.document.getText = vi.fn(() => "entirely replaced content");
+      editor.document.version = 2;
+
+      const error = await bridge
+        .handle("replaceMultipleContents", [[{ suggestion: "rapid", range: { start: 4, end: 9 } }]])
+        .catch((e: unknown) => e);
+
+      expect(isTextLookupError(error)).toBe(true);
+      expect((error as Error).message).toContain("None of the suggestions");
+      expect(vscode.workspace.applyEdit).not.toHaveBeenCalled();
+    });
+
+    it("throws when the batch edit is rejected by the workspace", async () => {
+      const editor = makeEditor();
+      setActiveEditor(editor);
+      stubEditorReopen(editor);
+      vi.mocked(vscode.workspace.applyEdit).mockResolvedValue(false);
+      await bridge.handle("getContent", []);
+
+      const error = await bridge
+        .handle("replaceMultipleContents", [[{ suggestion: "rapid", range: { start: 4, end: 9 } }]])
+        .catch((e: unknown) => e);
+
+      expect(isTextLookupError(error)).toBe(true);
+      expect((error as Error).message).toContain("could not be applied");
+    });
+
+    it("disposes the decoration and sessions", () => {
+      expect(() => {
+        bridge.dispose();
+      }).not.toThrow();
+    });
+  });
+
   it("rejects unknown methods", async () => {
     await expect(bridge.handle("nope", [])).rejects.toThrow("Unsupported sidebar request");
   });

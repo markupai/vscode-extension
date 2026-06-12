@@ -63,7 +63,7 @@ export class SidebarBridge implements SidebarRpcHandler, vscode.Disposable {
         return this.replaceMultipleContents(args[0] as ContentReplacementArg[]);
       case "openAuthUrl": {
         const url = args[0];
-        if (typeof url !== "string" || !/^https:\/\//.test(url)) {
+        if (typeof url !== "string" || !url.startsWith("https://")) {
           throw new Error("Invalid auth URL");
         }
         await vscode.env.openExternal(vscode.Uri.parse(url));

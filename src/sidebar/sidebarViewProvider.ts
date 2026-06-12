@@ -93,7 +93,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
   <style nonce="${nonce}"></style>
 </head>
 <body>
-  <script nonce="${nonce}">window.__MARKUPAI_BOOTSTRAP__ = ${JSON.stringify(bootstrap)};</script>
+  <script nonce="${nonce}">globalThis.__MARKUPAI_BOOTSTRAP__ = ${JSON.stringify(bootstrap)};</script>
   <script nonce="${nonce}" src="${scriptUri.toString()}"></script>
 </body>
 </html>`;
@@ -101,10 +101,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
 }
 
 function generateNonce(): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let nonce = "";
-  for (let i = 0; i < 32; i++) {
-    nonce += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return nonce;
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }

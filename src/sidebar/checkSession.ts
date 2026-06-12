@@ -96,7 +96,7 @@ export class CheckSession {
   }
 
   private getAlignmentMap(currentText: string, currentVersion: number): Int32Array {
-    if (!this.alignmentCache || this.alignmentCache.version !== currentVersion) {
+    if (this.alignmentCache?.version !== currentVersion) {
       this.alignmentCache = {
         version: currentVersion,
         map: buildAlignmentMap(this.snapshotText, currentText),

@@ -32,13 +32,12 @@ interface VsCodeApi {
 declare function acquireVsCodeApi(): VsCodeApi;
 
 declare global {
-  interface Window {
-    __MARKUPAI_BOOTSTRAP__?: SidebarBootstrap;
-  }
+   
+  var __MARKUPAI_BOOTSTRAP__: SidebarBootstrap | undefined;
 }
 
 const vscode = acquireVsCodeApi();
-const bootstrap = window.__MARKUPAI_BOOTSTRAP__;
+const bootstrap = globalThis.__MARKUPAI_BOOTSTRAP__;
 
 // ============================================================================
 // RPC to the extension host
@@ -52,7 +51,13 @@ interface Pending {
 let nextRpcId = 1;
 const pending = new Map<number, Pending>();
 
-window.addEventListener("message", (event: MessageEvent<unknown>) => {
+globalThis.addEventListener("message", (event: MessageEvent<unknown>) => {
+  // RPC responses come from the extension host, delivered with this
+  // webview's own origin. The sidebar iframe also posts messages to this
+  // window (adapter IPC, handled elsewhere) — never parse those as RPC.
+  if (event.origin !== globalThis.location.origin) {
+    return;
+  }
   const data = event.data;
   if (!isRpcResponse(data)) {
     return;

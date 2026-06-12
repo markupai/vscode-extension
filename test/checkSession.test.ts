@@ -115,6 +115,12 @@ describe("CheckSession.resolveRange", () => {
     expect(sliceAt(edited, resolved).trim().length).toBeGreaterThan(0);
   });
 
+  it("returns null for empty ranges once the document has changed", () => {
+    const session = fullDocSession();
+    const edited = "X" + TEXT;
+    expect(session.resolveRange({ start: 5, end: 5 }, edited, 2)).toBeNull();
+  });
+
   it("exposes the expected original surface for verification", () => {
     const session = fullDocSession();
     expect(session.expectedText({ start: 4, end: 9 })).toBe("quick");
