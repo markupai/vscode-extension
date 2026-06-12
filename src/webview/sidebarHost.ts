@@ -138,16 +138,20 @@ function buildPlugin(boot: SidebarBootstrap): PluginInterface {
  */
 function syncVsCodeTheme(iframe: HTMLIFrameElement): void {
   const apply = () => {
+    // VS Code stamps the theme kind on the webview body as both a class
+    // (vscode-dark / vscode-high-contrast) and data-vscode-theme-kind.
     const kind = document.body.dataset.vscodeThemeKind ?? "";
-    const scheme = kind === "vscode-dark" || kind === "vscode-high-contrast" ? "dark" : "light";
+    const classes = document.body.classList;
+    const dark =
+      kind === "vscode-dark" ||
+      kind === "vscode-high-contrast" ||
+      (kind === "" && (classes.contains("vscode-dark") || classes.contains("vscode-high-contrast")));
+    const scheme = dark ? "dark" : "light";
     document.documentElement.style.colorScheme = scheme;
     iframe.style.colorScheme = scheme;
   };
 
-  new MutationObserver(apply).observe(document.body, {
-    attributes: true,
-    attributeFilter: ["class", "data-vscode-theme-kind"],
-  });
+  new MutationObserver(apply).observe(document.body, { attributes: true });
   apply();
 }
 
