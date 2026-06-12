@@ -20,6 +20,8 @@ import {
   SUPPORTED_SCHEMES,
 } from "./utils";
 import { DiagnosticsManager } from "./diagnosticsManager";
+import { SidebarViewProvider } from "./sidebar/sidebarViewProvider";
+import { SidebarBridge } from "./sidebar/sidebarBridge";
 import { StatusBarManager } from "./statusBarManager";
 import { FindingsTreeDataProvider } from "./findingsTreeProvider";
 import { FolderScannerTreeDataProvider } from "./folderScannerProvider";
@@ -666,6 +668,19 @@ async function checkMultipleFiles(files: vscode.Uri[]): Promise<void> {
 
 export function activate(context: vscode.ExtensionContext) {
   console.log("MarkupAI extension is now active!");
+
+  const extensionVersion =
+    (context.extension.packageJSON as { version?: string }).version ?? "0.0.0";
+
+  // Sidebar mode: webview view hosting the MarkupAI sidebar app
+  const sidebarBridge = new SidebarBridge();
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider(
+      SidebarViewProvider.viewType,
+      new SidebarViewProvider(context.extensionUri, extensionVersion, sidebarBridge),
+      { webviewOptions: { retainContextWhenHidden: true } },
+    ),
+  );
 
   // Initialize auth
   auth = new AuthManager(context.secrets, () => ({

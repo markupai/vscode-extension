@@ -15,6 +15,21 @@ export const ENVIRONMENT_URLS = {
 
 export type MarkupAIEnvironment = keyof typeof ENVIRONMENT_URLS;
 
+/** Hosted sidebar app, embedded as an iframe in sidebar mode. */
+export const SIDEBAR_URLS: Record<MarkupAIEnvironment, string> = {
+  prod: "https://sidebar.markup.ai/",
+  dev: "https://sidebar.dev.markup.ai/",
+};
+
+/**
+ * Sidebar integration identity. The sidebar derives its mediation OAuth
+ * provider from integrationName.toLowerCase(), and only the "figma"
+ * integration is registered in Auth0 today — switch to a "VSCode" name
+ * once a dedicated vscode integration is registered.
+ */
+export const SIDEBAR_INTEGRATION_NAME = "Figma";
+export const SIDEBAR_INTEGRATION_ID = "vscode-extension";
+
 /**
  * OAuth mediation integration. The "figma" integration is registered in
  * Auth0 and works today; swap for a dedicated "vscode" integration once

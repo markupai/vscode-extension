@@ -54,16 +54,26 @@ const webOptions = {
   outfile: "out/web/extension.js",
 };
 
+/** Sidebar webview script — runs in the webview DOM, not the extension host. */
+/** @type {import('esbuild').BuildOptions} */
+const webviewOptions = {
+  ...sharedOptions,
+  entryPoints: ["src/webview/sidebarHost.ts"],
+  external: [],
+  platform: "browser",
+  format: "iife",
+  outfile: "out/webview/sidebarHost.js",
+};
+
+const allOptions = [nodeOptions, webOptions, webviewOptions];
+
 async function build() {
   if (isWatch) {
-    const [nodeCtx, webCtx] = await Promise.all([
-      esbuild.context(nodeOptions),
-      esbuild.context(webOptions),
-    ]);
-    await Promise.all([nodeCtx.watch(), webCtx.watch()]);
+    const contexts = await Promise.all(allOptions.map((options) => esbuild.context(options)));
+    await Promise.all(contexts.map((ctx) => ctx.watch()));
     console.log("Watching for changes...");
   } else {
-    await Promise.all([esbuild.build(nodeOptions), esbuild.build(webOptions)]);
+    await Promise.all(allOptions.map((options) => esbuild.build(options)));
     console.log("Build complete.");
   }
 }

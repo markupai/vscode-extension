@@ -22,6 +22,7 @@ export default defineConfig({
       exclude: [
         "src/test/**",
         "src/extension.ts",
+        "src/webview/sidebarHost.ts",
         "**/*.d.ts",
         "**/node_modules/**",
         "**/out/**",
