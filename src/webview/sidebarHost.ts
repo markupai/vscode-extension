@@ -32,7 +32,6 @@ interface VsCodeApi {
 declare function acquireVsCodeApi(): VsCodeApi;
 
 declare global {
-   
   var __MARKUPAI_BOOTSTRAP__: SidebarBootstrap | undefined;
 }
 
