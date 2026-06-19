@@ -73,8 +73,8 @@ describe("constants", () => {
   });
 
   describe("OAUTH_PROVIDER", () => {
-    it("should be the figma integration", () => {
-      expect(OAUTH_PROVIDER).toBe("figma");
+    it("should be the dedicated vscode-extension integration", () => {
+      expect(OAUTH_PROVIDER).toBe("vscode-extension");
     });
   });
 

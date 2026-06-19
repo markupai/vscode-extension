@@ -31,7 +31,7 @@ function fakeFetch(handler: (url: string) => Response): typeof fetch {
 }
 
 const BASE = "https://api.dev.markup.ai";
-const PROVIDER = "figma";
+const PROVIDER = "vscode-extension";
 
 function signIn(
   fetchImpl: typeof fetch,
@@ -59,20 +59,20 @@ describe("runBrowserSignIn", () => {
     const calls: string[] = [];
     const fetchImpl = fakeFetch((url) => {
       calls.push(url);
-      if (url.endsWith("/oauth/figma/start")) {
+      if (url.endsWith("/oauth/vscode-extension/start")) {
         return jsonOk({
           read_key: "rk_123",
-          authorize_url: "https://api.dev.markup.ai/oauth/figma/authorize?state=abc",
+          authorize_url: "https://api.dev.markup.ai/oauth/vscode-extension/authorize?state=abc",
         });
       }
-      if (url.includes("/oauth/figma/poll")) {
+      if (url.includes("/oauth/vscode-extension/poll")) {
         const pollCount = calls.filter((c) => c.includes("/poll")).length;
         if (pollCount === 1) {
           return jsonOk({ status: "pending" });
         }
         return jsonOk({ status: "complete", code: "auth_code_abc" });
       }
-      if (url.endsWith("/oauth/figma/exchange")) {
+      if (url.endsWith("/oauth/vscode-extension/exchange")) {
         return jsonOk({
           access_token: "eyJ.real",
           expires_in: 3600,
@@ -87,7 +87,7 @@ describe("runBrowserSignIn", () => {
     expect(result.expiresIn).toBe(3600);
     expect(result.refreshToken).toBe("rt_xyz");
     const exchange = calls.at(-1) ?? "";
-    expect(exchange).toContain("/oauth/figma/exchange");
+    expect(exchange).toContain("/oauth/vscode-extension/exchange");
   });
 
   it("opens the authorize_url from /start in the user's browser", async () => {
@@ -100,7 +100,7 @@ describe("runBrowserSignIn", () => {
       if (url.endsWith("/start")) {
         return jsonOk({
           readKey: "rk",
-          authorizeUrl: "https://api.dev.markup.ai/oauth/figma/authorize?state=S-xyz",
+          authorizeUrl: "https://api.dev.markup.ai/oauth/vscode-extension/authorize?state=S-xyz",
         });
       }
       if (url.includes("/poll")) {
@@ -113,7 +113,7 @@ describe("runBrowserSignIn", () => {
     });
     await signIn(fetchImpl, { openExternal });
     expect(openExternal).toHaveBeenCalledOnce();
-    expect(openedUri?.toString()).toContain("/oauth/figma/authorize");
+    expect(openedUri?.toString()).toContain("/oauth/vscode-extension/authorize");
     expect(openedUri?.toString()).toContain("state=S-xyz");
   });
 

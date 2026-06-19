@@ -29,7 +29,7 @@ function createAuth(fetchImpl?: typeof fetch) {
   const secrets = new FakeSecretStorage();
   const auth = new AuthManager(
     secrets as unknown as vscode.SecretStorage,
-    () => ({ baseUrl: "https://api.example.com", provider: "figma" }),
+    () => ({ baseUrl: "https://api.example.com", provider: "vscode-extension" }),
     fetchImpl ?? vi.fn(),
   );
   return { auth, secrets };
@@ -116,7 +116,7 @@ describe("AuthManager", () => {
 
     expect(token).toBe("fresh");
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("https://api.example.com/oauth/figma/exchange");
+    expect(url).toBe("https://api.example.com/oauth/vscode-extension/exchange");
     expect(JSON.parse(init.body as string)).toEqual({
       grant_type: "refresh_token",
       refresh_token: "rt1",

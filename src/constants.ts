@@ -22,20 +22,20 @@ export const SIDEBAR_URLS: Record<MarkupAIEnvironment, string> = {
 };
 
 /**
- * Sidebar integration identity. The sidebar derives its mediation OAuth
- * provider from integrationName.toLowerCase(), and only the "figma"
- * integration is registered in Auth0 today — switch to a "VSCode" name
- * once a dedicated vscode integration is registered.
+ * Sidebar integration identity. The sidebar lowercases integrationName to
+ * derive its mediation OAuth provider, so it must match the dedicated
+ * "vscode-extension" Auth0 integration (registered in helios-core #2402).
  */
-export const SIDEBAR_INTEGRATION_NAME = "Figma";
+export const SIDEBAR_INTEGRATION_NAME = "vscode-extension";
 export const SIDEBAR_INTEGRATION_ID = "vscode-extension";
 
 /**
- * OAuth mediation integration. The "figma" integration is registered in
- * Auth0 and works today; swap for a dedicated "vscode" integration once
- * it is registered.
+ * OAuth mediation provider for the native sign-in flow. Matches the
+ * dedicated "vscode-extension" Auth0 integration (helios-core #2402); this
+ * replaced the temporary "figma" provider once the VS Code integration was
+ * registered in Auth0.
  */
-export const OAUTH_PROVIDER = "figma";
+export const OAUTH_PROVIDER = "vscode-extension";
 
 /** Sent as x-integration-id on every API request. */
 export const INTEGRATION_ID = "vscode_extension";

@@ -2,8 +2,8 @@ import * as vscode from "vscode";
 import { USER_MESSAGE_PREFIX } from "./constants";
 
 /**
- * Backend-mediated Auth0 sign-in — same flow the sidebar-app uses when
- * hosted inside figma:
+ * Backend-mediated Auth0 sign-in — the same flow the sidebar-app uses for
+ * iframe-embedded hosts, here against the "vscode-extension" provider:
  *
  *   1. POST {base}/oauth/{provider}/start → { read_key, authorize_url }
  *   2. Open authorize_url in the user's default browser
@@ -16,7 +16,7 @@ import { USER_MESSAGE_PREFIX } from "./constants";
  *      { grant_type: "authorization_code", code } → { access_token, … }
  *
  * No localhost server, no sidebar-app involvement — purely a VS Code-to-
- * API conversation, identical to what sidebar-app does on figma.
+ * API conversation, identical to what sidebar-app does for its own provider.
  */
 
 export interface BrowserSignInResult {

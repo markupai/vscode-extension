@@ -272,7 +272,9 @@ describe("SidebarBridge", () => {
 
   describe("openAuthUrl", () => {
     it("opens https auth URLs externally", async () => {
-      await bridge.handle("openAuthUrl", ["https://api.markup.ai/oauth/figma/authorize?x=1"]);
+      await bridge.handle("openAuthUrl", [
+        "https://api.markup.ai/oauth/vscode-extension/authorize?x=1",
+      ]);
       expect(vscode.env.openExternal).toHaveBeenCalledOnce();
     });
 
