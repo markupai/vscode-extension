@@ -56,6 +56,7 @@ describe("SidebarViewProvider", () => {
     expect(webview.html).toContain("frame-src https://sidebar.markup.ai");
     expect(webview.html).toContain('"integrationId":"vscode-extension"');
     expect(webview.html).toContain('"integrationVersion":"1.2.3"');
+    expect(webview.html).toContain('<meta name="color-scheme" content="light dark" />');
     const nonces = webview.html.match(/nonce="([a-f0-9]{32})"/g);
     expect(nonces?.length).toBeGreaterThanOrEqual(2);
   });

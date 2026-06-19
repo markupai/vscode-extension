@@ -24,6 +24,7 @@ import {
   type RpcRequest,
   type SidebarBootstrap,
 } from "./rpc";
+import { themeKindToColorScheme } from "./theme";
 
 interface VsCodeApi {
   postMessage(message: unknown): void;
@@ -125,6 +126,35 @@ function buildPlugin(boot: SidebarBootstrap): PluginInterface {
 }
 
 // ============================================================================
+// Theme sync
+// ============================================================================
+
+/**
+ * Mirror VS Code's theme into the sidebar. The sidebar's default theme mode
+ * is "system" (prefers-color-scheme), and Chromium derives a cross-origin
+ * iframe's preferred color scheme from the embedder's `color-scheme` — so
+ * setting it here flips the sidebar between light and dark with the editor,
+ * observed live so it follows theme switches. An explicit light/dark choice
+ * made inside the sidebar still wins, as it should.
+ */
+function syncVsCodeTheme(iframe: HTMLIFrameElement): void {
+  const apply = () => {
+    const scheme = themeKindToColorScheme(
+      document.body.dataset.vscodeThemeKind ?? "",
+      document.body.classList,
+    );
+    document.documentElement.style.colorScheme = scheme;
+    iframe.style.colorScheme = scheme;
+  };
+
+  new MutationObserver(apply).observe(document.body, {
+    attributes: true,
+    attributeFilter: ["class", "data-vscode-theme-kind"],
+  });
+  apply();
+}
+
+// ============================================================================
 // Mount
 // ============================================================================
 
@@ -138,7 +168,7 @@ function mount(): void {
   // CSS (same shell the Figma plugin UI uses).
   const container = ensureSidebarHostShell();
 
-  createSidebarHost({
+  const host = createSidebarHost({
     plugin: buildPlugin(bootstrap),
     iframeMount: {
       container,
@@ -149,6 +179,8 @@ function mount(): void {
       targetOrigin: sidebarPostMessageTargetOrigin(bootstrap.sidebarUrl),
     },
   });
+
+  syncVsCodeTheme(host.iframe);
 }
 
 mount();
