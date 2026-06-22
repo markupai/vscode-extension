@@ -278,7 +278,7 @@ describe("FolderScannerTreeDataProvider", () => {
 
       const treeItem = provider.getTreeItem(item);
 
-      expect(treeItem.command?.command).toBe("markupai.openFile");
+      expect(treeItem.command?.command).toBe("markupai-lint.openFile");
       expect(treeItem.command?.arguments).toEqual([fileUri]);
     });
   });

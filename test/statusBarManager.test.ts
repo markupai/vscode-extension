@@ -34,7 +34,7 @@ describe("StatusBarManager", () => {
       statusBar.showAssessment(assessment);
 
       expect(mockItem.text).toBe("🟢 MarkupAI: 95");
-      expect(mockItem.command).toBe("markupai.showScores");
+      expect(mockItem.command).toBe("markupai-lint.showScores");
       expect(mockItem.backgroundColor).toBeUndefined();
       expect(mockItem.show).toHaveBeenCalled();
     });
@@ -76,7 +76,7 @@ describe("StatusBarManager", () => {
       statusBar.showAssessment(assessment);
 
       expect(mockItem.text).toBe("$(check) MarkupAI: No issues");
-      expect(mockItem.command).toBe("markupai.showScores");
+      expect(mockItem.command).toBe("markupai-lint.showScores");
       expect(mockItem.show).toHaveBeenCalled();
     });
 
@@ -129,22 +129,12 @@ describe("StatusBarManager", () => {
     });
   });
 
-  describe("showSidebarMode", () => {
-    it("shows the sidebar shortcut", () => {
-      statusBar.showSidebarMode();
-
-      expect(mockItem.text).toBe("$(layout-sidebar-left) MarkupAI");
-      expect(mockItem.command).toBe("markupai.sidebar.focus");
-      expect(mockItem.show).toHaveBeenCalled();
-    });
-  });
-
   describe("showSignedOut", () => {
     it("should display sign-in prompt with warning background", () => {
       statusBar.showSignedOut();
 
       expect(mockItem.text).toBe("$(key) MarkupAI: Sign in");
-      expect(mockItem.command).toBe("markupai.signIn");
+      expect(mockItem.command).toBe("markupai-lint.signIn");
       expect(mockItem.backgroundColor).toBeInstanceOf(vscode.ThemeColor);
       expect(mockItem.show).toHaveBeenCalled();
     });
@@ -175,7 +165,7 @@ describe("StatusBarManager", () => {
       statusBar.showDisabled();
 
       expect(mockItem.text).toBe("$(circle-slash) MarkupAI: Disabled");
-      expect(mockItem.command).toBe("markupai.enableIssues");
+      expect(mockItem.command).toBe("markupai-lint.enableIssues");
       expect(mockItem.backgroundColor).toBeUndefined();
       expect(mockItem.show).toHaveBeenCalled();
     });

@@ -32,7 +32,7 @@ export class MarkupAICodeActionProvider implements vscode.CodeActionProvider {
         );
 
         action.command = {
-          command: "markupai.applyFix",
+          command: "markupai-lint.applyFix",
           title: "Apply Fix",
           arguments: [
             {
@@ -63,7 +63,7 @@ export class MarkupAICodeActionProvider implements vscode.CodeActionProvider {
             vscode.CodeActionKind.QuickFix,
           );
           disableCategoryAction.command = {
-            command: "markupai.disableCategory",
+            command: "markupai-lint.disableCategory",
             title: `Disable ${categoryLabel} Issues`,
             arguments: [category],
           };

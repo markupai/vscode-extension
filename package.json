@@ -1,8 +1,8 @@
 {
-  "name": "vscode-markupai",
-  "displayName": "MarkupAI",
+  "name": "markup-ai-lint",
+  "displayName": "Markup AI Lint",
   "version": "0.0.1",
-  "description": "Real-time content analysis in VS Code. Ensure your writing is clear, on-brand, and compliant with instant feedback as you type.",
+  "description": "Native content linting in VS Code: inline diagnostics, quick fixes, a findings panel, and batch folder checking powered by the Markup AI Style Agent.",
   "categories": [
     "Linters",
     "Other"
@@ -37,161 +37,156 @@
   "contributes": {
     "commands": [
       {
-        "command": "markupai.switchMode",
-        "title": "Switch Between Sidebar and Native Mode",
-        "category": "MarkupAI"
-      },
-      {
-        "command": "markupai.signIn",
+        "command": "markupai-lint.signIn",
         "title": "Sign In",
-        "category": "MarkupAI"
+        "category": "Markup AI Lint"
       },
       {
-        "command": "markupai.signOut",
+        "command": "markupai-lint.signOut",
         "title": "Sign Out",
-        "category": "MarkupAI"
+        "category": "Markup AI Lint"
       },
       {
-        "command": "markupai.checkContent",
+        "command": "markupai-lint.checkContent",
         "title": "MarkupAI - Check Content",
-        "category": "MarkupAI"
+        "category": "Markup AI Lint"
       },
       {
-        "command": "markupai.toggleEnabled",
+        "command": "markupai-lint.toggleEnabled",
         "title": "Toggle Enable/Disable",
-        "category": "MarkupAI"
+        "category": "Markup AI Lint"
       },
       {
-        "command": "markupai.enableIssues",
+        "command": "markupai-lint.enableIssues",
         "title": "MarkupAI - Enable Issues",
-        "category": "MarkupAI"
+        "category": "Markup AI Lint"
       },
       {
-        "command": "markupai.disableIssues",
+        "command": "markupai-lint.disableIssues",
         "title": "MarkupAI - Disable Issues",
-        "category": "MarkupAI"
+        "category": "Markup AI Lint"
       },
       {
-        "command": "markupai.disableCategory",
+        "command": "markupai-lint.disableCategory",
         "title": "MarkupAI - Disable Category",
-        "category": "MarkupAI"
+        "category": "Markup AI Lint"
       },
       {
-        "command": "markupai.enableCategory",
+        "command": "markupai-lint.enableCategory",
         "title": "MarkupAI - Enable Category",
-        "category": "MarkupAI"
+        "category": "Markup AI Lint"
       },
       {
-        "command": "markupai.showScores",
+        "command": "markupai-lint.showScores",
         "title": "Show Content Scores",
-        "category": "MarkupAI"
+        "category": "Markup AI Lint"
       },
       {
-        "command": "markupai.selectStyleGuide",
+        "command": "markupai-lint.selectStyleGuide",
         "title": "Select Style Guide",
-        "category": "MarkupAI"
+        "category": "Markup AI Lint"
       },
       {
-        "command": "markupai.goToIssue",
+        "command": "markupai-lint.goToIssue",
         "title": "Go to Issue",
-        "category": "MarkupAI"
+        "category": "Markup AI Lint"
       },
       {
-        "command": "markupai.filterBySeverity",
+        "command": "markupai-lint.filterBySeverity",
         "title": "Filter by Severity",
-        "category": "MarkupAI",
+        "category": "Markup AI Lint",
         "icon": "$(filter)"
       },
       {
-        "command": "markupai.filterByCategory",
+        "command": "markupai-lint.filterByCategory",
         "title": "Filter by Category",
-        "category": "MarkupAI",
+        "category": "Markup AI Lint",
         "icon": "$(tag)"
       },
       {
-        "command": "markupai.clearFilters",
+        "command": "markupai-lint.clearFilters",
         "title": "Clear Filters",
-        "category": "MarkupAI",
+        "category": "Markup AI Lint",
         "icon": "$(clear-all)"
       },
       {
-        "command": "markupai.refreshFindings",
+        "command": "markupai-lint.refreshFindings",
         "title": "Refresh Findings",
-        "category": "MarkupAI",
+        "category": "Markup AI Lint",
         "icon": "$(refresh)"
       },
       {
-        "command": "markupai.showAllFindings",
+        "command": "markupai-lint.showAllFindings",
         "title": "Show All Files",
-        "category": "MarkupAI",
+        "category": "Markup AI Lint",
         "icon": "$(files)"
       },
       {
-        "command": "markupai.showCurrentFileFindings",
+        "command": "markupai-lint.showCurrentFileFindings",
         "title": "Show Current File Only",
-        "category": "MarkupAI",
+        "category": "Markup AI Lint",
         "icon": "$(file)"
       },
       {
-        "command": "markupai.selectFolder",
+        "command": "markupai-lint.selectFolder",
         "title": "Change Folder",
-        "category": "MarkupAI",
+        "category": "Markup AI Lint",
         "icon": "$(folder-opened)"
       },
       {
-        "command": "markupai.refreshFolderScanner",
+        "command": "markupai-lint.refreshFolderScanner",
         "title": "Refresh Folder Scanner",
-        "category": "MarkupAI",
+        "category": "Markup AI Lint",
         "icon": "$(refresh)"
       },
       {
-        "command": "markupai.checkAllFiles",
+        "command": "markupai-lint.checkAllFiles",
         "title": "Check All Files",
-        "category": "MarkupAI",
+        "category": "Markup AI Lint",
         "icon": "$(run-all)"
       },
       {
-        "command": "markupai.checkSelectedFiles",
+        "command": "markupai-lint.checkSelectedFiles",
         "title": "Check Selected Files",
-        "category": "MarkupAI",
+        "category": "Markup AI Lint",
         "icon": "$(run)"
       },
       {
-        "command": "markupai.toggleFileSelection",
+        "command": "markupai-lint.toggleFileSelection",
         "title": "Toggle File Selection",
-        "category": "MarkupAI",
+        "category": "Markup AI Lint",
         "icon": "$(check)"
       },
       {
-        "command": "markupai.openFile",
+        "command": "markupai-lint.openFile",
         "title": "Open File",
-        "category": "MarkupAI"
+        "category": "Markup AI Lint"
       }
     ],
     "configuration": {
-      "title": "MarkupAI",
+      "title": "Markup AI Lint",
       "properties": {
-        "markupai.checkDelay": {
+        "markupai-lint.checkDelay": {
           "type": "number",
           "default": 2000,
           "description": "Delay in milliseconds before checking after a document change"
         },
-        "markupai.checkOnChange": {
+        "markupai-lint.checkOnChange": {
           "type": "boolean",
           "default": false,
           "description": "Automatically re-check content when the document changes. Enable this for real-time score updates while editing. Disable to save API calls (recommended)."
         },
-        "markupai.checkOnOpen": {
+        "markupai-lint.checkOnOpen": {
           "type": "boolean",
           "default": true,
           "description": "Automatically check content when a file is opened"
         },
-        "markupai.enabled": {
+        "markupai-lint.enabled": {
           "type": "boolean",
           "default": true,
           "description": "Enable or disable MarkupAI checking"
         },
-        "markupai.environment": {
+        "markupai-lint.environment": {
           "type": "string",
           "default": "prod",
           "enum": [
@@ -204,20 +199,7 @@
           ],
           "description": "MarkupAI API environment."
         },
-        "markupai.mode": {
-          "type": "string",
-          "default": "sidebar",
-          "enum": [
-            "sidebar",
-            "native"
-          ],
-          "enumDescriptions": [
-            "Sidebar panel with its own sign-in and check configuration",
-            "Inline diagnostics, findings panel, and batch folder checking"
-          ],
-          "description": "How MarkupAI checks are presented. Sidebar and native modes are mutually exclusive."
-        },
-        "markupai.styleGuide": {
+        "markupai-lint.styleGuide": {
           "type": "string",
           "default": "",
           "description": "Style guide ID to check against. Leave empty to use your organization's default. Use the 'MarkupAI: Select Style Guide' command to pick one."
@@ -227,182 +209,166 @@
     "menus": {
       "view/title": [
         {
-          "command": "markupai.refreshFindings",
-          "when": "view == markupai.findings",
+          "command": "markupai-lint.refreshFindings",
+          "when": "view == markupai-lint.findings",
           "group": "navigation@1"
         },
         {
-          "command": "markupai.filterBySeverity",
-          "when": "view == markupai.findings",
+          "command": "markupai-lint.filterBySeverity",
+          "when": "view == markupai-lint.findings",
           "group": "navigation@2"
         },
         {
-          "command": "markupai.filterByCategory",
-          "when": "view == markupai.findings",
+          "command": "markupai-lint.filterByCategory",
+          "when": "view == markupai-lint.findings",
           "group": "navigation@3"
         },
         {
-          "command": "markupai.clearFilters",
-          "when": "view == markupai.findings",
+          "command": "markupai-lint.clearFilters",
+          "when": "view == markupai-lint.findings",
           "group": "navigation@4"
         },
         {
-          "command": "markupai.showAllFindings",
-          "when": "view == markupai.findings && !markupai.showAllFiles",
+          "command": "markupai-lint.showAllFindings",
+          "when": "view == markupai-lint.findings && !markupai-lint.showAllFiles",
           "group": "navigation@5"
         },
         {
-          "command": "markupai.showCurrentFileFindings",
-          "when": "view == markupai.findings && markupai.showAllFiles",
+          "command": "markupai-lint.showCurrentFileFindings",
+          "when": "view == markupai-lint.findings && markupai-lint.showAllFiles",
           "group": "navigation@5"
         },
         {
-          "command": "markupai.selectFolder",
-          "when": "view == markupai.folderScanner",
+          "command": "markupai-lint.selectFolder",
+          "when": "view == markupai-lint.folderScanner",
           "group": "navigation@1"
         },
         {
-          "command": "markupai.refreshFolderScanner",
-          "when": "view == markupai.folderScanner",
+          "command": "markupai-lint.refreshFolderScanner",
+          "when": "view == markupai-lint.folderScanner",
           "group": "navigation@2"
         },
         {
-          "command": "markupai.checkAllFiles",
-          "when": "view == markupai.folderScanner",
+          "command": "markupai-lint.checkAllFiles",
+          "when": "view == markupai-lint.folderScanner",
           "group": "navigation@3"
         },
         {
-          "command": "markupai.checkSelectedFiles",
-          "when": "view == markupai.folderScanner",
+          "command": "markupai-lint.checkSelectedFiles",
+          "when": "view == markupai-lint.folderScanner",
           "group": "navigation@4"
         }
       ],
       "view/item/context": [
         {
-          "command": "markupai.toggleFileSelection",
-          "when": "view == markupai.folderScanner && viewItem == file",
+          "command": "markupai-lint.toggleFileSelection",
+          "when": "view == markupai-lint.folderScanner && viewItem == file",
           "group": "inline@1"
         },
         {
-          "command": "markupai.toggleFileSelection",
-          "when": "view == markupai.folderScanner && viewItem == file",
+          "command": "markupai-lint.toggleFileSelection",
+          "when": "view == markupai-lint.folderScanner && viewItem == file",
           "group": "1_selection@1"
         }
       ],
       "editor/context": [
         {
-          "command": "markupai.checkContent",
+          "command": "markupai-lint.checkContent",
           "group": "markupai@1",
-          "when": "config.markupai.mode == 'native' && editorTextFocus && markupai.enabled"
+          "when": "editorTextFocus && markupai-lint.enabled"
         },
         {
-          "command": "markupai.disableIssues",
+          "command": "markupai-lint.disableIssues",
           "group": "markupai@2",
-          "when": "config.markupai.mode == 'native' && editorTextFocus && markupai.enabled"
+          "when": "editorTextFocus && markupai-lint.enabled"
         },
         {
-          "command": "markupai.enableIssues",
+          "command": "markupai-lint.enableIssues",
           "group": "markupai@2",
-          "when": "config.markupai.mode == 'native' && editorTextFocus && !markupai.enabled"
+          "when": "editorTextFocus && !markupai-lint.enabled"
         }
       ],
       "commandPalette": [
         {
-          "command": "markupai.checkContent",
-          "when": "config.markupai.mode == 'native' && editorIsOpen"
+          "command": "markupai-lint.checkContent",
+          "when": "editorIsOpen"
         },
         {
-          "command": "markupai.toggleEnabled",
-          "when": "config.markupai.mode == 'native'"
+          "command": "markupai-lint.toggleEnabled"
         },
         {
-          "command": "markupai.enableIssues",
-          "when": "config.markupai.mode == 'native' && !markupai.enabled"
+          "command": "markupai-lint.enableIssues",
+          "when": "!markupai-lint.enabled"
         },
         {
-          "command": "markupai.disableIssues",
-          "when": "config.markupai.mode == 'native' && markupai.enabled"
+          "command": "markupai-lint.disableIssues",
+          "when": "markupai-lint.enabled"
         },
         {
-          "command": "markupai.enableCategory",
-          "when": "config.markupai.mode == 'native' && markupai.enabled"
+          "command": "markupai-lint.enableCategory",
+          "when": "markupai-lint.enabled"
         },
         {
-          "command": "markupai.disableCategory",
+          "command": "markupai-lint.disableCategory",
           "when": "false"
         },
         {
-          "command": "markupai.showScores",
-          "when": "config.markupai.mode == 'native' && editorIsOpen"
+          "command": "markupai-lint.showScores",
+          "when": "editorIsOpen"
         },
         {
-          "command": "markupai.selectStyleGuide",
-          "when": "config.markupai.mode == 'native'"
+          "command": "markupai-lint.selectStyleGuide"
         },
         {
-          "command": "markupai.goToIssue",
+          "command": "markupai-lint.goToIssue",
           "when": "false"
         },
         {
-          "command": "markupai.signIn",
-          "when": "config.markupai.mode == 'native'"
+          "command": "markupai-lint.signIn"
         },
         {
-          "command": "markupai.signOut",
-          "when": "config.markupai.mode == 'native'"
-        },
-        {
-          "command": "markupai.switchMode"
+          "command": "markupai-lint.signOut"
         }
       ]
     },
     "views": {
-      "markupai-sidebar": [
+      "markupai-lint": [
         {
-          "id": "markupai.folderScanner",
+          "id": "markupai-lint.folderScanner",
           "name": "Folder Scanner",
           "type": "tree",
-          "contextualTitle": "MarkupAI Folder Scanner",
-          "when": "config.markupai.mode == 'native'"
-        },
-        {
-          "id": "markupai.sidebar",
-          "name": "Sidebar",
-          "type": "webview",
-          "contextualTitle": "MarkupAI Sidebar",
-          "when": "config.markupai.mode == 'sidebar'"
+          "contextualTitle": "Markup AI Lint Folder Scanner"
         }
       ],
-      "markupai-panel": [
+      "markupai-lint-panel": [
         {
-          "id": "markupai.findings",
+          "id": "markupai-lint.findings",
           "name": "Findings",
           "type": "tree",
-          "contextualTitle": "MarkupAI Findings",
-          "when": "config.markupai.mode == 'native'"
+          "contextualTitle": "Markup AI Lint Findings"
         }
       ]
     },
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "markupai-sidebar",
-          "title": "MarkupAI",
+          "id": "markupai-lint",
+          "title": "Markup AI Lint",
           "icon": "assets/markup-icon-activitybar.svg"
         }
       ],
       "panel": [
         {
-          "id": "markupai-panel",
-          "title": "MarkupAI",
+          "id": "markupai-lint-panel",
+          "title": "Markup AI Lint",
           "icon": "$(checklist)"
         }
       ]
     },
     "viewsWelcome": [
       {
-        "view": "markupai.folderScanner",
-        "contents": "No folder open.\n\nOpen a folder to scan documents for writing issues.\n\n[Open Folder](command:vscode.openFolder)\n\nOr select a specific folder:\n[Select Folder](command:markupai.selectFolder)",
+        "view": "markupai-lint.folderScanner",
+        "contents": "No folder open.\n\nOpen a folder to scan documents for writing issues.\n\n[Open Folder](command:vscode.openFolder)\n\nOr select a specific folder:\n[Select Folder](command:markupai-lint.selectFolder)",
         "when": "workspaceFolderCount == 0"
       }
     ]
@@ -412,7 +378,6 @@
   ],
   "dependencies": {
     "@markupai/format-offset-mapper": "^1.1.8",
-    "@markupai/sidebar-adapter": "^1.3.1",
     "diff-match-patch-ts": "^0.8.0"
   },
   "devDependencies": {

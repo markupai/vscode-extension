@@ -29,7 +29,7 @@ export class MarkupAIHoverProvider implements vscode.HoverProvider {
         const severity = markupDiagnostic.markupaiSeverity;
 
         const markdown = new vscode.MarkdownString();
-        markdown.isTrusted = { enabledCommands: ["markupai.applyFix"] };
+        markdown.isTrusted = { enabledCommands: ["markupai-lint.applyFix"] };
 
         if (category) {
           markdown.appendMarkdown(`### ${category}\n\n`);
@@ -54,7 +54,7 @@ export class MarkupAIHoverProvider implements vscode.HoverProvider {
               suggestion: suggestion,
             }),
           );
-          markdown.appendMarkdown(`[Apply Fix](command:markupai.applyFix?${args})\n\n`);
+          markdown.appendMarkdown(`[Apply Fix](command:markupai-lint.applyFix?${args})\n\n`);
         }
 
         if (guidelineName && guidelineName !== category) {

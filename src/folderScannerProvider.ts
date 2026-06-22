@@ -145,7 +145,7 @@ export class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<Fo
       }
 
       treeItem.command = {
-        command: "markupai.openFile",
+        command: "markupai-lint.openFile",
         title: "Open File",
         arguments: [element.uri],
       };

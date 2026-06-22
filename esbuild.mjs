@@ -54,18 +54,7 @@ const webOptions = {
   outfile: "out/web/extension.js",
 };
 
-/** Sidebar webview script — runs in the webview DOM, not the extension host. */
-/** @type {import('esbuild').BuildOptions} */
-const webviewOptions = {
-  ...sharedOptions,
-  entryPoints: ["src/webview/sidebarHost.ts"],
-  external: [],
-  platform: "browser",
-  format: "iife",
-  outfile: "out/webview/sidebarHost.js",
-};
-
-const allOptions = [nodeOptions, webOptions, webviewOptions];
+const allOptions = [nodeOptions, webOptions];
 
 async function build() {
   if (isWatch) {

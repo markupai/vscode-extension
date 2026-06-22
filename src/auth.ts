@@ -1,9 +1,9 @@
 import * as vscode from "vscode";
 import { USER_MESSAGE_PREFIX } from "./constants";
 
-const ACCESS_TOKEN_KEY = "markupai.accessToken";
-const REFRESH_TOKEN_KEY = "markupai.refreshToken";
-const EXPIRES_AT_KEY = "markupai.tokenExpiresAt";
+const ACCESS_TOKEN_KEY = "markupai-lint.accessToken";
+const REFRESH_TOKEN_KEY = "markupai-lint.refreshToken";
+const EXPIRES_AT_KEY = "markupai-lint.tokenExpiresAt";
 
 /** Refresh this long before the access token actually expires. */
 const EXPIRY_BUFFER_MS = 60_000;

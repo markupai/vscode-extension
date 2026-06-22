@@ -10,7 +10,6 @@ import {
   getConfig,
   getApiBaseUrl,
   getStyleGuideId,
-  isSidebarMode,
   getScoreEmoji,
   getSeverityEmoji,
   getLeadSeverity,
@@ -21,8 +20,6 @@ import {
   SUPPORTED_SCHEMES,
 } from "./utils";
 import { DiagnosticsManager } from "./diagnosticsManager";
-import { SidebarViewProvider } from "./sidebar/sidebarViewProvider";
-import { SidebarBridge } from "./sidebar/sidebarBridge";
 import { StatusBarManager } from "./statusBarManager";
 import { FindingsTreeDataProvider } from "./findingsTreeProvider";
 import { FolderScannerTreeDataProvider } from "./folderScannerProvider";
@@ -184,7 +181,7 @@ function handleCheckError(error: unknown, showCompletionNotification: boolean): 
       .showErrorMessage(`${USER_MESSAGE_PREFIX}your session has expired.`, "Sign In")
       .then((action) => {
         if (action === "Sign In") {
-          void vscode.commands.executeCommand("markupai.signIn");
+          void vscode.commands.executeCommand("markupai-lint.signIn");
         }
       });
     return;
@@ -208,10 +205,6 @@ async function checkDocument(
   showProgress: boolean = false,
   showCompletionNotification: boolean = true,
 ): Promise<void> {
-  if (isSidebarMode()) {
-    return;
-  }
-
   if (!isExtensionEnabled()) {
     diagnosticsManager.clearForDocument(document.uri);
     statusBar.update(null);
@@ -307,9 +300,9 @@ async function showCheckCompleteNotification(assessment: DocumentAssessment): Pr
   );
 
   if (action === "View Details") {
-    vscode.commands.executeCommand("markupai.showScores");
+    vscode.commands.executeCommand("markupai-lint.showScores");
   } else if (action === "Show Findings") {
-    vscode.commands.executeCommand("markupai.findings.focus");
+    vscode.commands.executeCommand("markupai-lint.findings.focus");
   }
 }
 
@@ -580,7 +573,7 @@ async function showScoresDialog(): Promise<void> {
 async function setMarkupAIEnabled(enabled: boolean): Promise<void> {
   isEnabled = enabled;
 
-  await vscode.commands.executeCommand("setContext", "markupai.enabled", isEnabled);
+  await vscode.commands.executeCommand("setContext", "markupai-lint.enabled", isEnabled);
 
   const config = getConfig();
   await config.update("enabled", isEnabled, vscode.ConfigurationTarget.Global);
@@ -654,12 +647,12 @@ async function checkMultipleFiles(files: vscode.Uri[]): Promise<void> {
   if (failed === 0) {
     const action = await vscode.window.showInformationMessage(message, "View Findings");
     if (action === "View Findings") {
-      vscode.commands.executeCommand("markupai.findings.focus");
+      vscode.commands.executeCommand("markupai-lint.findings.focus");
     }
   } else {
     const action = await vscode.window.showWarningMessage(message, "View Findings", "Show Errors");
     if (action === "View Findings") {
-      vscode.commands.executeCommand("markupai.findings.focus");
+      vscode.commands.executeCommand("markupai-lint.findings.focus");
     } else if (action === "Show Errors") {
       const errorMessage = errors.join("\n");
       vscode.window.showErrorMessage(`Errors:\n${errorMessage}`);
@@ -672,22 +665,7 @@ async function checkMultipleFiles(files: vscode.Uri[]): Promise<void> {
 // ============================================================================
 
 export function activate(context: vscode.ExtensionContext) {
-  console.log("MarkupAI extension is now active!");
-
-  const extensionVersion =
-    (context.extension.packageJSON as { version?: string }).version ?? "0.0.0";
-
-  // Sidebar mode: webview view hosting the MarkupAI sidebar app
-  const sidebarBridge = new SidebarBridge();
-  sidebarBridge.trackEditor(vscode.window.activeTextEditor);
-  context.subscriptions.push(
-    sidebarBridge,
-    vscode.window.registerWebviewViewProvider(
-      SidebarViewProvider.viewType,
-      new SidebarViewProvider(context.extensionUri, extensionVersion, sidebarBridge),
-      { webviewOptions: { retainContextWhenHidden: true } },
-    ),
-  );
+  console.log("Markup AI Lint extension is now active!");
 
   // Initialize auth
   auth = new AuthManager(context.secrets, () => ({
@@ -697,7 +675,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(auth);
 
   // Initialize diagnostic collection
-  const diagnosticCollection = vscode.languages.createDiagnosticCollection("markupai");
+  const diagnosticCollection = vscode.languages.createDiagnosticCollection("markupai-lint");
   context.subscriptions.push(diagnosticCollection);
 
   // Initialize managers
@@ -710,12 +688,12 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Set initial enabled state
   isEnabled = getConfig().get("enabled", true);
-  vscode.commands.executeCommand("setContext", "markupai.enabled", isEnabled);
-  vscode.commands.executeCommand("setContext", "markupai.showAllFiles", true);
+  vscode.commands.executeCommand("setContext", "markupai-lint.enabled", isEnabled);
+  vscode.commands.executeCommand("setContext", "markupai-lint.showAllFiles", true);
 
   // Initialize Findings TreeView
   findingsTreeDataProvider = new FindingsTreeDataProvider(() => diagnosticsManager.getAllIssues());
-  const findingsTreeView = vscode.window.createTreeView("markupai.findings", {
+  const findingsTreeView = vscode.window.createTreeView("markupai-lint.findings", {
     treeDataProvider: findingsTreeDataProvider,
     showCollapseAll: true,
   });
@@ -732,7 +710,7 @@ export function activate(context: vscode.ExtensionContext) {
     });
     return assessments;
   });
-  const folderScannerTreeView = vscode.window.createTreeView("markupai.folderScanner", {
+  const folderScannerTreeView = vscode.window.createTreeView("markupai-lint.folderScanner", {
     treeDataProvider: folderScannerTreeDataProvider,
     showCollapseAll: true,
   });
@@ -769,7 +747,7 @@ export function activate(context: vscode.ExtensionContext) {
   // Register findings panel commands
   context.subscriptions.push(
     vscode.commands.registerCommand(
-      "markupai.goToIssue",
+      "markupai-lint.goToIssue",
       async (uri: vscode.Uri, issue: ContentIssue) => {
         const document = await vscode.workspace.openTextDocument(uri);
         const editor = await vscode.window.showTextDocument(document);
@@ -783,14 +761,14 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("markupai.refreshFindings", () => {
+    vscode.commands.registerCommand("markupai-lint.refreshFindings", () => {
       findingsTreeDataProvider.refresh();
       updateTreeViewTitle();
     }),
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("markupai.filterBySeverity", async () => {
+    vscode.commands.registerCommand("markupai-lint.filterBySeverity", async () => {
       const severities = findingsTreeDataProvider.getAvailableSeverities();
       if (severities.length === 0) {
         vscode.window.showInformationMessage("No issues found to filter");
@@ -820,7 +798,7 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("markupai.filterByCategory", async () => {
+    vscode.commands.registerCommand("markupai-lint.filterByCategory", async () => {
       const categories = findingsTreeDataProvider.getAvailableCategories();
       if (categories.length === 0) {
         vscode.window.showInformationMessage("No issues found to filter");
@@ -845,7 +823,7 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("markupai.clearFilters", () => {
+    vscode.commands.registerCommand("markupai-lint.clearFilters", () => {
       findingsTreeDataProvider.clearFilters();
       updateTreeViewTitle();
       vscode.window.showInformationMessage("Filters cleared");
@@ -853,14 +831,14 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("markupai.showAllFindings", () => {
+    vscode.commands.registerCommand("markupai-lint.showAllFindings", () => {
       findingsTreeDataProvider.setShowAllFiles(true);
       updateTreeViewTitle();
     }),
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("markupai.showCurrentFileFindings", () => {
+    vscode.commands.registerCommand("markupai-lint.showCurrentFileFindings", () => {
       findingsTreeDataProvider.setShowAllFiles(false);
       updateTreeViewTitle();
     }),
@@ -871,7 +849,7 @@ export function activate(context: vscode.ExtensionContext) {
   // ============================================================================
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("markupai.selectFolder", async () => {
+    vscode.commands.registerCommand("markupai-lint.selectFolder", async () => {
       const currentFolder = folderScannerTreeDataProvider.getRootFolder();
 
       const folderUri = await vscode.window.showOpenDialog({
@@ -892,26 +870,29 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("markupai.refreshFolderScanner", () => {
+    vscode.commands.registerCommand("markupai-lint.refreshFolderScanner", () => {
       folderScannerTreeDataProvider.refresh();
     }),
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("markupai.openFile", async (uri: vscode.Uri) => {
+    vscode.commands.registerCommand("markupai-lint.openFile", async (uri: vscode.Uri) => {
       const document = await vscode.workspace.openTextDocument(uri);
       await vscode.window.showTextDocument(document);
     }),
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("markupai.toggleFileSelection", (item: FolderScannerItem) => {
-      folderScannerTreeDataProvider.toggleFileSelection(item);
-    }),
+    vscode.commands.registerCommand(
+      "markupai-lint.toggleFileSelection",
+      (item: FolderScannerItem) => {
+        folderScannerTreeDataProvider.toggleFileSelection(item);
+      },
+    ),
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("markupai.checkAllFiles", async () => {
+    vscode.commands.registerCommand("markupai-lint.checkAllFiles", async () => {
       if (!(await requireSignIn())) {
         return;
       }
@@ -927,7 +908,7 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("markupai.checkSelectedFiles", async () => {
+    vscode.commands.registerCommand("markupai-lint.checkSelectedFiles", async () => {
       if (!(await requireSignIn())) {
         return;
       }
@@ -961,7 +942,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Register Commands
   context.subscriptions.push(
-    vscode.commands.registerCommand("markupai.checkContent", () => {
+    vscode.commands.registerCommand("markupai-lint.checkContent", () => {
       const editor = vscode.window.activeTextEditor;
       if (editor) {
         void checkDocument(editor.document, true);
@@ -970,25 +951,25 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("markupai.toggleEnabled", async () => {
+    vscode.commands.registerCommand("markupai-lint.toggleEnabled", async () => {
       await setMarkupAIEnabled(!isEnabled);
     }),
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("markupai.enableIssues", async () => {
+    vscode.commands.registerCommand("markupai-lint.enableIssues", async () => {
       await setMarkupAIEnabled(true);
     }),
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("markupai.disableIssues", async () => {
+    vscode.commands.registerCommand("markupai-lint.disableIssues", async () => {
       await setMarkupAIEnabled(false);
     }),
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("markupai.disableCategory", (category: string) => {
+    vscode.commands.registerCommand("markupai-lint.disableCategory", (category: string) => {
       if (!category) {
         return;
       }
@@ -1005,7 +986,7 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("markupai.enableCategory", async () => {
+    vscode.commands.registerCommand("markupai-lint.enableCategory", async () => {
       const disabledCategories = diagnosticsManager.getDisabledCategories();
       if (disabledCategories.size === 0) {
         vscode.window.showInformationMessage("MarkupAI: All categories are already enabled.");
@@ -1042,89 +1023,87 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("markupai.showScores", showScoresDialog),
+    vscode.commands.registerCommand("markupai-lint.showScores", showScoresDialog),
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("markupai.signIn", signIn),
-    vscode.commands.registerCommand("markupai.signOut", signOut),
-    vscode.commands.registerCommand("markupai.switchMode", async () => {
-      const next = isSidebarMode() ? "native" : "sidebar";
-      await getConfig().update("mode", next, vscode.ConfigurationTarget.Global);
-      vscode.window.showInformationMessage(`MarkupAI: switched to ${next} mode.`);
-    }),
+    vscode.commands.registerCommand("markupai-lint.signIn", signIn),
+    vscode.commands.registerCommand("markupai-lint.signOut", signOut),
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("markupai.selectStyleGuide", selectStyleGuide),
+    vscode.commands.registerCommand("markupai-lint.selectStyleGuide", selectStyleGuide),
   );
 
   context.subscriptions.push(
-    vscode.commands.registerCommand("markupai.applyFix", async (args: string | ApplyFixArgs) => {
-      if (!args) {
-        return;
-      }
-
-      const parsedArgs: ApplyFixArgs =
-        typeof args === "string" ? (JSON.parse(args) as ApplyFixArgs) : args;
-      const uri = vscode.Uri.parse(parsedArgs.uri);
-      const range = new vscode.Range(
-        new vscode.Position(parsedArgs.range.start.line, parsedArgs.range.start.character),
-        new vscode.Position(parsedArgs.range.end.line, parsedArgs.range.end.character),
-      );
-
-      const document = await vscode.workspace.openTextDocument(uri);
-      const oldText = document.getText();
-      const startOffset = document.offsetAt(range.start);
-      const endOffset = document.offsetAt(range.end);
-
-      isApplyingFix = true;
-
-      const edit = new vscode.WorkspaceEdit();
-      edit.replace(uri, range, parsedArgs.suggestion);
-      await vscode.workspace.applyEdit(edit);
-
-      const newText = document.getText();
-
-      const translator = new OffsetTranslator(oldText, newText);
-      const docKey = uri.toString();
-      const existingIssues = diagnosticsManager.getIssues(docKey);
-
-      if (existingIssues) {
-        const updatedIssues: ContentIssue[] = [];
-
-        for (const issue of existingIssues) {
-          if (
-            (issue.startIndex >= startOffset && issue.startIndex < endOffset) ||
-            (issue.endIndex > startOffset && issue.endIndex <= endOffset)
-          ) {
-            continue;
-          }
-
-          const translatedRange = translator.translateRange(issue.startIndex, issue.endIndex);
-
-          if (translatedRange) {
-            const textAtPosition = newText.substring(translatedRange.start, translatedRange.end);
-
-            if (textAtPosition === issue.originalText) {
-              updatedIssues.push({
-                ...issue,
-                startIndex: translatedRange.start,
-                endIndex: translatedRange.end,
-              });
-            }
-          }
+    vscode.commands.registerCommand(
+      "markupai-lint.applyFix",
+      async (args: string | ApplyFixArgs) => {
+        if (!args) {
+          return;
         }
 
-        diagnosticsManager.setIssues(docKey, updatedIssues);
-        diagnosticsManager.updateDiagnostics(document, updatedIssues);
-        findingsTreeDataProvider.refresh();
-      }
+        const parsedArgs: ApplyFixArgs =
+          typeof args === "string" ? (JSON.parse(args) as ApplyFixArgs) : args;
+        const uri = vscode.Uri.parse(parsedArgs.uri);
+        const range = new vscode.Range(
+          new vscode.Position(parsedArgs.range.start.line, parsedArgs.range.start.character),
+          new vscode.Position(parsedArgs.range.end.line, parsedArgs.range.end.character),
+        );
 
-      setTimeout(() => {
-        isApplyingFix = false;
-      }, 100);
-    }),
+        const document = await vscode.workspace.openTextDocument(uri);
+        const oldText = document.getText();
+        const startOffset = document.offsetAt(range.start);
+        const endOffset = document.offsetAt(range.end);
+
+        isApplyingFix = true;
+
+        const edit = new vscode.WorkspaceEdit();
+        edit.replace(uri, range, parsedArgs.suggestion);
+        await vscode.workspace.applyEdit(edit);
+
+        const newText = document.getText();
+
+        const translator = new OffsetTranslator(oldText, newText);
+        const docKey = uri.toString();
+        const existingIssues = diagnosticsManager.getIssues(docKey);
+
+        if (existingIssues) {
+          const updatedIssues: ContentIssue[] = [];
+
+          for (const issue of existingIssues) {
+            if (
+              (issue.startIndex >= startOffset && issue.startIndex < endOffset) ||
+              (issue.endIndex > startOffset && issue.endIndex <= endOffset)
+            ) {
+              continue;
+            }
+
+            const translatedRange = translator.translateRange(issue.startIndex, issue.endIndex);
+
+            if (translatedRange) {
+              const textAtPosition = newText.substring(translatedRange.start, translatedRange.end);
+
+              if (textAtPosition === issue.originalText) {
+                updatedIssues.push({
+                  ...issue,
+                  startIndex: translatedRange.start,
+                  endIndex: translatedRange.end,
+                });
+              }
+            }
+          }
+
+          diagnosticsManager.setIssues(docKey, updatedIssues);
+          diagnosticsManager.updateDiagnostics(document, updatedIssues);
+          findingsTreeDataProvider.refresh();
+        }
+
+        setTimeout(() => {
+          isApplyingFix = false;
+        }, 100);
+      },
+    ),
   );
 
   // Document Events
@@ -1154,7 +1133,6 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.workspace.onDidCloseTextDocument((document) => {
-      sidebarBridge.handleDocumentClosed(document.uri);
       diagnosticsManager.clearForDocument(document.uri);
       findingsTreeDataProvider.refresh();
       const timer = checkDebounceTimers.get(document.uri.toString());
@@ -1167,12 +1145,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.window.onDidChangeActiveTextEditor((editor) => {
-      sidebarBridge.trackEditor(editor);
       void (async () => {
-        if (isSidebarMode()) {
-          statusBar.showSidebarMode();
-          return;
-        }
         if (editor) {
           const assessment = diagnosticsManager.getAssessment(editor.document.uri.toString());
           if (assessment) {
@@ -1192,9 +1165,9 @@ export function activate(context: vscode.ExtensionContext) {
   // Configuration change listener
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((event) => {
-      if (event.affectsConfiguration("markupai.enabled")) {
+      if (event.affectsConfiguration("markupai-lint.enabled")) {
         isEnabled = getConfig().get("enabled", true);
-        vscode.commands.executeCommand("setContext", "markupai.enabled", isEnabled);
+        vscode.commands.executeCommand("setContext", "markupai-lint.enabled", isEnabled);
 
         // Runtime check - user can change this setting
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
@@ -1210,42 +1183,15 @@ export function activate(context: vscode.ExtensionContext) {
         }
       }
 
-      if (event.affectsConfiguration("markupai.environment")) {
+      if (event.affectsConfiguration("markupai-lint.environment")) {
         resetSessionCaches();
         void refreshStyleGuides();
-      }
-
-      if (event.affectsConfiguration("markupai.mode")) {
-        if (isSidebarMode()) {
-          // Native artifacts are meaningless in sidebar mode.
-          diagnosticsManager.clearAll();
-          findingsTreeDataProvider.refresh();
-          statusBar.showSidebarMode();
-        } else {
-          void (async () => {
-            if (await auth.isSignedIn()) {
-              void refreshStyleGuides();
-              const editor = vscode.window.activeTextEditor;
-              if (editor) {
-                void checkDocument(editor.document);
-              } else {
-                statusBar.hide();
-              }
-            } else {
-              statusBar.showSignedOut();
-            }
-          })();
-        }
       }
     }),
   );
 
   // Initial setup
   void (async () => {
-    if (isSidebarMode()) {
-      statusBar.showSidebarMode();
-      return;
-    }
     if (await auth.isSignedIn()) {
       void refreshStyleGuides();
       if (vscode.window.activeTextEditor) {

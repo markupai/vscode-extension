@@ -16,7 +16,7 @@ const SUPPORTED_SCHEMES_SET = new Set<string>(SUPPORTED_SCHEMES);
  * Get the MarkupAI configuration
  */
 export function getConfig(): vscode.WorkspaceConfiguration {
-  return vscode.workspace.getConfiguration("markupai");
+  return vscode.workspace.getConfiguration("markupai-lint");
 }
 
 /**
@@ -32,18 +32,6 @@ export function getEnvironment(): MarkupAIEnvironment {
  */
 export function getApiBaseUrl(): string {
   return ENVIRONMENT_URLS[getEnvironment()];
-}
-
-/** Presentation mode: hosted sidebar panel vs native inline checking. */
-export type MarkupAIMode = "sidebar" | "native";
-
-export function getMode(): MarkupAIMode {
-  const mode = getConfig().get<string>("mode", "sidebar");
-  return mode === "native" ? "native" : "sidebar";
-}
-
-export function isSidebarMode(): boolean {
-  return getMode() === "sidebar";
 }
 
 /** Values the pre-style-agent extension stored; not valid style guide IDs. */

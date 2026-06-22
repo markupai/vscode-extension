@@ -35,15 +35,7 @@ export class StatusBarManager {
       tooltipLines.splice(1, 0, `Quality score: ${String(score)}`);
     }
     this.statusBarItem.tooltip = tooltipLines.join("\n");
-    this.statusBarItem.command = "markupai.showScores";
-    this.statusBarItem.backgroundColor = undefined;
-    this.statusBarItem.show();
-  }
-
-  showSidebarMode(): void {
-    this.statusBarItem.text = "$(layout-sidebar-left) MarkupAI";
-    this.statusBarItem.tooltip = "Open the MarkupAI sidebar";
-    this.statusBarItem.command = "markupai.sidebar.focus";
+    this.statusBarItem.command = "markupai-lint.showScores";
     this.statusBarItem.backgroundColor = undefined;
     this.statusBarItem.show();
   }
@@ -51,7 +43,7 @@ export class StatusBarManager {
   showSignedOut(): void {
     this.statusBarItem.text = "$(key) MarkupAI: Sign in";
     this.statusBarItem.tooltip = "Click to sign in to MarkupAI";
-    this.statusBarItem.command = "markupai.signIn";
+    this.statusBarItem.command = "markupai-lint.signIn";
     this.statusBarItem.backgroundColor = new vscode.ThemeColor("statusBarItem.warningBackground");
     this.statusBarItem.show();
   }
@@ -67,7 +59,7 @@ export class StatusBarManager {
   showDisabled(): void {
     this.statusBarItem.text = "$(circle-slash) MarkupAI: Disabled";
     this.statusBarItem.tooltip = "MarkupAI issues are disabled. Right-click to enable.";
-    this.statusBarItem.command = "markupai.enableIssues";
+    this.statusBarItem.command = "markupai-lint.enableIssues";
     this.statusBarItem.backgroundColor = undefined;
     this.statusBarItem.show();
   }
