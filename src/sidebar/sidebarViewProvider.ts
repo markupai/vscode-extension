@@ -1,5 +1,10 @@
 import * as vscode from "vscode";
-import { SIDEBAR_INTEGRATION_ID, SIDEBAR_INTEGRATION_NAME, SIDEBAR_URLS } from "../constants";
+import {
+  AUTH_URLS,
+  SIDEBAR_INTEGRATION_ID,
+  SIDEBAR_INTEGRATION_NAME,
+  SIDEBAR_URLS,
+} from "../constants";
 import { getEnvironment } from "../utils";
 import {
   RPC_ERROR,
@@ -60,8 +65,12 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
   }
 
   private buildHtml(webview: vscode.Webview): string {
-    const sidebarUrl = SIDEBAR_URLS[getEnvironment()];
+    const environment = getEnvironment();
+    const sidebarUrl = SIDEBAR_URLS[environment];
     const sidebarOrigin = new URL(sidebarUrl).origin;
+    // Sign-out redirects the iframe to the Auth0 custom domain and back, so
+    // the CSP must permit framing it as well as the sidebar origin.
+    const authOrigin = new URL(AUTH_URLS[environment]).origin;
     const scriptUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.extensionUri, "out", "webview", "sidebarHost.js"),
     );
@@ -76,7 +85,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
 
     const csp = [
       "default-src 'none'",
-      `frame-src ${sidebarOrigin}`,
+      `frame-src ${sidebarOrigin} ${authOrigin}`,
       `script-src 'nonce-${nonce}'`,
       // The adapter's load overlay styles elements inline.
       "style-src 'unsafe-inline'",
