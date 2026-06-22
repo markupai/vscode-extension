@@ -52,7 +52,7 @@ describe("MarkupAICodeActionProvider", () => {
     expect(fixAction.title).toContain("Hello");
     expect(fixAction.title).toContain("Hi");
     expect(fixAction.isPreferred).toBe(true);
-    expect(fixAction.command?.command).toBe("markupai.applyFix");
+    expect(fixAction.command?.command).toBe("markupai-lint.applyFix");
   });
 
   it("should include the correct fix arguments", () => {
@@ -83,7 +83,7 @@ describe("MarkupAICodeActionProvider", () => {
     expect(actions.length).toBe(2);
     const disableAction = actions[1];
     expect(disableAction.title).toBe("Disable Grammar Issues");
-    expect(disableAction.command?.command).toBe("markupai.disableCategory");
+    expect(disableAction.command?.command).toBe("markupai-lint.disableCategory");
     expect(disableAction.command?.arguments).toContain("grammar");
   });
 

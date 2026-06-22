@@ -38,7 +38,7 @@ export class FindingsTreeDataProvider implements vscode.TreeDataProvider<Finding
 
   setShowAllFiles(showAll: boolean): void {
     this.showAllFiles = showAll;
-    vscode.commands.executeCommand("setContext", "markupai.showAllFiles", showAll);
+    vscode.commands.executeCommand("setContext", "markupai-lint.showAllFiles", showAll);
     this.refresh();
   }
 
@@ -88,7 +88,7 @@ export class FindingsTreeDataProvider implements vscode.TreeDataProvider<Finding
       treeItem.tooltip = tooltip;
 
       treeItem.command = {
-        command: "markupai.goToIssue",
+        command: "markupai-lint.goToIssue",
         title: "Go to Issue",
         arguments: [element.uri, issue],
       };

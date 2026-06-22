@@ -121,7 +121,7 @@ describe("FindingsTreeDataProvider", () => {
 
       const treeItem = provider.getTreeItem(element);
 
-      expect(treeItem.command?.command).toBe("markupai.goToIssue");
+      expect(treeItem.command?.command).toBe("markupai-lint.goToIssue");
       expect(treeItem.command?.arguments).toEqual([uri, issue]);
     });
 
@@ -340,7 +340,7 @@ describe("FindingsTreeDataProvider", () => {
 
       expect(vscode.commands.executeCommand).toHaveBeenCalledWith(
         "setContext",
-        "markupai.showAllFiles",
+        "markupai-lint.showAllFiles",
         false,
       );
     });

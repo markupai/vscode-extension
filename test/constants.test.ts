@@ -85,8 +85,8 @@ describe("constants", () => {
   });
 
   describe("USER_MESSAGE_PREFIX", () => {
-    it("should prefix messages with MarkupAI", () => {
-      expect(USER_MESSAGE_PREFIX).toBe("MarkupAI: ");
+    it("should prefix messages with Markup AI Lint", () => {
+      expect(USER_MESSAGE_PREFIX).toBe("Markup AI Lint: ");
     });
   });
 

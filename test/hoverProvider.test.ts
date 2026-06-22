@@ -107,7 +107,7 @@ describe("MarkupAIHoverProvider", () => {
 
     expect(markdown.value).toContain("**Suggestion:** `Hi`");
     expect(markdown.value).toContain("Apply Fix");
-    expect(markdown.value).toContain("command:markupai.applyFix");
+    expect(markdown.value).toContain("command:markupai-lint.applyFix");
   });
 
   it("should not include suggestion when suggestion equals original text", () => {
@@ -206,7 +206,7 @@ describe("MarkupAIHoverProvider", () => {
     expect(markdown.value).toContain("Low");
   });
 
-  it("should restrict trust to markupai.applyFix command only", () => {
+  it("should restrict trust to markupai-lint.applyFix command only", () => {
     const diagnostic = createMarkupDiagnostic();
     const provider = new MarkupAIHoverProvider(() => [diagnostic]);
     const doc = createMockDocument();
@@ -215,7 +215,7 @@ describe("MarkupAIHoverProvider", () => {
     const hover = provider.provideHover(doc, position, mockToken);
     const markdown = getHoverMarkdown(hover);
 
-    expect(markdown.isTrusted).toEqual({ enabledCommands: ["markupai.applyFix"] });
+    expect(markdown.isTrusted).toEqual({ enabledCommands: ["markupai-lint.applyFix"] });
     expect(markdown.supportHtml).toBeUndefined();
   });
 
