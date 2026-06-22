@@ -55,9 +55,7 @@ describe("SidebarViewProvider", () => {
     expect(webview.html).toContain("https://sidebar.markup.ai");
     // Both the sidebar origin and the Auth0 custom domain must be frameable:
     // sign-out navigates the iframe to the auth origin and back.
-    expect(webview.html).toContain(
-      "frame-src https://sidebar.markup.ai https://auth.markup.ai",
-    );
+    expect(webview.html).toContain("frame-src https://sidebar.markup.ai https://auth.markup.ai");
     expect(webview.html).toContain('"integrationId":"vscode-extension"');
     expect(webview.html).toContain('"integrationVersion":"1.2.3"');
     expect(webview.html).toContain('<meta name="color-scheme" content="light dark" />');
