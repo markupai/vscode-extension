@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as vscode from "vscode";
 import * as utils from "../src/utils";
 import { ContentIssue, RiskSummary } from "../src/types";
@@ -42,45 +42,48 @@ describe("utils", () => {
   });
 
   describe("getEnvironment", () => {
-    it("should return configured dev environment", () => {
-      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(
-        createMockConfig((key, defaultValue) => (key === "environment" ? "dev" : defaultValue)),
-      );
+    const originalEnv = process.env.MARKUPAI_ENV;
+    afterEach(() => {
+      if (originalEnv === undefined) {
+        delete process.env.MARKUPAI_ENV;
+      } else {
+        process.env.MARKUPAI_ENV = originalEnv;
+      }
+    });
 
+    it("returns dev when MARKUPAI_ENV is dev", () => {
+      process.env.MARKUPAI_ENV = "dev";
       expect(utils.getEnvironment()).toBe("dev");
     });
 
-    it("should return default prod if not configured", () => {
-      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(
-        createMockConfig((_key, defaultValue) => defaultValue),
-      );
-
+    it("defaults to prod when MARKUPAI_ENV is unset", () => {
+      delete process.env.MARKUPAI_ENV;
       expect(utils.getEnvironment()).toBe("prod");
     });
 
-    it("should fall back to prod for unknown values", () => {
-      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(
-        createMockConfig((key, defaultValue) => (key === "environment" ? "staging" : defaultValue)),
-      );
-
+    it("falls back to prod for unknown values", () => {
+      process.env.MARKUPAI_ENV = "staging";
       expect(utils.getEnvironment()).toBe("prod");
     });
   });
 
   describe("getApiBaseUrl", () => {
-    it("should return prod URL by default", () => {
-      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(
-        createMockConfig((_key, defaultValue) => defaultValue),
-      );
+    const originalEnv = process.env.MARKUPAI_ENV;
+    afterEach(() => {
+      if (originalEnv === undefined) {
+        delete process.env.MARKUPAI_ENV;
+      } else {
+        process.env.MARKUPAI_ENV = originalEnv;
+      }
+    });
 
+    it("returns the prod URL by default", () => {
+      delete process.env.MARKUPAI_ENV;
       expect(utils.getApiBaseUrl()).toBe("https://api.markup.ai");
     });
 
-    it("should return dev URL when dev environment is configured", () => {
-      vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(
-        createMockConfig((key, defaultValue) => (key === "environment" ? "dev" : defaultValue)),
-      );
-
+    it("returns the dev URL when MARKUPAI_ENV is dev", () => {
+      process.env.MARKUPAI_ENV = "dev";
       expect(utils.getApiBaseUrl()).toBe("https://api.dev.markup.ai");
     });
   });

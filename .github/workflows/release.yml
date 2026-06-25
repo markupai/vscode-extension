@@ -1,0 +1,132 @@
+name: Release
+
+run-name: "Release ${{ github.ref_name }} → VS Code Marketplace & Open VSX"
+
+# Publishes the extension from CI — never from a developer machine.
+#
+# Auth uses GitHub OIDC → Microsoft Entra ID workload identity federation
+# (no Personal Access Tokens). One-time setup:
+#   - Entra App Registration + a GitHub federated credential whose subject is
+#     `repo:markupai/vscode-extension:environment:release`
+#   - that service principal granted the Contributor role on the `markupai`
+#     Marketplace publisher (shared with the Markup AI sidebar extension)
+#   - environment variables (non-secret IDs): AZURE_CLIENT_ID, AZURE_TENANT_ID
+#   - environment secret: OPEN_VSX_TOKEN (Eclipse token; Open VSX is skipped if unset)
+#
+# Once that is in place, publishing is "just run this workflow" (or push a v* tag).
+
+on:
+  workflow_dispatch: {}
+  push:
+    tags:
+      - "v*"
+
+# Never run two releases against the same ref at once, and never cancel a
+# publish that is already in flight (a half-cancelled publish is worse than a queue).
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  id-token: write # GitHub OIDC → Microsoft Entra ID (no PAT, no stored secret)
+  contents: write # create the git tag + GitHub Release
+
+jobs:
+  publish:
+    name: Build, publish & release
+    runs-on: ubuntu-latest
+    # `release` gates the run (add required reviewers on the environment) AND is
+    # the entity the Entra federated credential is bound to — the OIDC subject is
+    # `repo:markupai/vscode-extension:environment:release`. Do not remove.
+    environment: release
+    env:
+      # Mapped here so the Open VSX step can be skipped when the token is absent
+      # (secrets cannot be referenced directly in step `if:` conditions).
+      OPEN_VSX_TOKEN: ${{ secrets.OPEN_VSX_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0 # full history so the Release notes/tag resolve correctly
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ---- Quality gate: nothing is published unless all of this passes ----
+      - name: Type check
+        run: npm run type-check
+
+      - name: Lint
+        run: npm run lint:check
+
+      - name: Test
+        run: npm test
+
+      # ---- Package once, then publish the identical artifact to both registries ----
+      - name: Package extension
+        id: package
+        run: |
+          npm run package   # vscode:prepublish (compile:production) + vsce package --out dist/
+          vsix="$(ls dist/*.vsix)"
+          {
+            echo "vsix=$vsix"
+            echo "version=$(node -p "require('./package.json').version")"
+          } >> "$GITHUB_OUTPUT"
+          echo "Packaged $vsix"
+
+      # ---- Authenticate to Azure via GitHub OIDC (no PAT, no client secret) ----
+      - name: Azure login (OIDC → Entra ID)
+        uses: azure/login@v3
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          # The CI service principal only has a role on the Marketplace publisher,
+          # not on any Azure subscription — without this, `az login` fails with
+          # "no subscriptions found".
+          allow-no-subscriptions: true
+
+      - name: Publish to VS Code Marketplace
+        run: npx --no-install @vscode/vsce publish --azure-credential --packagePath "${{ steps.package.outputs.vsix }}"
+
+      - name: Ensure Open VSX namespace exists
+        if: ${{ env.OPEN_VSX_TOKEN != '' }}
+        # Check before create: Open VSX returns 200 if the namespace exists, 404
+        # if not. We only create when it is genuinely missing, so this is safe to
+        # run on every release AND a real create failure (bad token, unsigned
+        # Eclipse Publisher Agreement, name owned by another account) fails loudly
+        # here instead of being masked. It runs with the CI token, so the
+        # namespace is owned by the same account that publishes below.
+        run: |
+          publisher="$(node -p "require('./package.json').publisher")"
+          status="$(curl -s -o /dev/null -w '%{http_code}' "https://open-vsx.org/api/${publisher}")"
+          if [ "$status" = "200" ]; then
+            echo "Open VSX namespace '${publisher}' already exists — skipping creation."
+          else
+            echo "Open VSX namespace '${publisher}' not found (HTTP ${status}) — creating..."
+            npx --no-install ovsx create-namespace "$publisher" --pat "$OPEN_VSX_TOKEN"
+          fi
+
+      - name: Publish to Open VSX
+        if: ${{ env.OPEN_VSX_TOKEN != '' }}
+        run: npx --no-install ovsx publish "${{ steps.package.outputs.vsix }}" --pat "$OPEN_VSX_TOKEN"
+
+      - name: Skip Open VSX (no token configured)
+        if: ${{ env.OPEN_VSX_TOKEN == '' }}
+        run: echo "::notice::OPEN_VSX_TOKEN is not set — skipping Open VSX publish. Set the secret to publish to Open VSX."
+
+      # ---- Tag + GitHub Release, only after a successful publish ----
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.package.outputs.version }}
+          name: v${{ steps.package.outputs.version }}
+          files: dist/*.vsix
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          make_latest: true

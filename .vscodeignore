@@ -1,14 +1,33 @@
+# Editor / test tooling
 .vscode/**
 .vscode-test/**
-src/**
-.gitignore
-.yarnrc
-vsc-extension-quickstart.md
-**/tsconfig.json
-**/eslint.config.mjs
-**/*.map
-**/*.ts
+.vscode-test-web/**
 **/.vscode-test.*
+
+# Source & maps (shipped code is the bundled output in out/)
+src/**
+test/**
+**/*.ts
+**/*.map
+
+# Build & config files
+esbuild.mjs
+**/tsconfig*.json
+**/eslint.config.mjs
+vitest.config.ts
+sonar-project.properties
+.prettierignore
+.prettierrc.yml
+.npmrc
+.yarnrc
+
+# CI / repo meta
+.github/**
+.gitignore
+vsc-extension-quickstart.md
+
+# Test fixtures & generated output
+testdoc/**
 coverage/**
 dist/**
 node_modules/**
