@@ -84,7 +84,6 @@ Access settings via `File > Preferences > Settings` and search for "Markup AI Li
 | ----------------------------- | ------------------------------------------------------------- | ------- |
 | `markupai-lint.enabled`       | Enable/disable Markup AI Lint checking                        | `true`  |
 | `markupai-lint.styleGuide`    | Style guide ID (empty = organization default; use the picker) | `""`    |
-| `markupai-lint.environment`   | API environment (`prod` or `dev`)                             | `prod`  |
 | `markupai-lint.checkOnOpen`   | Automatically check when a file is opened                     | `true`  |
 | `markupai-lint.checkOnChange` | Automatically check when content changes                      | `false` |
 | `markupai-lint.checkDelay`    | Delay (ms) before checking after a change                     | `2000`  |

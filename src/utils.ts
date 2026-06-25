@@ -20,11 +20,15 @@ export function getConfig(): vscode.WorkspaceConfiguration {
 }
 
 /**
- * Selected API environment (prod unless overridden).
+ * API environment. Production for everyone; `dev` is a development-only
+ * override, enabled by launching the extension host with `MARKUPAI_ENV=dev`.
+ * It is intentionally NOT a user-facing setting. The `typeof process` guard
+ * keeps this safe in the web (browser) extension host, where `process` is
+ * undefined.
  */
 export function getEnvironment(): MarkupAIEnvironment {
-  const env = getConfig().get<string>("environment", "prod");
-  return env === "dev" ? "dev" : "prod";
+  const override = typeof process === "undefined" ? undefined : process.env.MARKUPAI_ENV;
+  return override === "dev" ? "dev" : "prod";
 }
 
 /**

@@ -1182,11 +1182,6 @@ export function activate(context: vscode.ExtensionContext) {
           statusBar.showDisabled();
         }
       }
-
-      if (event.affectsConfiguration("markupai-lint.environment")) {
-        resetSessionCaches();
-        void refreshStyleGuides();
-      }
     }),
   );
 
