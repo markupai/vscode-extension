@@ -385,7 +385,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^25.9.3",
-    "@types/vscode": "^1.120.0",
+    "@types/vscode": "~1.105.0",
     "@vitest/coverage-v8": "^4.1.8",
     "@vitest/ui": "^4.1.8",
     "@vscode/test-web": "^0.0.80",
@@ -401,7 +401,7 @@
     "vitest": "^4.1.8"
   },
   "engines": {
-    "vscode": "^1.120.0"
+    "vscode": "^1.105.1"
   },
   "icon": "assets/markup-ai-icon-128.png",
   "capabilities": {

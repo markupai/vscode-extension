@@ -36,7 +36,7 @@ All commands are listed under the **Markup AI Lint** category in the Command Pal
 
 ## Requirements
 
-- VS Code 1.120.0 or higher (Desktop or Remote)
+- VS Code 1.105.1 or higher (Desktop or Remote) — also works in VS Code forks such as Cursor and Windsurf (install from Open VSX)
 - A Markup AI account — see [Prerequisites](#prerequisites)
 
 ## Support
