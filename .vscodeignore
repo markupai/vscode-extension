@@ -25,6 +25,10 @@ sonar-project.properties
 .github/**
 .gitignore
 vsc-extension-quickstart.md
+DEVELOPMENT.md
+
+# README demo gif is loaded from raw.githubusercontent.com, not from the VSIX
+assets/markup-ai-lint-demo.gif
 
 # Test fixtures & generated output
 testdoc/**
