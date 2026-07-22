@@ -19,6 +19,8 @@ export interface StyleAgentConfig {
   style_agent: StyleAgentMode;
   /** When false, results carry no numeric scores — risk levels only. */
   style_agent_numeric_scoring: boolean;
+  /** Org-level opt-out of per-user analytics tracking. */
+  allow_user_tracking?: boolean;
 }
 
 export interface StyleGuideSummary {
@@ -153,18 +155,7 @@ export class StyleAgentClient {
   }
 
   async listStyleGuides(): Promise<StyleGuideSummary[]> {
-    let guides: StyleGuideSummary[];
-    try {
-      guides = (await this.request("/style-agent/style-guides")) as StyleGuideSummary[];
-    } catch (error) {
-      // Prod does not serve /style-agent/style-guides yet; fall back to
-      // the older /style-agent/targets endpoint (same response shape).
-      if (error instanceof ApiError && error.status === 404 && !(error instanceof AuthError)) {
-        guides = (await this.request("/style-agent/targets")) as StyleGuideSummary[];
-      } else {
-        throw error;
-      }
-    }
+    const guides = (await this.request("/style-agent/style-guides")) as StyleGuideSummary[];
     return guides.filter((g) => g.enabled);
   }
 
@@ -182,10 +173,7 @@ export class StyleAgentClient {
 
     const body: Record<string, unknown> = { text: req.text };
     if (req.styleGuideId) {
-      // `target_id` is the deprecated alias of `style_guide_id`, but it is
-      // the only name the prod API accepts today (dev accepts both, prod
-      // 422s on style_guide_id). Switch once prod supports the new name.
-      body.target_id = req.styleGuideId;
+      body.style_guide_id = req.styleGuideId;
     }
     if (req.documentName) {
       body.document_name = req.documentName;

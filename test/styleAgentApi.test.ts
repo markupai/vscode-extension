@@ -87,24 +87,17 @@ describe("StyleAgentClient", () => {
       expect(guides[0].id).toBe("sg-1");
     });
 
-    it("falls back to /style-agent/targets when style-guides is 404 (prod)", async () => {
-      const fetchMock = vi
-        .fn()
-        .mockResolvedValueOnce(jsonResponse({ detail: "Not Found" }, 404))
-        .mockResolvedValueOnce(
-          jsonResponse([{ id: "t-1", display_name: "Target", is_default: true, enabled: true }]),
-        );
+    it("requests /style-agent/style-guides", async () => {
+      const fetchMock = vi.fn().mockResolvedValue(jsonResponse([]));
       const client = createClient(fetchMock);
 
-      const guides = await client.listStyleGuides();
+      await client.listStyleGuides();
 
-      expect(guides).toHaveLength(1);
-      expect(guides[0].id).toBe("t-1");
-      const [fallbackUrl] = fetchMock.mock.calls[1] as [string];
-      expect(fallbackUrl).toBe("https://api.example.com/style-agent/targets");
+      const [url] = fetchMock.mock.calls[0] as [string];
+      expect(url).toBe("https://api.example.com/style-agent/style-guides");
     });
 
-    it("does not swallow non-404 errors from style guide listing", async () => {
+    it("propagates errors from style guide listing", async () => {
       const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ message: "boom" }, 500));
       const client = createClient(fetchMock);
 
@@ -151,10 +144,9 @@ describe("StyleAgentClient", () => {
 
       const [runUrl, runInit] = fetchMock.mock.calls[0] as [string, RequestInit];
       expect(runUrl).toBe("https://api.example.com/style-agent/run?wait=false");
-      // target_id, not style_guide_id — prod only accepts the legacy name.
       expect(JSON.parse(runInit.body as string)).toEqual({
         text: "this is text",
-        target_id: "sg-1",
+        style_guide_id: "sg-1",
         document_name: "sample.md",
       });
 
