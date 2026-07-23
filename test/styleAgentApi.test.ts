@@ -39,7 +39,7 @@ describe("StyleAgentClient", () => {
           method: "GET",
           headers: expect.objectContaining({
             Authorization: "Bearer tok-123",
-            "x-integration-id": "vscode_extension",
+            "x-integration-id": "markupai-vscode-lint",
           }) as Record<string, string>,
         }),
       );
