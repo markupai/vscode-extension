@@ -23,8 +23,12 @@ export type MarkupAIEnvironment = keyof typeof ENVIRONMENT_URLS;
  */
 export const OAUTH_PROVIDER = "vscode-extension";
 
-/** Sent as x-integration-id on every API request. */
-export const INTEGRATION_ID = "vscode_extension";
+/**
+ * Sent as x-integration-id on every API request. Follows the fleet-wide
+ * `markupai-` slug convention; the OAuth provider above intentionally keeps
+ * its own slug, matching the Auth0 integration registration.
+ */
+export const INTEGRATION_ID = "markupai-vscode-lint";
 
 export const USER_MESSAGE_PREFIX = "Markup AI Lint: ";
 
