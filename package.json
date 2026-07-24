@@ -1,7 +1,7 @@
 {
   "name": "markup-ai-lint",
   "displayName": "Markup AI Lint",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Native content linting in VS Code: inline diagnostics, quick fixes, a findings panel, and batch folder checking powered by the Markup AI Style Agent.",
   "categories": [
     "Linters",
@@ -403,7 +403,7 @@
   "engines": {
     "vscode": "^1.105.1"
   },
-  "icon": "assets/markup-ai-icon-128.png",
+  "icon": "assets/markup-ai-lint-icon.png",
   "capabilities": {
     "virtualWorkspaces": true,
     "untrustedWorkspaces": {
