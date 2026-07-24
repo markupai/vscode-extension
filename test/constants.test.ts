@@ -80,7 +80,7 @@ describe("constants", () => {
 
   describe("INTEGRATION_ID", () => {
     it("should identify the VS Code extension", () => {
-      expect(INTEGRATION_ID).toBe("vscode_extension");
+      expect(INTEGRATION_ID).toBe("markupai-vscode-lint");
     });
   });
 

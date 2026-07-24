@@ -5,6 +5,14 @@ All notable changes to the Markup AI Lint extension are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-07-23
+
+### Changed
+
+- Lowered the minimum required VS Code version to 1.105.1 so the extension installs in Cursor
+  and other VS Code-based editors on older engine versions.
+- Trimmed the README to marketplace essentials and added a demo GIF.
+
 ## [0.1.0] - 2026-06-25
 
 Initial public release.
