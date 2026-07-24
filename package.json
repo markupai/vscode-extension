@@ -1,7 +1,7 @@
 {
   "name": "markup-ai-lint",
   "displayName": "Markup AI Lint",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Native content linting in VS Code: inline diagnostics, quick fixes, a findings panel, and batch folder checking powered by the Markup AI Style Agent.",
   "categories": [
     "Linters",
@@ -379,18 +379,18 @@
     "onStartupFinished"
   ],
   "dependencies": {
-    "@markupai/format-offset-mapper": "^1.1.8",
-    "diff-match-patch-ts": "^0.8.0"
+    "@markupai/format-offset-mapper": "^1.1.9",
+    "diff-match-patch-ts": "^2.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@types/node": "^25.9.3",
+    "@types/node": "^26.1.1",
     "@types/vscode": "~1.105.0",
     "@vitest/coverage-v8": "^4.1.8",
     "@vitest/ui": "^4.1.8",
-    "@vscode/test-web": "^0.0.80",
+    "@vscode/test-web": "^0.0.81",
     "@vscode/vsce": "^3.9.2",
-    "esbuild": "^0.28.0",
+    "esbuild": "^0.28.1",
     "eslint": "^10.4.1",
     "ovsx": "^1.0.2",
     "prettier": "^3.8.4",
