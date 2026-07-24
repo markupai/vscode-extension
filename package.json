@@ -403,7 +403,7 @@
   "engines": {
     "vscode": "^1.105.1"
   },
-  "icon": "assets/markup-ai-icon-128.png",
+  "icon": "assets/markup-ai-lint-icon.png",
   "capabilities": {
     "virtualWorkspaces": true,
     "untrustedWorkspaces": {
