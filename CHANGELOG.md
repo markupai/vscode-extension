@@ -5,6 +5,29 @@ All notable changes to the Markup AI Lint extension are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-07-31
+
+First stable release. No breaking changes for users upgrading from 0.1.x — the version
+signals that the extension's feature set and settings are now considered stable.
+
+### Changed
+
+- Updated development dependencies (ESLint, typescript-eslint, Prettier, Vite, Vitest) and
+  the pinned GitHub Actions used by CI and the release workflow.
+
+### Security
+
+- Resolved six high-severity advisories in transitive dependencies (`brace-expansion`,
+  `fast-uri`, `form-data`, `js-yaml`, `linkify-it`, `undici`).
+
+## [0.1.2] - 2026-07-24
+
+### Changed
+
+- Replaced the marketplace and activity bar icons with the new Markup AI Lint mark, whose
+  wavy underline stays legible in the monochrome activity bar.
+- Updated runtime and development dependencies.
+
 ## [0.1.1] - 2026-07-23
 
 ### Changed
