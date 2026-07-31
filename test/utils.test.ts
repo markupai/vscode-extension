@@ -88,6 +88,31 @@ describe("utils", () => {
     });
   });
 
+  describe("getConsoleSignupUrl", () => {
+    const originalEnv = process.env.MARKUPAI_ENV;
+    afterEach(() => {
+      if (originalEnv === undefined) {
+        delete process.env.MARKUPAI_ENV;
+      } else {
+        process.env.MARKUPAI_ENV = originalEnv;
+      }
+    });
+
+    it("returns the prod Console signup URL with attribution params", () => {
+      delete process.env.MARKUPAI_ENV;
+      expect(utils.getConsoleSignupUrl()).toBe(
+        "https://console.markup.ai/signup?utm_source=markup_vscode-extension&utm_medium=in-app",
+      );
+    });
+
+    it("returns the dev Console signup URL when MARKUPAI_ENV is dev", () => {
+      process.env.MARKUPAI_ENV = "dev";
+      expect(utils.getConsoleSignupUrl()).toBe(
+        "https://console.dev.markup.ai/signup?utm_source=markup_vscode-extension&utm_medium=in-app",
+      );
+    });
+  });
+
   describe("getStyleGuideId", () => {
     it("should return configured style guide ID", () => {
       vi.mocked(vscode.workspace.getConfiguration).mockReturnValue(
