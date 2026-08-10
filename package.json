@@ -50,6 +50,12 @@
     "watch": "npm run compile:watch"
   },
   "contributes": {
+    "authentication": [
+      {
+        "id": "markupai",
+        "label": "Markup AI"
+      }
+    ],
     "commands": [
       {
         "command": "markupai-lint.signIn",
@@ -370,8 +376,60 @@
     "viewsWelcome": [
       {
         "view": "markupai-lint.folderScanner",
+        "contents": "Welcome to Markup AI Lint!\n\nSign in to check your content for style, grammar, and terminology issues.\n\n[Sign In](command:markupai-lint.signIn)\n\nYou can also sign in any time from the status bar or the \"Markup AI Lint: Sign In\" command.",
+        "when": "!markupai-lint.signedIn"
+      },
+      {
+        "view": "markupai-lint.folderScanner",
         "contents": "No folder open.\n\nOpen a folder to scan documents for writing issues.\n\n[Open Folder](command:vscode.openFolder)\n\nOr select a specific folder:\n[Select Folder](command:markupai-lint.selectFolder)",
-        "when": "workspaceFolderCount == 0"
+        "when": "markupai-lint.signedIn && workspaceFolderCount == 0"
+      },
+      {
+        "view": "markupai-lint.findings",
+        "contents": "Sign in to Markup AI to see writing findings for your documents.\n\n[Sign In](command:markupai-lint.signIn)",
+        "when": "!markupai-lint.signedIn"
+      }
+    ],
+    "walkthroughs": [
+      {
+        "id": "markupai-lint.gettingStarted",
+        "title": "Get Started with Markup AI Lint",
+        "description": "Sign in and run your first content check.",
+        "steps": [
+          {
+            "id": "signIn",
+            "title": "Sign in to Markup AI",
+            "description": "Connect VS Code to your Markup AI account. Sign in with your browser, or paste an access token or API key.\n[Sign In](command:markupai-lint.signIn)",
+            "media": {
+              "markdown": "walkthroughs/sign-in.md"
+            },
+            "completionEvents": [
+              "onContext:markupai-lint.signedIn"
+            ]
+          },
+          {
+            "id": "selectStyleGuide",
+            "title": "Pick a style guide",
+            "description": "Choose which style guide your content is checked against, or keep your organization's default.\n[Select Style Guide](command:markupai-lint.selectStyleGuide)",
+            "media": {
+              "markdown": "walkthroughs/select-style-guide.md"
+            },
+            "completionEvents": [
+              "onCommand:markupai-lint.selectStyleGuide"
+            ]
+          },
+          {
+            "id": "checkContent",
+            "title": "Check a document",
+            "description": "Open a Markdown, HTML, DITA, XML, or text file and run a check. Issues appear inline, in the editor, and in the Findings panel.\n[Check Current File](command:markupai-lint.checkContent)",
+            "media": {
+              "markdown": "walkthroughs/check-content.md"
+            },
+            "completionEvents": [
+              "onCommand:markupai-lint.checkContent"
+            ]
+          }
+        ]
       }
     ]
   },

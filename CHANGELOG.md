@@ -5,6 +5,21 @@ All notable changes to the Markup AI Lint extension are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Made sign-in far more discoverable when signed out:
+  - The activity bar and Findings panel now show a welcome view with a **Sign In** button
+    instead of an empty tree.
+  - The Markup AI Lint activity bar icon shows a badge until you sign in.
+  - A Markup AI authentication provider registers the account in VS Code's Accounts menu
+    (with sign-out), so sign-in also lives where other accounts do.
+  - A one-time notification points new users at sign-in on first activation.
+  - A "Get Started with Markup AI Lint" walkthrough (sign in → pick a style guide → run a
+    check) appears on VS Code's Welcome page after install.
+  - The signed-out status bar item now stays visible even when no editor is open.
+
 ## [1.0.0] - 2026-07-31
 
 First stable release. No breaking changes for users upgrading from 0.1.x — the version

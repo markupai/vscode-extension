@@ -290,6 +290,21 @@ describe("FolderScannerTreeDataProvider", () => {
       expect(children).toEqual([]);
     });
 
+    it("should return empty array when signed out so the welcome view renders", async () => {
+      const signedOutProvider = new FolderScannerTreeDataProvider(
+        () => assessmentsMap,
+        () => false,
+      );
+      signedOutProvider.setRootFolder(vscode.Uri.file("/project"));
+
+      vi.mocked(mockReadDirectory).mockResolvedValue([["readme.md", vscode.FileType.File]] as [
+        string,
+        vscode.FileType,
+      ][]);
+
+      expect(await signedOutProvider.getChildren()).toEqual([]);
+    });
+
     it("should return folder contents for root when folder is set", async () => {
       const folder = vscode.Uri.file("/project");
       provider.setRootFolder(folder);

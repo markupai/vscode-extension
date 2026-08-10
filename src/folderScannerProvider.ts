@@ -22,7 +22,10 @@ export class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<Fo
   private rootFolder: vscode.Uri | null = null;
   private readonly selectedFiles: Set<string> = new Set();
 
-  constructor(private readonly getDocumentAssessments: () => Map<string, DocumentAssessment>) {
+  constructor(
+    private readonly getDocumentAssessments: () => Map<string, DocumentAssessment>,
+    private readonly isSignedIn: () => boolean = () => true,
+  ) {
     this.initializeFromWorkspace();
   }
 
@@ -155,6 +158,12 @@ export class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<Fo
   }
 
   async getChildren(element?: FolderScannerItem): Promise<FolderScannerItem[]> {
+    // An empty tree lets the signed-out viewsWelcome (with its Sign In
+    // button) render instead of a folder listing the user can't check yet.
+    if (!this.isSignedIn()) {
+      return [];
+    }
+
     if (!this.rootFolder) {
       const initialized = this.initializeFromWorkspace();
       if (!initialized) {
