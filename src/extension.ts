@@ -751,6 +751,21 @@ export function activate(context: vscode.ExtensionContext) {
     ),
   );
 
+  // Request our own session so VS Code surfaces the provider in the
+  // Accounts menu: signed in, this marks the session as in use (account row
+  // with Sign Out); signed out, it files a "Sign in with Markup AI to use
+  // Markup AI Lint" request badge on the Accounts icon. A provider that is
+  // merely registered but never requested shows nothing there.
+  const touchAccountsMenu = (): void => {
+    void vscode.authentication
+      .getSession(AUTH_PROVIDER_ID, [], { createIfNone: false })
+      .then(undefined, (error: unknown) => {
+        console.error("MarkupAI: authentication session request failed", error);
+      });
+  };
+  touchAccountsMenu();
+  context.subscriptions.push(auth.onDidChange(touchAccountsMenu));
+
   // Refresh folder scanner after workspace is ready
   setTimeout(() => {
     if (!folderScannerTreeDataProvider.hasFolder()) {
