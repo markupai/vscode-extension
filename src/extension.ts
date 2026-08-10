@@ -25,6 +25,12 @@ import { FindingsTreeDataProvider } from "./findingsTreeProvider";
 import { FolderScannerTreeDataProvider } from "./folderScannerProvider";
 import { MarkupAICodeActionProvider } from "./codeActionProvider";
 import { MarkupAIHoverProvider } from "./hoverProvider";
+import {
+  AUTH_PROVIDER_ID,
+  AUTH_PROVIDER_LABEL,
+  MarkupAIAuthenticationProvider,
+} from "./authProvider";
+import { maybeShowFirstRunSignInNudge, updateSignedInVisuals } from "./signInExperience";
 
 // ============================================================================
 // Internal Types
@@ -50,6 +56,8 @@ let folderScannerTreeDataProvider: FolderScannerTreeDataProvider;
 let auth: AuthManager;
 const checkDebounceTimers: Map<string, NodeJS.Timeout> = new Map();
 let isEnabled = true;
+/** Synchronous mirror of auth.isSignedIn(), kept fresh via auth.onDidChange. */
+let signedInState = false;
 let cachedStyleGuides: StyleGuideOption[] = [];
 let orgConfig: StyleAgentConfig | null = null;
 const isCheckingDocument: Map<string, boolean> = new Map();
@@ -700,21 +708,63 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(findingsTreeView);
 
   // Initialize Folder Scanner TreeView
-  folderScannerTreeDataProvider = new FolderScannerTreeDataProvider(() => {
-    const assessments = new Map<string, DocumentAssessment>();
-    diagnosticsManager.getAllIssues().forEach((_, docKey) => {
-      const a = diagnosticsManager.getAssessment(docKey);
-      if (a) {
-        assessments.set(docKey, a);
-      }
-    });
-    return assessments;
-  });
+  folderScannerTreeDataProvider = new FolderScannerTreeDataProvider(
+    () => {
+      const assessments = new Map<string, DocumentAssessment>();
+      diagnosticsManager.getAllIssues().forEach((_, docKey) => {
+        const a = diagnosticsManager.getAssessment(docKey);
+        if (a) {
+          assessments.set(docKey, a);
+        }
+      });
+      return assessments;
+    },
+    () => signedInState,
+  );
   const folderScannerTreeView = vscode.window.createTreeView("markupai-lint.folderScanner", {
     treeDataProvider: folderScannerTreeDataProvider,
     showCollapseAll: true,
   });
   context.subscriptions.push(folderScannerTreeView);
+
+  // Mirror auth state into the sign-in surfaces (context key for the
+  // welcome views and walkthrough, activity bar badge, folder scanner tree).
+  const applySignedInState = async (): Promise<void> => {
+    signedInState = await auth.isSignedIn();
+    await updateSignedInVisuals(signedInState, [folderScannerTreeView]);
+    folderScannerTreeDataProvider.refresh();
+  };
+  context.subscriptions.push(auth.onDidChange(() => void applySignedInState()));
+
+  // Surface the Markup AI account in VS Code's Accounts menu.
+  const authProvider = new MarkupAIAuthenticationProvider(auth, async () => {
+    await signIn();
+    return auth.isSignedIn();
+  });
+  context.subscriptions.push(
+    authProvider,
+    vscode.authentication.registerAuthenticationProvider(
+      AUTH_PROVIDER_ID,
+      AUTH_PROVIDER_LABEL,
+      authProvider,
+      { supportsMultipleAccounts: false },
+    ),
+  );
+
+  // Request our own session so VS Code surfaces the provider in the
+  // Accounts menu: signed in, this marks the session as in use (account row
+  // with Sign Out); signed out, it files a "Sign in with Markup AI to use
+  // Markup AI Lint" request badge on the Accounts icon. A provider that is
+  // merely registered but never requested shows nothing there.
+  const touchAccountsMenu = (): void => {
+    void vscode.authentication
+      .getSession(AUTH_PROVIDER_ID, [], { createIfNone: false })
+      .then(undefined, (error: unknown) => {
+        console.error("MarkupAI: authentication session request failed", error);
+      });
+  };
+  touchAccountsMenu();
+  context.subscriptions.push(auth.onDidChange(touchAccountsMenu));
 
   // Refresh folder scanner after workspace is ready
   setTimeout(() => {
@@ -1155,8 +1205,11 @@ export function activate(context: vscode.ExtensionContext) {
           } else {
             statusBar.showSignedOut();
           }
-        } else {
+        } else if (signedInState) {
           statusBar.hide();
+        } else {
+          // Keep the sign-in affordance visible even with no editor open.
+          statusBar.showSignedOut();
         }
       })();
     }),
@@ -1187,13 +1240,15 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Initial setup
   void (async () => {
-    if (await auth.isSignedIn()) {
+    await applySignedInState();
+    if (signedInState) {
       void refreshStyleGuides();
       if (vscode.window.activeTextEditor) {
         void checkDocument(vscode.window.activeTextEditor.document);
       }
     } else {
       statusBar.showSignedOut();
+      void maybeShowFirstRunSignInNudge(context.globalState, signedInState);
     }
   })();
 }

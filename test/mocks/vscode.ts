@@ -340,6 +340,7 @@ export const window = {
 
   createTreeView: vi.fn(() => ({
     title: "",
+    badge: undefined,
     dispose: vi.fn(),
   })),
 
@@ -392,6 +393,13 @@ export const env: {
 export const commands = {
   registerCommand: vi.fn(() => ({ dispose: vi.fn() })),
   executeCommand: vi.fn(),
+};
+
+// Mock authentication
+export const authentication = {
+  registerAuthenticationProvider: vi.fn(() => ({ dispose: vi.fn() })),
+  getSession: vi.fn(),
+  onDidChangeSessions: vi.fn(() => ({ dispose: vi.fn() })),
 };
 
 // Mock ExtensionContext
