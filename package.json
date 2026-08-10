@@ -376,7 +376,7 @@
     "viewsWelcome": [
       {
         "view": "markupai-lint.folderScanner",
-        "contents": "Welcome to Markup AI Lint!\n\nSign in to check your content for style, grammar, and terminology issues.\n\n[Sign In](command:markupai-lint.signIn)\n\nYou can also sign in any time from the status bar or the \"Markup AI Lint: Sign In\" command.",
+        "contents": "Welcome to Markup AI Lint!\n\nSign in to Markup AI to get started.\n\n[Sign In](command:markupai-lint.signIn)",
         "when": "!markupai-lint.signedIn"
       },
       {
