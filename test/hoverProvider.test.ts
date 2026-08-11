@@ -19,7 +19,7 @@ function createMarkupDiagnostic(overrides: Partial<MarkupAIDiagnostic> = {}): Ma
     vscode.DiagnosticSeverity.Warning,
   ) as MarkupAIDiagnostic;
 
-  diag.source = "MarkupAI";
+  diag.source = "Markup AI";
   diag.markupaiSuggestion = "Hi";
   diag.markupaiOriginalText = "Hello";
   diag.markupaiCategory = "Grammar";

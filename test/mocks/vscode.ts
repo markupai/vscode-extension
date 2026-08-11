@@ -169,6 +169,11 @@ export class ThemeIcon {
   ) {}
 }
 
+export enum TreeItemCheckboxState {
+  Unchecked = 0,
+  Checked = 1,
+}
+
 export class TreeItem {
   label?: string;
   iconPath?: ThemeIcon | Uri;
@@ -178,6 +183,7 @@ export class TreeItem {
   description?: string;
   resourceUri?: Uri;
   collapsibleState?: TreeItemCollapsibleState;
+  checkboxState?: TreeItemCheckboxState;
 
   constructor(label: string, collapsibleState?: TreeItemCollapsibleState) {
     this.label = label;
@@ -341,6 +347,7 @@ export const window = {
   createTreeView: vi.fn(() => ({
     title: "",
     badge: undefined,
+    onDidChangeCheckboxState: vi.fn(() => ({ dispose: vi.fn() })),
     dispose: vi.fn(),
   })),
 

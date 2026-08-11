@@ -9,6 +9,6 @@ Two ways to sign in:
 
 You can always find sign-in again in:
 
-- the **status bar** item at the bottom right (`MarkupAI: Sign in`),
+- the **status bar** item at the bottom right (`Markup AI: Sign in`),
 - the **Markup AI Lint** icon in the activity bar,
 - the Command Palette: **Markup AI Lint: Sign In**.

@@ -33,7 +33,7 @@ describe("StatusBarManager", () => {
       };
       statusBar.showAssessment(assessment);
 
-      expect(mockItem.text).toBe("🟢 MarkupAI: 95");
+      expect(mockItem.text).toBe("🟢 Markup AI: 95");
       expect(mockItem.command).toBe("markupai-lint.showScores");
       expect(mockItem.backgroundColor).toBeUndefined();
       expect(mockItem.show).toHaveBeenCalled();
@@ -46,7 +46,7 @@ describe("StatusBarManager", () => {
       };
       statusBar.showAssessment(assessment);
 
-      expect(mockItem.text).toBe("🟡 MarkupAI: 75");
+      expect(mockItem.text).toBe("🟡 Markup AI: 75");
     });
 
     it("should display orange emoji for scores >= 50 and < 70", () => {
@@ -56,7 +56,7 @@ describe("StatusBarManager", () => {
       };
       statusBar.showAssessment(assessment);
 
-      expect(mockItem.text).toBe("🟠 MarkupAI: 55");
+      expect(mockItem.text).toBe("🟠 Markup AI: 55");
     });
 
     it("should display red emoji for scores < 50", () => {
@@ -66,7 +66,7 @@ describe("StatusBarManager", () => {
       };
       statusBar.showAssessment(assessment);
 
-      expect(mockItem.text).toBe("🔴 MarkupAI: 30");
+      expect(mockItem.text).toBe("🔴 Markup AI: 30");
     });
 
     it("should display 'No issues' when there is no score and zero issues", () => {
@@ -75,7 +75,7 @@ describe("StatusBarManager", () => {
       };
       statusBar.showAssessment(assessment);
 
-      expect(mockItem.text).toBe("$(check) MarkupAI: No issues");
+      expect(mockItem.text).toBe("$(check) Markup AI: No issues");
       expect(mockItem.command).toBe("markupai-lint.showScores");
       expect(mockItem.show).toHaveBeenCalled();
     });
@@ -86,7 +86,7 @@ describe("StatusBarManager", () => {
       };
       statusBar.showAssessment(assessment);
 
-      expect(mockItem.text).toBe("🔴 MarkupAI: 2H 3M 11L");
+      expect(mockItem.text).toBe("🔴 Markup AI: 2H 3M 11L");
     });
 
     it("should display risk summary with medium severity emoji when medium is highest", () => {
@@ -95,7 +95,7 @@ describe("StatusBarManager", () => {
       };
       statusBar.showAssessment(assessment);
 
-      expect(mockItem.text).toBe("🟡 MarkupAI: 3M 1L");
+      expect(mockItem.text).toBe("🟡 Markup AI: 3M 1L");
     });
 
     it("should display risk summary with low severity emoji when only low risks exist", () => {
@@ -104,7 +104,7 @@ describe("StatusBarManager", () => {
       };
       statusBar.showAssessment(assessment);
 
-      expect(mockItem.text).toBe("🔵 MarkupAI: 5L");
+      expect(mockItem.text).toBe("🔵 Markup AI: 5L");
     });
 
     it("should include detailed tooltip with risk counts", () => {
@@ -133,7 +133,7 @@ describe("StatusBarManager", () => {
     it("should display sign-in prompt with warning background", () => {
       statusBar.showSignedOut();
 
-      expect(mockItem.text).toBe("$(key) MarkupAI: Sign in");
+      expect(mockItem.text).toBe("$(key) Markup AI: Sign in");
       expect(mockItem.command).toBe("markupai-lint.signIn");
       expect(mockItem.backgroundColor).toBeInstanceOf(vscode.ThemeColor);
       expect(mockItem.show).toHaveBeenCalled();
@@ -144,7 +144,7 @@ describe("StatusBarManager", () => {
     it("should display checking spinner", () => {
       statusBar.showChecking();
 
-      expect(mockItem.text).toBe("$(sync~spin) MarkupAI: Checking...");
+      expect(mockItem.text).toBe("$(sync~spin) Markup AI: Checking...");
       expect(mockItem.tooltip).toBe("Checking content...");
       expect(mockItem.command).toBeUndefined();
       expect(mockItem.backgroundColor).toBeUndefined();
@@ -164,7 +164,7 @@ describe("StatusBarManager", () => {
     it("should display disabled state", () => {
       statusBar.showDisabled();
 
-      expect(mockItem.text).toBe("$(circle-slash) MarkupAI: Disabled");
+      expect(mockItem.text).toBe("$(circle-slash) Markup AI: Disabled");
       expect(mockItem.command).toBe("markupai-lint.enableIssues");
       expect(mockItem.backgroundColor).toBeUndefined();
       expect(mockItem.show).toHaveBeenCalled();
@@ -175,7 +175,7 @@ describe("StatusBarManager", () => {
     it("should display error indicator", () => {
       statusBar.showError();
 
-      expect(mockItem.text).toBe("⚠️ MarkupAI: Error");
+      expect(mockItem.text).toBe("⚠️ Markup AI: Error");
       expect(mockItem.tooltip).toBe("An error occurred while checking content");
       expect(mockItem.command).toBeUndefined();
       expect(mockItem.backgroundColor).toBeUndefined();
@@ -213,7 +213,7 @@ describe("StatusBarManager", () => {
       };
       statusBar.update(assessment);
 
-      expect(mockItem.text).toContain("MarkupAI: 85");
+      expect(mockItem.text).toContain("Markup AI: 85");
       expect(mockItem.show).toHaveBeenCalled();
     });
   });

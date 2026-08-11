@@ -1,3 +1,4 @@
+import { decodeHtmlEntities } from "./htmlEntities";
 import { TextOffsetMapper } from "./offsetMapper";
 import { StyleAgentIssue, StyleAgentResult, StyleAgentWorkflow } from "./styleAgentApi";
 import { CheckResult, ContentIssue, IssueSeverity, RiskSummary } from "./types";
@@ -47,26 +48,29 @@ function mapIssue(
   text: string,
   mapper: TextOffsetMapper,
 ): ContentIssue | null {
-  const originalText = raw.position?.text ?? "";
+  // The API HTML-escapes issue text; decode before matching against the
+  // document (originalText) and before anything user-facing or applied
+  // as an edit (message, suggestion).
+  const originalText = decodeHtmlEntities(raw.position?.text ?? "");
   const range = resolveRange(raw, text, mapper, originalText);
   if (!range) {
     return null;
   }
 
   const category = raw.category?.trim() || "Style";
+  const explanation = decodeHtmlEntities(raw.explanation ?? "");
+  const guidelineName = decodeHtmlEntities(raw.guideline_name ?? "");
   const message =
-    raw.explanation?.trim() ||
-    raw.guideline_name?.trim() ||
-    `${category}: review "${originalText}"`;
+    explanation.trim() || guidelineName.trim() || `${category}: review "${originalText}"`;
 
   return {
     id: raw.id ?? `issue-${String(index)}`,
     startIndex: range.start,
     endIndex: range.end,
     category,
-    ...(raw.guideline_name ? { guidelineName: raw.guideline_name } : {}),
+    ...(guidelineName ? { guidelineName } : {}),
     message,
-    suggestion: raw.suggestion ?? raw.suggestions?.[0] ?? "",
+    suggestion: decodeHtmlEntities(raw.suggestion ?? raw.suggestions?.[0] ?? ""),
     originalText: originalText || text.slice(range.start, range.end),
     severity: normalizeSeverity(raw.severity),
   };

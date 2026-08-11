@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { MarkupAIDiagnostic } from "./types";
 
 /**
- * Provides quick-fix code actions for MarkupAI diagnostics.
+ * Provides quick-fix code actions for Markup AI diagnostics.
  */
 export class MarkupAICodeActionProvider implements vscode.CodeActionProvider {
   static readonly providedCodeActionKinds = [vscode.CodeActionKind.QuickFix];
@@ -16,7 +16,7 @@ export class MarkupAICodeActionProvider implements vscode.CodeActionProvider {
     const actions: vscode.CodeAction[] = [];
 
     for (const diagnostic of context.diagnostics) {
-      if (diagnostic.source !== "MarkupAI") {
+      if (diagnostic.source !== "Markup AI") {
         continue;
       }
 

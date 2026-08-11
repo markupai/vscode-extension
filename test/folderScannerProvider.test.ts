@@ -64,18 +64,29 @@ describe("FolderScannerTreeDataProvider", () => {
     });
   });
 
+  function fileItem(path: string): FolderScannerItem {
+    return {
+      type: "file",
+      uri: vscode.Uri.file(path),
+      label: path.split("/").pop() ?? path,
+      isSelected: false,
+    };
+  }
+
+  async function check(item: FolderScannerItem): Promise<void> {
+    await provider.handleCheckboxChange([[item, vscode.TreeItemCheckboxState.Checked]]);
+  }
+
+  async function uncheck(item: FolderScannerItem): Promise<void> {
+    await provider.handleCheckboxChange([[item, vscode.TreeItemCheckboxState.Unchecked]]);
+  }
+
   describe("setRootFolder", () => {
-    it("should clear selected files when root folder changes", () => {
+    it("should clear selected files when root folder changes", async () => {
       const folder1 = vscode.Uri.file("/project1");
       provider.setRootFolder(folder1);
 
-      const fileItem: FolderScannerItem = {
-        type: "file",
-        uri: vscode.Uri.file("/project1/readme.md"),
-        label: "readme.md",
-        isSelected: false,
-      };
-      provider.toggleFileSelection(fileItem);
+      await check(fileItem("/project1/readme.md"));
       expect(provider.getSelectedFiles()).toHaveLength(1);
 
       const folder2 = vscode.Uri.file("/project2");
@@ -85,56 +96,77 @@ describe("FolderScannerTreeDataProvider", () => {
     });
   });
 
-  describe("toggleFileSelection", () => {
-    it("should select an unselected file", () => {
-      const item: FolderScannerItem = {
-        type: "file",
-        uri: vscode.Uri.file("/test/readme.md"),
-        label: "readme.md",
-        isSelected: false,
-      };
-
-      provider.toggleFileSelection(item);
+  describe("handleCheckboxChange", () => {
+    it("should select a file when its checkbox is checked", async () => {
+      await check(fileItem("/test/readme.md"));
 
       expect(provider.getSelectedFiles()).toHaveLength(1);
     });
 
-    it("should deselect a selected file", () => {
-      const item: FolderScannerItem = {
-        type: "file",
-        uri: vscode.Uri.file("/test/readme.md"),
-        label: "readme.md",
-        isSelected: false,
-      };
+    it("should deselect a file when its checkbox is unchecked", async () => {
+      const item = fileItem("/test/readme.md");
 
-      provider.toggleFileSelection(item);
-      provider.toggleFileSelection(item);
+      await check(item);
+      await uncheck(item);
 
       expect(provider.getSelectedFiles()).toHaveLength(0);
     });
-  });
 
-  describe("deselectAll", () => {
-    it("should clear all selections", () => {
-      const item1: FolderScannerItem = {
-        type: "file",
-        uri: vscode.Uri.file("/test/a.md"),
-        label: "a.md",
+    it("should select all supported descendant files when a folder is checked", async () => {
+      vi.mocked(mockReadDirectory)
+        .mockResolvedValueOnce([
+          ["nested", vscode.FileType.Directory],
+          ["readme.md", vscode.FileType.File],
+          ["script.js", vscode.FileType.File],
+        ] as [string, vscode.FileType][])
+        .mockResolvedValueOnce([["guide.txt", vscode.FileType.File]] as [
+          string,
+          vscode.FileType,
+        ][]);
+
+      const folderElement: FolderScannerItem = {
+        type: "folder",
+        uri: vscode.Uri.file("/project/docs"),
+        label: "docs",
         isSelected: false,
       };
-      const item2: FolderScannerItem = {
-        type: "file",
-        uri: vscode.Uri.file("/test/b.md"),
-        label: "b.md",
-        isSelected: false,
+      await check(folderElement);
+
+      // The Uri mock's parse() keeps the full uri string in `path`.
+      const selected = provider.getSelectedFiles().map((uri) => uri.path);
+      expect(selected).toHaveLength(2);
+      expect(selected).toContain(vscode.Uri.file("/project/docs/readme.md").toString());
+      expect(selected).toContain(vscode.Uri.file("/project/docs/nested/guide.txt").toString());
+    });
+
+    it("should deselect all descendant files when a folder is unchecked", async () => {
+      await check(fileItem("/project/docs/readme.md"));
+      await check(fileItem("/project/other.md"));
+
+      vi.mocked(mockReadDirectory).mockResolvedValue([["readme.md", vscode.FileType.File]] as [
+        string,
+        vscode.FileType,
+      ][]);
+
+      const folderElement: FolderScannerItem = {
+        type: "folder",
+        uri: vscode.Uri.file("/project/docs"),
+        label: "docs",
+        isSelected: true,
       };
+      await uncheck(folderElement);
 
-      provider.toggleFileSelection(item1);
-      provider.toggleFileSelection(item2);
-      expect(provider.getSelectedFiles()).toHaveLength(2);
+      const selected = provider.getSelectedFiles().map((uri) => uri.path);
+      expect(selected).toEqual([vscode.Uri.file("/project/other.md").toString()]);
+    });
 
-      provider.deselectAll();
-      expect(provider.getSelectedFiles()).toHaveLength(0);
+    it("should fire a refresh after applying changes", async () => {
+      const listener = vi.fn();
+      provider.onDidChangeTreeData(listener);
+
+      await check(fileItem("/test/readme.md"));
+
+      expect(listener).toHaveBeenCalledWith(undefined);
     });
   });
 
@@ -169,33 +201,37 @@ describe("FolderScannerTreeDataProvider", () => {
       expect(treeItem.contextValue).toBe("file");
     });
 
-    it("should show check icon for selected file", () => {
-      const item: FolderScannerItem = {
-        type: "file",
-        uri: vscode.Uri.file("/test/readme.md"),
-        label: "readme.md",
-        isSelected: false,
-      };
+    it("should show a checked checkbox for a selected file", async () => {
+      const item = fileItem("/test/readme.md");
 
-      provider.toggleFileSelection(item);
+      await check(item);
       const treeItem = provider.getTreeItem(item);
-      const icon = treeItem.iconPath as vscode.ThemeIcon;
 
-      expect(icon.id).toBe("check");
+      expect(treeItem.checkboxState).toBe(vscode.TreeItemCheckboxState.Checked);
     });
 
-    it("should show circle-outline icon for unselected file", () => {
-      const item: FolderScannerItem = {
-        type: "file",
-        uri: vscode.Uri.file("/test/readme.md"),
-        label: "readme.md",
-        isSelected: false,
-      };
+    it("should show an unchecked checkbox and the native file icon for an unselected file", () => {
+      const item = fileItem("/test/readme.md");
 
       const treeItem = provider.getTreeItem(item);
-      const icon = treeItem.iconPath as vscode.ThemeIcon;
 
-      expect(icon.id).toBe("circle-outline");
+      expect(treeItem.checkboxState).toBe(vscode.TreeItemCheckboxState.Unchecked);
+      // No iconPath override: resourceUri drives the file-type icon.
+      expect(treeItem.iconPath).toBeUndefined();
+      expect(treeItem.resourceUri?.path).toBe("/test/readme.md");
+    });
+
+    it("should mirror folder selection state into the folder checkbox", () => {
+      const folderElement: FolderScannerItem = {
+        type: "folder",
+        uri: vscode.Uri.file("/test/docs"),
+        label: "docs",
+        isSelected: true,
+      };
+
+      const treeItem = provider.getTreeItem(folderElement);
+
+      expect(treeItem.checkboxState).toBe(vscode.TreeItemCheckboxState.Checked);
     });
 
     it("should show score when available", () => {
