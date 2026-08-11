@@ -60,7 +60,7 @@ describe("ScoreDecorationProvider", () => {
     const decoration = makeProvider(assessments).provideFileDecoration(toScanUri(uri));
 
     expect(decoration?.badge).toBe(String(score));
-    expect((decoration?.color as vscode.ThemeColor | undefined)?.id).toBe(colorId);
+    expect(decoration?.color?.id).toBe(colorId);
   });
 
   it("compresses a perfect score into the two-character badge limit", () => {
@@ -107,7 +107,7 @@ describe("ScoreDecorationProvider", () => {
     const decoration = makeProvider(assessments).provideFileDecoration(toScanUri(uri));
 
     expect(decoration?.badge).toBe("5");
-    expect((decoration?.color as vscode.ThemeColor | undefined)?.id).toBe("charts.yellow");
+    expect(decoration?.color?.id).toBe("charts.yellow");
   });
 
   it("colors low-only assessments blue", () => {
@@ -119,7 +119,7 @@ describe("ScoreDecorationProvider", () => {
     const decoration = makeProvider(assessments).provideFileDecoration(toScanUri(uri));
 
     expect(decoration?.badge).toBe("4");
-    expect((decoration?.color as vscode.ThemeColor | undefined)?.id).toBe("charts.blue");
+    expect(decoration?.color?.id).toBe("charts.blue");
   });
 
   it("disposes its event emitter", () => {
