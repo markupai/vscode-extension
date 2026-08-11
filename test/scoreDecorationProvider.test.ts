@@ -16,6 +16,11 @@ describe("toScanUri / fromScanUri", () => {
     expect(scanUri.path).toBe("/project/readme.md");
     expect(fromScanUri(scanUri).toString()).toBe(uri.toString());
   });
+
+  it("falls back to the file scheme when the scan uri carries no origin", () => {
+    const bare = toScanUri(vscode.Uri.file("/project/readme.md")).with({ query: "" });
+    expect(fromScanUri(bare).scheme).toBe("file");
+  });
 });
 
 describe("ScoreDecorationProvider", () => {
@@ -40,6 +45,22 @@ describe("ScoreDecorationProvider", () => {
     expect(decoration?.badge).toBe("95");
     expect(decoration?.color?.id).toBe("charts.green");
     expect(decoration?.tooltip).toContain("95");
+  });
+
+  it.each([
+    [85, "charts.yellow"],
+    [55, "charts.orange"],
+    [30, "charts.red"],
+  ])("colors score %i with %s", (score, colorId) => {
+    const uri = vscode.Uri.file("/a.md");
+    const assessments = new Map([
+      [uri.toString(), { risk: { high: 0, medium: 0, low: 0, total: 0 }, score }],
+    ]);
+
+    const decoration = makeProvider(assessments).provideFileDecoration(toScanUri(uri));
+
+    expect(decoration?.badge).toBe(String(score));
+    expect((decoration?.color as vscode.ThemeColor | undefined)?.id).toBe(colorId);
   });
 
   it("compresses a perfect score into the two-character badge limit", () => {
@@ -75,6 +96,37 @@ describe("ScoreDecorationProvider", () => {
     expect(decoration?.badge).toBe("9+");
     expect(decoration?.color?.id).toBe("charts.red");
     expect(decoration?.tooltip).toContain("2H 3M 11L");
+  });
+
+  it("shows the exact issue count and severity color for small no-score assessments", () => {
+    const uri = vscode.Uri.file("/a.md");
+    const assessments = new Map([
+      [uri.toString(), { risk: { high: 0, medium: 2, low: 3, total: 5 } }],
+    ]);
+
+    const decoration = makeProvider(assessments).provideFileDecoration(toScanUri(uri));
+
+    expect(decoration?.badge).toBe("5");
+    expect((decoration?.color as vscode.ThemeColor | undefined)?.id).toBe("charts.yellow");
+  });
+
+  it("colors low-only assessments blue", () => {
+    const uri = vscode.Uri.file("/a.md");
+    const assessments = new Map([
+      [uri.toString(), { risk: { high: 0, medium: 0, low: 4, total: 4 } }],
+    ]);
+
+    const decoration = makeProvider(assessments).provideFileDecoration(toScanUri(uri));
+
+    expect(decoration?.badge).toBe("4");
+    expect((decoration?.color as vscode.ThemeColor | undefined)?.id).toBe("charts.blue");
+  });
+
+  it("disposes its event emitter", () => {
+    const provider = makeProvider(new Map());
+    expect(() => {
+      provider.dispose();
+    }).not.toThrow();
   });
 
   it("fires onDidChangeFileDecorations on refresh", () => {
