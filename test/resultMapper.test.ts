@@ -110,6 +110,34 @@ describe("toCheckResult", () => {
     expect(issue.id).toBe("issue-0");
   });
 
+  it("decodes HTML entities in flagged text, message, and suggestion", () => {
+    const text = 'Say don\'t and "hello" here.';
+    const result = toCheckResult(
+      workflow({
+        issues: [
+          {
+            severity: "medium",
+            category: "Grammar",
+            explanation: "Prefer &quot;don&#39;t&quot; &amp; friends.",
+            position: { start: 4, end: 9, text: "don&#39;t" },
+            suggestion: "do&nbsp;not",
+            guideline_name: "Contractions &amp; tone",
+          },
+        ],
+      }),
+      text,
+    );
+
+    expect(result.issues).toHaveLength(1);
+    const issue = result.issues[0];
+    // Escaped position.text must be decoded before offset matching.
+    expect(text.slice(issue.startIndex, issue.endIndex)).toBe("don't");
+    expect(issue.originalText).toBe("don't");
+    expect(issue.message).toBe('Prefer "don\'t" & friends.');
+    expect(issue.suggestion).toBe("do\u00a0not");
+    expect(issue.guidelineName).toBe("Contractions & tone");
+  });
+
   it("extracts a quality score from result.quality when scoring is enabled", () => {
     const result = toCheckResult(workflow({ issues: [], quality: { score: 87 } }), TEXT);
     expect(result.assessment.score).toBe(87);

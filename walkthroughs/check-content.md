@@ -1,6 +1,6 @@
 # Check a document
 
-Open a supported file — Markdown, HTML, DITA, XML, or plain text — and run **MarkupAI - Check Content** (or just open the file: checks run automatically on open by default).
+Open a supported file — Markdown, HTML, DITA, XML, or plain text — and run **Markup AI Lint: Check Content** (or just open the file: checks run automatically on open by default).
 
 After a check:
 

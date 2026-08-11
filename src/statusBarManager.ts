@@ -3,7 +3,7 @@ import { DocumentAssessment } from "./types";
 import { formatRiskSummary, getLeadSeverity, getScoreEmoji, getSeverityEmoji } from "./utils";
 
 /**
- * Manages the status bar item for MarkupAI risk / score display.
+ * Manages the status bar item for Markup AI risk / score display.
  */
 export class StatusBarManager {
   private readonly statusBarItem: vscode.StatusBarItem;
@@ -16,12 +16,12 @@ export class StatusBarManager {
     const { risk, score } = assessment;
 
     if (typeof score === "number") {
-      this.statusBarItem.text = `${getScoreEmoji(score)} MarkupAI: ${String(score)}`;
+      this.statusBarItem.text = `${getScoreEmoji(score)} Markup AI: ${String(score)}`;
     } else if (risk.total === 0) {
-      this.statusBarItem.text = "$(check) MarkupAI: No issues";
+      this.statusBarItem.text = "$(check) Markup AI: No issues";
     } else {
       const lead = getLeadSeverity(risk);
-      this.statusBarItem.text = `${getSeverityEmoji(lead)} MarkupAI: ${formatRiskSummary(risk)}`;
+      this.statusBarItem.text = `${getSeverityEmoji(lead)} Markup AI: ${formatRiskSummary(risk)}`;
     }
 
     const tooltipLines = [
@@ -41,15 +41,15 @@ export class StatusBarManager {
   }
 
   showSignedOut(): void {
-    this.statusBarItem.text = "$(key) MarkupAI: Sign in";
-    this.statusBarItem.tooltip = "Click to sign in to MarkupAI";
+    this.statusBarItem.text = "$(key) Markup AI: Sign in";
+    this.statusBarItem.tooltip = "Sign in to Markup AI";
     this.statusBarItem.command = "markupai-lint.signIn";
     this.statusBarItem.backgroundColor = new vscode.ThemeColor("statusBarItem.warningBackground");
     this.statusBarItem.show();
   }
 
   showChecking(): void {
-    this.statusBarItem.text = "$(sync~spin) MarkupAI: Checking...";
+    this.statusBarItem.text = "$(sync~spin) Markup AI: Checking...";
     this.statusBarItem.tooltip = "Checking content...";
     this.statusBarItem.command = undefined;
     this.statusBarItem.backgroundColor = undefined;
@@ -57,15 +57,15 @@ export class StatusBarManager {
   }
 
   showDisabled(): void {
-    this.statusBarItem.text = "$(circle-slash) MarkupAI: Disabled";
-    this.statusBarItem.tooltip = "MarkupAI issues are disabled. Right-click to enable.";
+    this.statusBarItem.text = "$(circle-slash) Markup AI: Disabled";
+    this.statusBarItem.tooltip = "Markup AI issues are disabled. Right-click to enable.";
     this.statusBarItem.command = "markupai-lint.enableIssues";
     this.statusBarItem.backgroundColor = undefined;
     this.statusBarItem.show();
   }
 
   showError(): void {
-    this.statusBarItem.text = "⚠️ MarkupAI: Error";
+    this.statusBarItem.text = "⚠️ Markup AI: Error";
     this.statusBarItem.tooltip = "An error occurred while checking content";
     this.statusBarItem.command = undefined;
     this.statusBarItem.backgroundColor = undefined;

@@ -138,13 +138,13 @@ describe("DiagnosticsManager", () => {
         expect.arrayContaining([
           expect.objectContaining({
             message: "Test issue",
-            source: "MarkupAI",
+            source: "Markup AI",
           }),
         ]),
       );
     });
 
-    it("should set MarkupAI-specific properties on diagnostics", () => {
+    it("should set Markup AI-specific properties on diagnostics", () => {
       const doc = createMockDocument("Hello world");
       const issues = [
         createIssue({

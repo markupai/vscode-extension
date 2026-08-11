@@ -171,7 +171,7 @@ export class DiagnosticsManager {
       getSeverityForIssue(issue),
     ) as MarkupAIDiagnostic;
 
-    diagnostic.source = "MarkupAI";
+    diagnostic.source = "Markup AI";
     diagnostic.markupaiSuggestion = issue.suggestion;
     diagnostic.markupaiOriginalText = issue.originalText;
     diagnostic.markupaiCategory = issue.category;

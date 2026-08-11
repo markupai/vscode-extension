@@ -20,7 +20,7 @@ function createMarkupDiagnostic(overrides: Partial<MarkupAIDiagnostic> = {}): Ma
     vscode.DiagnosticSeverity.Warning,
   ) as MarkupAIDiagnostic;
 
-  diag.source = "MarkupAI";
+  diag.source = "Markup AI";
   diag.markupaiSuggestion = "Hi";
   diag.markupaiOriginalText = "Hello";
   diag.markupaiCategory = "grammar";
@@ -39,7 +39,7 @@ describe("MarkupAICodeActionProvider", () => {
     );
   });
 
-  it("should create a fix action for MarkupAI diagnostics with suggestions", () => {
+  it("should create a fix action for Markup AI diagnostics with suggestions", () => {
     const doc = createMockDocument();
     const diagnostic = createMarkupDiagnostic();
     const context = { diagnostics: [diagnostic] } as unknown as vscode.CodeActionContext;
@@ -97,7 +97,7 @@ describe("MarkupAICodeActionProvider", () => {
     expect(actions.length).toBe(1);
   });
 
-  it("should skip non-MarkupAI diagnostics", () => {
+  it("should skip non-Markup AI diagnostics", () => {
     const doc = createMockDocument();
     const range = new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 5));
     const otherDiag = new vscode.Diagnostic(range, "Other issue", vscode.DiagnosticSeverity.Error);

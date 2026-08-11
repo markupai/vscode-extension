@@ -4,7 +4,7 @@ import { AuthManager, promptForToken } from "./auth";
 import { isBrowserSignInAvailable, runBrowserSignIn } from "./browserSignIn";
 import { StyleAgentClient, StyleAgentConfig, AuthError } from "./styleAgentApi";
 import { toCheckResult } from "./resultMapper";
-import { ContentIssue, DocumentAssessment, StyleGuideOption, FolderScannerItem } from "./types";
+import { ContentIssue, DocumentAssessment, StyleGuideOption } from "./types";
 import { OAUTH_PROVIDER, USER_MESSAGE_PREFIX } from "./constants";
 import {
   getConfig,
@@ -29,6 +29,7 @@ import {
   AUTH_PROVIDER_ID,
   AUTH_PROVIDER_LABEL,
   MarkupAIAuthenticationProvider,
+  SESSION_SCOPES,
 } from "./authProvider";
 import { maybeShowFirstRunSignInNudge, updateSignedInVisuals } from "./signInExperience";
 
@@ -101,7 +102,7 @@ async function ensureStyleAgentAvailable(): Promise<boolean> {
     } catch (error) {
       // Config is a gate, not a hard dependency — let the check call
       // surface a meaningful error instead.
-      console.error("MarkupAI: Error fetching org config", error);
+      console.error("Markup AI: Error fetching org config", error);
       return true;
     }
   }
@@ -159,7 +160,7 @@ async function runContentCheck(
   return await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
-      title: "MarkupAI: Checking content...",
+      title: "Markup AI: Checking content...",
       cancellable: false,
     },
     () => check(),
@@ -167,13 +168,13 @@ async function runContentCheck(
 }
 
 function handleCheckError(error: unknown, showCompletionNotification: boolean): void {
-  console.error("MarkupAI: Error checking content", error);
+  console.error("Markup AI: Error checking content", error);
 
   if (isWebEnvironment() && isCorsOrNetworkError(error)) {
     if (!corsWarningShown) {
       corsWarningShown = true;
       void vscode.window.showWarningMessage(
-        "MarkupAI: API requests are blocked by the browser (CORS). " +
+        "Markup AI: API requests are blocked by the browser (CORS). " +
           "Content checking is not yet supported in VS Code for the Web. " +
           "Please use VS Code Desktop for full functionality.",
         "Dismiss",
@@ -204,7 +205,7 @@ function handleCheckError(error: unknown, showCompletionNotification: boolean): 
       ? error.message
       : "Unknown error";
 
-  vscode.window.showErrorMessage(`MarkupAI: Error checking content - ${errorMessage}`);
+  vscode.window.showErrorMessage(`Markup AI: Error checking content - ${errorMessage}`);
   statusBar.showError();
 }
 
@@ -289,15 +290,15 @@ function buildCheckCompleteMessage(assessment: DocumentAssessment): string {
 
   if (typeof score === "number") {
     return (
-      `${getScoreEmoji(score)} MarkupAI Check Complete — ${scoreStatusLabel(score)} | ` +
+      `${getScoreEmoji(score)} Markup AI Check Complete — ${scoreStatusLabel(score)} | ` +
       `Score: ${String(score)} | ${issueCount} found`
     );
   }
   if (risk.total === 0) {
-    return "✅ MarkupAI Check Complete — no issues found";
+    return "✅ Markup AI Check Complete — no issues found";
   }
   const emoji = getSeverityEmoji(getLeadSeverity(risk));
-  return `${emoji} MarkupAI Check Complete — ${issueCount} (${formatRiskSummary(risk)})`;
+  return `${emoji} Markup AI Check Complete — ${issueCount} (${formatRiskSummary(risk)})`;
 }
 
 async function showCheckCompleteNotification(assessment: DocumentAssessment): Promise<void> {
@@ -351,7 +352,7 @@ async function pickSignInMethod(): Promise<"browser" | "paste" | undefined> {
     },
   ];
   const selected = await vscode.window.showQuickPick(items, {
-    title: "MarkupAI Sign In",
+    title: "Sign in to Markup AI",
     placeHolder: "Choose how to sign in",
   });
   if (!selected) {
@@ -365,7 +366,7 @@ async function browserSignIn(): Promise<boolean> {
     return await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: "MarkupAI: Complete the sign-in in your browser…",
+        title: "Markup AI: Complete the sign-in in your browser…",
         cancellable: false,
       },
       async () => {
@@ -387,15 +388,15 @@ async function browserSignIn(): Promise<boolean> {
   }
 }
 
-async function signIn(): Promise<void> {
+async function performInteractiveSignIn(): Promise<boolean> {
   const method = await pickSignInMethod();
   if (!method) {
-    return;
+    return false;
   }
 
   const signedIn = method === "browser" ? await browserSignIn() : await promptForToken(auth);
   if (!signedIn) {
-    return;
+    return false;
   }
 
   vscode.window.showInformationMessage(`${USER_MESSAGE_PREFIX}signed in.`);
@@ -405,6 +406,24 @@ async function signIn(): Promise<void> {
   const editor = vscode.window.activeTextEditor;
   if (editor) {
     void checkDocument(editor.document, true);
+  }
+  return true;
+}
+
+/**
+ * Signs in through `vscode.authentication.getSession` rather than running
+ * the interactive flow directly, so VS Code records the extension's use of
+ * the session and shows the account (with Sign Out) in the Accounts menu.
+ */
+async function signIn(): Promise<void> {
+  try {
+    await vscode.authentication.getSession(AUTH_PROVIDER_ID, SESSION_SCOPES, {
+      createIfNone: true,
+    });
+  } catch (error) {
+    // Cancellation (or a failed flow) rejects getSession; the interactive
+    // flow already surfaced its own messages, so just log.
+    console.log("Markup AI: sign-in was not completed", error);
   }
 }
 
@@ -426,12 +445,12 @@ async function requireSignIn(): Promise<boolean> {
     return true;
   }
   const action = await vscode.window.showWarningMessage(
-    `${USER_MESSAGE_PREFIX}sign in to check content.`,
+    `${USER_MESSAGE_PREFIX}sign in to Markup AI to check content.`,
     "Sign In",
   );
   if (action === "Sign In") {
     await signIn();
-    return auth.isSignedIn();
+    return await auth.isSignedIn();
   }
   return false;
 }
@@ -457,13 +476,13 @@ async function refreshStyleGuides(): Promise<void> {
         : {}),
     }));
   } catch (error) {
-    console.error("MarkupAI: Error refreshing style guides", error);
+    console.error("Markup AI: Error refreshing style guides", error);
     cachedStyleGuides = [];
 
     if (isWebEnvironment() && isCorsOrNetworkError(error) && !corsWarningShown) {
       corsWarningShown = true;
       void vscode.window.showWarningMessage(
-        "MarkupAI: API requests are blocked by the browser (CORS). " +
+        "Markup AI: API requests are blocked by the browser (CORS). " +
           "Content checking is not yet supported in VS Code for the Web. " +
           "Please use VS Code Desktop for full functionality.",
         "Dismiss",
@@ -514,7 +533,7 @@ async function selectStyleGuide(): Promise<void> {
   }
 
   await getConfig().update("styleGuide", selected.detail, vscode.ConfigurationTarget.Global);
-  vscode.window.showInformationMessage(`MarkupAI: Style guide set to "${selected.label}"`);
+  vscode.window.showInformationMessage(`Markup AI: Style guide set to "${selected.label}"`);
 
   const editor = vscode.window.activeTextEditor;
   if (editor) {
@@ -568,7 +587,7 @@ async function showScoresDialog(): Promise<void> {
   );
 
   const selected = await vscode.window.showQuickPick(items, {
-    title: "MarkupAI Content Assessment",
+    title: "Markup AI Content Assessment",
     placeHolder: "Risk assessment for current document",
     canPickMany: false,
   });
@@ -587,13 +606,13 @@ async function setMarkupAIEnabled(enabled: boolean): Promise<void> {
   await config.update("enabled", isEnabled, vscode.ConfigurationTarget.Global);
 
   if (isEnabled) {
-    vscode.window.showInformationMessage("MarkupAI: Issues Enabled");
+    vscode.window.showInformationMessage("Markup AI: Issues Enabled");
     const editor = vscode.window.activeTextEditor;
     if (editor) {
       void checkDocument(editor.document, true);
     }
   } else {
-    vscode.window.showInformationMessage("MarkupAI: Issues Disabled");
+    vscode.window.showInformationMessage("Markup AI: Issues Disabled");
     diagnosticsManager.clearAll();
     findingsTreeDataProvider.refresh();
     statusBar.showDisabled();
@@ -613,7 +632,7 @@ async function checkMultipleFiles(files: vscode.Uri[]): Promise<void> {
   await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
-      title: `MarkupAI: Checking ${String(totalFiles)} file(s)...`,
+      title: `Markup AI: Checking ${String(totalFiles)} file(s)...`,
       cancellable: false,
     },
     async (progress) => {
@@ -638,7 +657,7 @@ async function checkMultipleFiles(files: vscode.Uri[]): Promise<void> {
               ? error.message
               : "Unknown error";
           errors.push(`${fileName}: ${errorMessage}`);
-          console.error(`MarkupAI: Error checking ${fileName}`, error);
+          console.error(`Markup AI: Error checking ${fileName}`, error);
         }
       }
     },
@@ -647,7 +666,7 @@ async function checkMultipleFiles(files: vscode.Uri[]): Promise<void> {
   folderScannerTreeDataProvider.refresh();
   findingsTreeDataProvider.refresh();
 
-  let message = `MarkupAI: Checked ${String(completed)} file(s)`;
+  let message = `Markup AI: Checked ${String(completed)} file(s)`;
   if (failed > 0) {
     message += `, ${String(failed)} failed`;
   }
@@ -690,7 +709,7 @@ export function activate(context: vscode.ExtensionContext) {
   diagnosticsManager = new DiagnosticsManager(diagnosticCollection);
 
   const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-  statusBarItem.name = "MarkupAI";
+  statusBarItem.name = "Markup AI";
   context.subscriptions.push(statusBarItem);
   statusBar = new StatusBarManager(statusBarItem);
 
@@ -724,8 +743,16 @@ export function activate(context: vscode.ExtensionContext) {
   const folderScannerTreeView = vscode.window.createTreeView("markupai-lint.folderScanner", {
     treeDataProvider: folderScannerTreeDataProvider,
     showCollapseAll: true,
+    // Checking a folder must select files in subtrees the view has not
+    // rendered, so the provider propagates checkbox state itself.
+    manageCheckboxStateManually: true,
   });
-  context.subscriptions.push(folderScannerTreeView);
+  context.subscriptions.push(
+    folderScannerTreeView,
+    folderScannerTreeView.onDidChangeCheckboxState((event) => {
+      void folderScannerTreeDataProvider.handleCheckboxChange(event.items);
+    }),
+  );
 
   // Mirror auth state into the sign-in surfaces (context key for the
   // welcome views and walkthrough, activity bar badge, folder scanner tree).
@@ -737,10 +764,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(auth.onDidChange(() => void applySignedInState()));
 
   // Surface the Markup AI account in VS Code's Accounts menu.
-  const authProvider = new MarkupAIAuthenticationProvider(auth, async () => {
-    await signIn();
-    return auth.isSignedIn();
-  });
+  const authProvider = new MarkupAIAuthenticationProvider(auth, performInteractiveSignIn);
   context.subscriptions.push(
     authProvider,
     vscode.authentication.registerAuthenticationProvider(
@@ -757,14 +781,45 @@ export function activate(context: vscode.ExtensionContext) {
   // Markup AI Lint" request badge on the Accounts icon. A provider that is
   // merely registered but never requested shows nothing there.
   const touchAccountsMenu = (): void => {
-    void vscode.authentication
-      .getSession(AUTH_PROVIDER_ID, [], { createIfNone: false })
-      .then(undefined, (error: unknown) => {
-        console.error("MarkupAI: authentication session request failed", error);
-      });
+    void (async () => {
+      try {
+        if (await auth.isSignedIn()) {
+          // Signed in: mark the session as in use so the account row (with
+          // Sign Out) shows. createIfNone matters: a `false` probe without a
+          // recorded grant files a session-access request — a menu entry and
+          // number badge VS Code only clears when that entry itself is
+          // clicked. With `true`, VS Code returns the session silently when
+          // the grant exists and otherwise grants it directly (one-time
+          // consent dialog), filing no request. The provider returns the
+          // existing token without an interactive flow either way.
+          await vscode.authentication.getSession(AUTH_PROVIDER_ID, SESSION_SCOPES, {
+            createIfNone: true,
+          });
+        } else {
+          // Signed out: file the "Sign in with Markup AI…" menu entry.
+          await vscode.authentication.getSession(AUTH_PROVIDER_ID, SESSION_SCOPES, {
+            createIfNone: false,
+          });
+        }
+      } catch (error) {
+        console.error("Markup AI: authentication session request failed", error);
+      }
+    })();
   };
   touchAccountsMenu();
-  context.subscriptions.push(auth.onDidChange(touchAccountsMenu));
+  // Re-file the request badge only after sign-out. Sign-in goes through
+  // getSession({createIfNone: true}) which records the grant itself; calling
+  // getSession again mid-createSession (auth fires onDidChange before the
+  // flow returns) would re-add a request entry while the grant is pending.
+  context.subscriptions.push(
+    auth.onDidChange(() => {
+      void auth.isSignedIn().then((signedIn) => {
+        if (!signedIn) {
+          touchAccountsMenu();
+        }
+      });
+    }),
+  );
 
   // Refresh folder scanner after workspace is ready
   setTimeout(() => {
@@ -914,7 +969,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (folderUri?.[0]) {
         folderScannerTreeDataProvider.setRootFolder(folderUri[0]);
         const folderName = folderUri[0].path.split("/").pop() || folderUri[0].fsPath;
-        vscode.window.showInformationMessage(`MarkupAI: Now scanning "${folderName}"`);
+        vscode.window.showInformationMessage(`Markup AI: Now scanning "${folderName}"`);
       }
     }),
   );
@@ -930,15 +985,6 @@ export function activate(context: vscode.ExtensionContext) {
       const document = await vscode.workspace.openTextDocument(uri);
       await vscode.window.showTextDocument(document);
     }),
-  );
-
-  context.subscriptions.push(
-    vscode.commands.registerCommand(
-      "markupai-lint.toggleFileSelection",
-      (item: FolderScannerItem) => {
-        folderScannerTreeDataProvider.toggleFileSelection(item);
-      },
-    ),
   );
 
   context.subscriptions.push(
@@ -1027,7 +1073,7 @@ export function activate(context: vscode.ExtensionContext) {
       diagnosticsManager.addDisabledCategory(category);
       const categoryLabel = category.charAt(0).toUpperCase() + category.slice(1);
       vscode.window.showInformationMessage(
-        `MarkupAI: ${categoryLabel} issues are now hidden. Use "MarkupAI: Enable Category" to show them again.`,
+        `Markup AI: ${categoryLabel} issues are now hidden. Use "Markup AI Lint: Enable Category" to show them again.`,
       );
 
       diagnosticsManager.filterDiagnosticsByDisabledCategories();
@@ -1039,7 +1085,7 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("markupai-lint.enableCategory", async () => {
       const disabledCategories = diagnosticsManager.getDisabledCategories();
       if (disabledCategories.size === 0) {
-        vscode.window.showInformationMessage("MarkupAI: All categories are already enabled.");
+        vscode.window.showInformationMessage("Markup AI: All categories are already enabled.");
         return;
       }
 
@@ -1065,7 +1111,7 @@ export function activate(context: vscode.ExtensionContext) {
         }
 
         vscode.window.showInformationMessage(
-          `MarkupAI: Enabled ${selected.join(", ")} issues. Run "MarkupAI - Check Content" to see them.`,
+          `Markup AI: Enabled ${selected.join(", ")} issues. Run "Markup AI Lint: Check Content" to see them.`,
         );
         findingsTreeDataProvider.refresh();
       }

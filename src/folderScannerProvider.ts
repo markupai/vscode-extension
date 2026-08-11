@@ -31,16 +31,16 @@ export class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<Fo
 
   initializeFromWorkspace(): boolean {
     const workspaceFolders = vscode.workspace.workspaceFolders;
-    console.log("MarkupAI: Workspace folders:", workspaceFolders);
+    console.log("Markup AI: Workspace folders:", workspaceFolders);
 
     if (workspaceFolders && workspaceFolders.length > 0) {
       this.rootFolder = workspaceFolders[0].uri;
       this.selectedFiles.clear();
-      console.log("MarkupAI: Folder scanner initialized with:", this.rootFolder.fsPath);
+      console.log("Markup AI: Folder scanner initialized with:", this.rootFolder.fsPath);
       return true;
     }
 
-    console.log("MarkupAI: No workspace folder found");
+    console.log("Markup AI: No workspace folder found");
     return false;
   }
 
@@ -62,29 +62,36 @@ export class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<Fo
     this.refresh();
   }
 
-  toggleFileSelection(item: FolderScannerItem): void {
-    const uriString = item.uri.toString();
-    if (this.selectedFiles.has(uriString)) {
-      this.selectedFiles.delete(uriString);
+  /**
+   * Applies checkbox changes from the tree view. Checking a folder selects
+   * every supported file beneath it (including files in subtrees the view
+   * has not rendered), which is why the view uses
+   * `manageCheckboxStateManually` instead of VS Code's own propagation.
+   */
+  async handleCheckboxChange(
+    items: readonly [FolderScannerItem, vscode.TreeItemCheckboxState][],
+  ): Promise<void> {
+    for (const [item, state] of items) {
+      const checked = state === vscode.TreeItemCheckboxState.Checked;
+      if (item.type === "folder") {
+        const files: vscode.Uri[] = [];
+        await this.collectFiles(item.uri, files);
+        for (const file of files) {
+          this.applySelection(file, checked);
+        }
+      } else {
+        this.applySelection(item.uri, checked);
+      }
+    }
+    this.refresh();
+  }
+
+  private applySelection(uri: vscode.Uri, selected: boolean): void {
+    if (selected) {
+      this.selectedFiles.add(uri.toString());
     } else {
-      this.selectedFiles.add(uriString);
+      this.selectedFiles.delete(uri.toString());
     }
-    this.refresh();
-  }
-
-  selectAll(): void {
-    if (!this.rootFolder) {
-      return;
-    }
-    void this.getAllFiles().then((files) => {
-      files.forEach((file) => this.selectedFiles.add(file.toString()));
-      this.refresh();
-    });
-  }
-
-  deselectAll(): void {
-    this.selectedFiles.clear();
-    this.refresh();
   }
 
   getSelectedFiles(): vscode.Uri[] {
@@ -124,6 +131,16 @@ export class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<Fo
     }
   }
 
+  /** A folder counts as selected when it has files and all of them are selected. */
+  private async isFolderFullySelected(folder: vscode.Uri): Promise<boolean> {
+    if (this.selectedFiles.size === 0) {
+      return false;
+    }
+    const files: vscode.Uri[] = [];
+    await this.collectFiles(folder, files);
+    return files.length > 0 && files.every((file) => this.selectedFiles.has(file.toString()));
+  }
+
   getTreeItem(element: FolderScannerItem): vscode.TreeItem {
     const treeItem = new vscode.TreeItem(
       element.label,
@@ -135,10 +152,16 @@ export class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<Fo
     if (element.type === "folder") {
       treeItem.iconPath = vscode.ThemeIcon.Folder;
       treeItem.contextValue = "folder";
+      treeItem.checkboxState = element.isSelected
+        ? vscode.TreeItemCheckboxState.Checked
+        : vscode.TreeItemCheckboxState.Unchecked;
     } else {
       const isSelected = this.selectedFiles.has(element.uri.toString());
-      treeItem.iconPath = new vscode.ThemeIcon(isSelected ? "check" : "circle-outline");
+      treeItem.checkboxState = isSelected
+        ? vscode.TreeItemCheckboxState.Checked
+        : vscode.TreeItemCheckboxState.Unchecked;
       treeItem.contextValue = "file";
+      // resourceUri (with no iconPath override) gives the native file icon.
       treeItem.resourceUri = element.uri;
 
       const docKey = element.uri.toString();
@@ -213,7 +236,7 @@ export class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<Fo
           type: "folder",
           uri: uri,
           label: name,
-          isSelected: false,
+          isSelected: await this.isFolderFullySelected(uri),
         });
       }
 

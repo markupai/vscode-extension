@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { MarkupAIDiagnostic } from "./types";
 
 /**
- * Provides hover information for MarkupAI diagnostics.
+ * Provides hover information for Markup AI diagnostics.
  */
 export class MarkupAIHoverProvider implements vscode.HoverProvider {
   constructor(

@@ -69,7 +69,7 @@
       },
       {
         "command": "markupai-lint.checkContent",
-        "title": "MarkupAI - Check Content",
+        "title": "Check Content",
         "category": "Markup AI Lint"
       },
       {
@@ -79,22 +79,22 @@
       },
       {
         "command": "markupai-lint.enableIssues",
-        "title": "MarkupAI - Enable Issues",
+        "title": "Enable Issues",
         "category": "Markup AI Lint"
       },
       {
         "command": "markupai-lint.disableIssues",
-        "title": "MarkupAI - Disable Issues",
+        "title": "Disable Issues",
         "category": "Markup AI Lint"
       },
       {
         "command": "markupai-lint.disableCategory",
-        "title": "MarkupAI - Disable Category",
+        "title": "Disable Category",
         "category": "Markup AI Lint"
       },
       {
         "command": "markupai-lint.enableCategory",
-        "title": "MarkupAI - Enable Category",
+        "title": "Enable Category",
         "category": "Markup AI Lint"
       },
       {
@@ -173,12 +173,6 @@
         "icon": "$(run)"
       },
       {
-        "command": "markupai-lint.toggleFileSelection",
-        "title": "Toggle File Selection",
-        "category": "Markup AI Lint",
-        "icon": "$(check)"
-      },
-      {
         "command": "markupai-lint.openFile",
         "title": "Open File",
         "category": "Markup AI Lint"
@@ -205,12 +199,12 @@
         "markupai-lint.enabled": {
           "type": "boolean",
           "default": true,
-          "description": "Enable or disable MarkupAI checking"
+          "description": "Enable or disable Markup AI checking"
         },
         "markupai-lint.styleGuide": {
           "type": "string",
           "default": "",
-          "description": "Style guide ID to check against. Leave empty to use your organization's default. Use the 'MarkupAI: Select Style Guide' command to pick one."
+          "description": "Style guide ID to check against. Leave empty to use your organization's default. Use the 'Markup AI Lint: Select Style Guide' command to pick one."
         }
       }
     },
@@ -267,18 +261,7 @@
           "group": "navigation@4"
         }
       ],
-      "view/item/context": [
-        {
-          "command": "markupai-lint.toggleFileSelection",
-          "when": "view == markupai-lint.folderScanner && viewItem == file",
-          "group": "inline@1"
-        },
-        {
-          "command": "markupai-lint.toggleFileSelection",
-          "when": "view == markupai-lint.folderScanner && viewItem == file",
-          "group": "1_selection@1"
-        }
-      ],
+      "view/item/context": [],
       "editor/context": [
         {
           "command": "markupai-lint.checkContent",
@@ -376,7 +359,7 @@
     "viewsWelcome": [
       {
         "view": "markupai-lint.folderScanner",
-        "contents": "Welcome to Markup AI Lint!\n\nSign in to Markup AI to get started.\n\n[Sign In](command:markupai-lint.signIn)",
+        "contents": "Sign in to Markup AI to scan your content.\n\n[Sign In](command:markupai-lint.signIn)",
         "when": "!markupai-lint.signedIn"
       },
       {
@@ -386,7 +369,7 @@
       },
       {
         "view": "markupai-lint.findings",
-        "contents": "Sign in to Markup AI to see writing findings for your documents.\n\n[Sign In](command:markupai-lint.signIn)",
+        "contents": "Sign in to Markup AI to scan your content.\n\n[Sign In](command:markupai-lint.signIn)",
         "when": "!markupai-lint.signedIn"
       }
     ],

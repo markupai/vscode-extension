@@ -156,8 +156,8 @@ export class AuthManager implements vscode.Disposable {
  */
 export async function promptForToken(auth: AuthManager): Promise<boolean> {
   const token = await vscode.window.showInputBox({
-    title: "MarkupAI Sign In",
-    prompt: "Paste your MarkupAI access token (JWT) or API key.",
+    title: "Sign in to Markup AI",
+    prompt: "Paste your Markup AI access token (JWT) or API key.",
     placeHolder: "eyJ… or mat_…",
     password: true,
     ignoreFocusOut: true,

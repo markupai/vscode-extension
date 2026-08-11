@@ -87,6 +87,27 @@ describe("MarkupAIAuthenticationProvider", () => {
     expect(session.accessToken).toBe("mat_key");
   });
 
+  it("createSession returns the existing session without rerunning sign-in when already signed in", async () => {
+    const auth = createAuth();
+    await auth.setSession({ accessToken: "mat_key" });
+
+    const performSignIn = vi.fn(() => Promise.resolve(true));
+    const provider = new MarkupAIAuthenticationProvider(auth, performSignIn);
+    await provider.getSessions();
+
+    const events: vscode.AuthenticationProviderAuthenticationSessionsChangeEvent[] = [];
+    provider.onDidChangeSessions((e) => events.push(e));
+
+    const session = await provider.createSession();
+
+    expect(performSignIn).not.toHaveBeenCalled();
+    expect(session.accessToken).toBe("mat_key");
+    // The session predates createSession, so it must still be announced as
+    // added — VS Code uses that event to clear its Accounts-menu request.
+    expect(events).toHaveLength(1);
+    expect(events[0].added).toHaveLength(1);
+  });
+
   it("createSession throws when the interactive sign-in is cancelled", async () => {
     const provider = new MarkupAIAuthenticationProvider(
       createAuth(),
@@ -104,6 +125,62 @@ describe("MarkupAIAuthenticationProvider", () => {
     await provider.removeSession(sessions[0].id);
 
     expect(await auth.isSignedIn()).toBe(false);
+  });
+
+  it("fires a removed event on sign-out when the session predates the provider", async () => {
+    // Activation while already signed in: getSessions seeds the provider's
+    // last-known session so a later sign-out still reports the removal.
+    const auth = createAuth();
+    await auth.setSession({ accessToken: "mat_key" });
+
+    const provider = new MarkupAIAuthenticationProvider(auth, vi.fn());
+    await provider.getSessions();
+
+    const events: vscode.AuthenticationProviderAuthenticationSessionsChangeEvent[] = [];
+    provider.onDidChangeSessions((e) => events.push(e));
+
+    await auth.signOut();
+    await vi.waitFor(() => {
+      expect(events).toHaveLength(1);
+    });
+    expect(events[0].removed).toHaveLength(1);
+  });
+
+  it("removeSession fires a removed event", async () => {
+    const auth = createAuth();
+    await auth.setSession({ accessToken: "mat_key" });
+
+    const provider = new MarkupAIAuthenticationProvider(auth, vi.fn());
+    const sessions = await provider.getSessions();
+
+    const events: vscode.AuthenticationProviderAuthenticationSessionsChangeEvent[] = [];
+    provider.onDidChangeSessions((e) => events.push(e));
+
+    await provider.removeSession(sessions[0].id);
+    await vi.waitFor(() => {
+      expect(events).toHaveLength(1);
+    });
+    expect(events[0].removed).toHaveLength(1);
+    expect(events[0].added).toHaveLength(0);
+  });
+
+  it("does not fire duplicate added events when createSession drives the sign-in", async () => {
+    const auth = createAuth();
+    const performSignIn = vi.fn(async () => {
+      await auth.setSession({ accessToken: "mat_key" });
+      return true;
+    });
+    const provider = new MarkupAIAuthenticationProvider(auth, performSignIn);
+
+    const events: vscode.AuthenticationProviderAuthenticationSessionsChangeEvent[] = [];
+    provider.onDidChangeSessions((e) => events.push(e));
+
+    await provider.createSession();
+    // Let the AuthManager change listener's queued reconcile settle too.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(events).toHaveLength(1);
+    expect(events[0].added).toHaveLength(1);
   });
 
   it("fires onDidChangeSessions with added/removed on sign-in and sign-out", async () => {

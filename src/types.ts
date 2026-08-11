@@ -76,7 +76,7 @@ export interface FolderScannerItem {
 // Diagnostic Extension Types
 // ============================================================================
 
-// Extended diagnostic interface for MarkupAI-specific properties
+// Extended diagnostic interface for Markup AI-specific properties
 export interface MarkupAIDiagnostic extends vscode.Diagnostic {
   markupaiSuggestion: string;
   markupaiOriginalText: string;

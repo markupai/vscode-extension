@@ -13,7 +13,7 @@ export const SUPPORTED_SCHEMES = [
 const SUPPORTED_SCHEMES_SET = new Set<string>(SUPPORTED_SCHEMES);
 
 /**
- * Get the MarkupAI configuration
+ * Get the Markup AI configuration
  */
 export function getConfig(): vscode.WorkspaceConfiguration {
   return vscode.workspace.getConfiguration("markupai-lint");
@@ -32,7 +32,7 @@ export function getEnvironment(): MarkupAIEnvironment {
 }
 
 /**
- * Base URL of the MarkupAI API for the selected environment.
+ * Base URL of the Markup AI API for the selected environment.
  */
 export function getApiBaseUrl(): string {
   return ENVIRONMENT_URLS[getEnvironment()];
