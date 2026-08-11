@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
-import { DocumentAssessment, FolderScannerItem } from "./types";
+import { FolderScannerItem } from "./types";
 import { SUPPORTED_FILE_EXTENSIONS } from "./constants";
-import { formatRiskSummary, getLeadSeverity, getScoreEmoji, getSeverityEmoji } from "./utils";
+import { toScanUri } from "./scoreDecorationProvider";
 
 const IGNORED_DIRECTORIES = new Set(["node_modules", "dist", "build"]);
 
@@ -22,10 +22,7 @@ export class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<Fo
   private rootFolder: vscode.Uri | null = null;
   private readonly selectedFiles: Set<string> = new Set();
 
-  constructor(
-    private readonly getDocumentAssessments: () => Map<string, DocumentAssessment>,
-    private readonly isSignedIn: () => boolean = () => true,
-  ) {
+  constructor(private readonly isSignedIn: () => boolean = () => true) {
     this.initializeFromWorkspace();
   }
 
@@ -162,13 +159,9 @@ export class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<Fo
         : vscode.TreeItemCheckboxState.Unchecked;
       treeItem.contextValue = "file";
       // resourceUri (with no iconPath override) gives the native file icon.
-      treeItem.resourceUri = element.uri;
-
-      const docKey = element.uri.toString();
-      const assessment = this.getDocumentAssessments().get(docKey);
-      if (assessment) {
-        treeItem.description = describeAssessment(assessment);
-      }
+      // The custom scheme scopes the score decoration (right-aligned badge)
+      // to this view without decorating the file elsewhere.
+      treeItem.resourceUri = toScanUri(element.uri);
 
       treeItem.command = {
         command: "markupai-lint.openFile",
@@ -256,15 +249,4 @@ export class FolderScannerTreeDataProvider implements vscode.TreeDataProvider<Fo
 
     return items;
   }
-}
-
-function describeAssessment(assessment: DocumentAssessment): string {
-  if (typeof assessment.score === "number") {
-    return `${getScoreEmoji(assessment.score)} ${String(assessment.score)}`;
-  }
-  const { risk } = assessment;
-  if (risk.total === 0) {
-    return "✅";
-  }
-  return `${getSeverityEmoji(getLeadSeverity(risk))} ${formatRiskSummary(risk)}`;
 }
