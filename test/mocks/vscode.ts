@@ -144,10 +144,20 @@ export class Uri {
   constructor(
     public scheme: string,
     public path: string,
+    public query: string = "",
   ) {}
 
+  with(change: { scheme?: string; path?: string; query?: string }): Uri {
+    return new Uri(
+      change.scheme ?? this.scheme,
+      change.path ?? this.path,
+      change.query ?? this.query,
+    );
+  }
+
   toString(): string {
-    return `${this.scheme}://${this.path}`;
+    const query = this.query ? `?${this.query}` : "";
+    return `${this.scheme}://${this.path}${query}`;
   }
 
   get fsPath(): string {
@@ -350,6 +360,8 @@ export const window = {
     onDidChangeCheckboxState: vi.fn(() => ({ dispose: vi.fn() })),
     dispose: vi.fn(),
   })),
+
+  registerFileDecorationProvider: vi.fn(() => ({ dispose: vi.fn() })),
 
   createTextEditorDecorationType: vi.fn(() => ({
     key: "mock-decoration",

@@ -23,6 +23,7 @@ import { DiagnosticsManager } from "./diagnosticsManager";
 import { StatusBarManager } from "./statusBarManager";
 import { FindingsTreeDataProvider } from "./findingsTreeProvider";
 import { FolderScannerTreeDataProvider } from "./folderScannerProvider";
+import { ScoreDecorationProvider } from "./scoreDecorationProvider";
 import { MarkupAICodeActionProvider } from "./codeActionProvider";
 import { MarkupAIHoverProvider } from "./hoverProvider";
 import {
@@ -54,6 +55,7 @@ let diagnosticsManager: DiagnosticsManager;
 let statusBar: StatusBarManager;
 let findingsTreeDataProvider: FindingsTreeDataProvider;
 let folderScannerTreeDataProvider: FolderScannerTreeDataProvider;
+let scoreDecorations: ScoreDecorationProvider | undefined;
 let auth: AuthManager;
 const checkDebounceTimers: Map<string, NodeJS.Timeout> = new Map();
 let isEnabled = true;
@@ -61,7 +63,12 @@ let isEnabled = true;
 let signedInState = false;
 let cachedStyleGuides: StyleGuideOption[] = [];
 let orgConfig: StyleAgentConfig | null = null;
-const isCheckingDocument: Map<string, boolean> = new Map();
+/**
+ * In-flight check per document. Joinable so concurrent callers (e.g. the
+ * on-open auto-check racing a batch check over the same file) await the
+ * real completion instead of silently skipping.
+ */
+const inFlightChecks: Map<string, Promise<void>> = new Map();
 let isApplyingFix = false;
 let corsWarningShown = false;
 let styleAgentDisabledWarningShown = false;
@@ -243,32 +250,39 @@ async function checkDocument(
   }
 
   const docKey = document.uri.toString();
-  if (isCheckingDocument.get(docKey)) {
-    return;
+  const inFlight = inFlightChecks.get(docKey);
+  if (inFlight) {
+    // Join the running check; swallow its error — the initiating caller
+    // owns error handling/reporting for that run.
+    return inFlight.catch(() => undefined);
   }
 
-  isCheckingDocument.set(docKey, true);
   statusBar.showChecking();
 
   const textAtCheckStart = text;
 
-  try {
-    const result = await runContentCheck(text, document, showProgress);
+  const run = (async () => {
+    try {
+      const result = await runContentCheck(text, document, showProgress);
 
-    diagnosticsManager.setIssues(docKey, result.issues);
-    diagnosticsManager.setAssessment(docKey, result.assessment);
-    diagnosticsManager.updateDiagnostics(document, result.issues, textAtCheckStart);
-    statusBar.update(result.assessment);
-    findingsTreeDataProvider.refresh();
+      diagnosticsManager.setIssues(docKey, result.issues);
+      diagnosticsManager.setAssessment(docKey, result.assessment);
+      diagnosticsManager.updateDiagnostics(document, result.issues, textAtCheckStart);
+      statusBar.update(result.assessment);
+      findingsTreeDataProvider.refresh();
+      scoreDecorations?.refresh();
 
-    if (showCompletionNotification) {
-      void showCheckCompleteNotification(result.assessment);
+      if (showCompletionNotification) {
+        void showCheckCompleteNotification(result.assessment);
+      }
+    } catch (error: unknown) {
+      handleCheckError(error, showCompletionNotification);
+    } finally {
+      inFlightChecks.delete(docKey);
     }
-  } catch (error: unknown) {
-    handleCheckError(error, showCompletionNotification);
-  } finally {
-    isCheckingDocument.set(docKey, false);
-  }
+  })();
+  inFlightChecks.set(docKey, run);
+  return run;
 }
 
 function scoreStatusLabel(score: number): string {
@@ -432,6 +446,7 @@ async function signOut(): Promise<void> {
   resetSessionCaches();
   diagnosticsManager.clearAll();
   findingsTreeDataProvider.refresh();
+  scoreDecorations?.refresh();
   statusBar.showSignedOut();
   vscode.window.showInformationMessage(`${USER_MESSAGE_PREFIX}signed out.`);
 }
@@ -727,18 +742,15 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(findingsTreeView);
 
   // Initialize Folder Scanner TreeView
-  folderScannerTreeDataProvider = new FolderScannerTreeDataProvider(
-    () => {
-      const assessments = new Map<string, DocumentAssessment>();
-      diagnosticsManager.getAllIssues().forEach((_, docKey) => {
-        const a = diagnosticsManager.getAssessment(docKey);
-        if (a) {
-          assessments.set(docKey, a);
-        }
-      });
-      return assessments;
-    },
-    () => signedInState,
+  folderScannerTreeDataProvider = new FolderScannerTreeDataProvider(() => signedInState);
+
+  // Right-aligned score/issue badges for Folder Scanner rows.
+  scoreDecorations = new ScoreDecorationProvider((docKey) =>
+    diagnosticsManager.getAssessment(docKey),
+  );
+  context.subscriptions.push(
+    scoreDecorations,
+    vscode.window.registerFileDecorationProvider(scoreDecorations),
   );
   const folderScannerTreeView = vscode.window.createTreeView("markupai-lint.folderScanner", {
     treeDataProvider: folderScannerTreeDataProvider,

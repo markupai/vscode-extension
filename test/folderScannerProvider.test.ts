@@ -1,20 +1,18 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import * as vscode from "vscode";
 import { FolderScannerTreeDataProvider } from "../src/folderScannerProvider";
-import { DocumentAssessment, FolderScannerItem } from "../src/types";
+import { FolderScannerItem } from "../src/types";
 
 // eslint-disable-next-line @typescript-eslint/unbound-method
 const mockReadDirectory = vscode.workspace.fs.readDirectory;
 
 describe("FolderScannerTreeDataProvider", () => {
   let provider: FolderScannerTreeDataProvider;
-  let assessmentsMap: Map<string, DocumentAssessment>;
 
   beforeEach(() => {
-    assessmentsMap = new Map();
     // Mock workspace with no folders to avoid constructor side effects
     vi.mocked(vscode.workspace).workspaceFolders = undefined;
-    provider = new FolderScannerTreeDataProvider(() => assessmentsMap);
+    provider = new FolderScannerTreeDataProvider();
   });
 
   describe("initializeFromWorkspace", () => {
@@ -219,6 +217,8 @@ describe("FolderScannerTreeDataProvider", () => {
       // No iconPath override: resourceUri drives the file-type icon.
       expect(treeItem.iconPath).toBeUndefined();
       expect(treeItem.resourceUri?.path).toBe("/test/readme.md");
+      // Custom scheme scopes score decorations to this view.
+      expect(treeItem.resourceUri?.scheme).toBe("markupai-scan");
     });
 
     it("should mirror folder selection state into the folder checkbox", () => {
@@ -232,75 +232,6 @@ describe("FolderScannerTreeDataProvider", () => {
       const treeItem = provider.getTreeItem(folderElement);
 
       expect(treeItem.checkboxState).toBe(vscode.TreeItemCheckboxState.Checked);
-    });
-
-    it("should show score when available", () => {
-      const fileUri = vscode.Uri.file("/test/readme.md");
-      assessmentsMap.set(fileUri.toString(), {
-        risk: { high: 0, medium: 1, low: 2, total: 3 },
-        score: 95,
-      });
-
-      const item: FolderScannerItem = {
-        type: "file",
-        uri: fileUri,
-        label: "readme.md",
-        isSelected: false,
-      };
-
-      const treeItem = provider.getTreeItem(item);
-
-      expect(treeItem.description).toContain("95");
-      expect(treeItem.description).toContain("🟢");
-    });
-
-    it("should show check mark when there is no score and zero issues", () => {
-      const fileUri = vscode.Uri.file("/test/readme.md");
-      assessmentsMap.set(fileUri.toString(), {
-        risk: { high: 0, medium: 0, low: 0, total: 0 },
-      });
-
-      const item: FolderScannerItem = {
-        type: "file",
-        uri: fileUri,
-        label: "readme.md",
-        isSelected: false,
-      };
-
-      const treeItem = provider.getTreeItem(item);
-
-      expect(treeItem.description).toBe("✅");
-    });
-
-    it("should show risk summary when there is no score and issues exist", () => {
-      const fileUri = vscode.Uri.file("/test/readme.md");
-      assessmentsMap.set(fileUri.toString(), {
-        risk: { high: 2, medium: 3, low: 11, total: 16 },
-      });
-
-      const item: FolderScannerItem = {
-        type: "file",
-        uri: fileUri,
-        label: "readme.md",
-        isSelected: false,
-      };
-
-      const treeItem = provider.getTreeItem(item);
-
-      expect(treeItem.description).toBe("🔴 2H 3M 11L");
-    });
-
-    it("should not set a description when no assessment exists", () => {
-      const item: FolderScannerItem = {
-        type: "file",
-        uri: vscode.Uri.file("/test/readme.md"),
-        label: "readme.md",
-        isSelected: false,
-      };
-
-      const treeItem = provider.getTreeItem(item);
-
-      expect(treeItem.description).toBeUndefined();
     });
 
     it("should include openFile command for files", () => {
@@ -327,10 +258,7 @@ describe("FolderScannerTreeDataProvider", () => {
     });
 
     it("should return empty array when signed out so the welcome view renders", async () => {
-      const signedOutProvider = new FolderScannerTreeDataProvider(
-        () => assessmentsMap,
-        () => false,
-      );
+      const signedOutProvider = new FolderScannerTreeDataProvider(() => false);
       signedOutProvider.setRootFolder(vscode.Uri.file("/project"));
 
       vi.mocked(mockReadDirectory).mockResolvedValue([["readme.md", vscode.FileType.File]] as [
