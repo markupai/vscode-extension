@@ -5,6 +5,30 @@ All notable changes to the Markup AI Lint extension are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2026-08-11
+
+### Fixed
+
+- Signing in now registers the session with VS Code's authentication API, so the Accounts
+  menu shows the Markup AI account (with Sign Out) after sign-in instead of a stuck
+  "Sign in with Markup AI…" entry and number badge.
+- Issue text from the Style Agent API is HTML-entity-decoded, so findings, hovers, and
+  quick-fix labels show literal characters (`'`, `"`, `&`) — and applied fixes no longer
+  write escape codes like `&quot;` into documents.
+- Batch checking ("Check Selected Files" / "Check All Files") no longer reports completion
+  before all checks finish, and per-file results appear reliably as each check completes.
+
+### Changed
+
+- The Folder Scanner now uses native, always-visible checkboxes to select files and
+  folders (a folder checkbox selects every supported file beneath it), replacing the
+  hover-only tick icon; files show their real file-type icons again.
+- Check results in the Folder Scanner render as right-aligned colored score badges
+  (issue counts for organizations without numeric scoring) instead of text after the
+  file name.
+- Sign-in wording and branding are consistent across the welcome panels, status bar,
+  dialogs, and command palette ("Markup AI" / "Markup AI Lint" everywhere).
+
 ## [1.0.1] - 2026-08-10
 
 ### Added
