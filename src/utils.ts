@@ -1,6 +1,11 @@
 import * as vscode from "vscode";
 import { ContentIssue, RiskSummary } from "./types";
-import { ENVIRONMENT_URLS, MarkupAIEnvironment } from "./constants";
+import {
+  CONSOLE_URLS,
+  ENVIRONMENT_URLS,
+  MarkupAIEnvironment,
+  SIGNUP_UTM_PARAMS,
+} from "./constants";
 
 export const SUPPORTED_SCHEMES = [
   "file",
@@ -36,6 +41,15 @@ export function getEnvironment(): MarkupAIEnvironment {
  */
 export function getApiBaseUrl(): string {
   return ENVIRONMENT_URLS[getEnvironment()];
+}
+
+/**
+ * Console signup URL, tagged for signup attribution. The Console `/signup`
+ * route threads `utm_*` params through the Auth0 round-trip, so signups
+ * started here are attributed to this extension (HubSpot + backend).
+ */
+export function getConsoleSignupUrl(): string {
+  return `${CONSOLE_URLS[getEnvironment()]}/signup?${SIGNUP_UTM_PARAMS}`;
 }
 
 /** Values the pre-style-agent extension stored; not valid style guide IDs. */
