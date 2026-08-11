@@ -426,7 +426,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^26.1.1",
-    "@types/vscode": "~1.105.0",
+    "@types/vscode": "~1.125.0",
     "@vitest/coverage-v8": "^4.1.10",
     "@vitest/ui": "^4.1.10",
     "@vscode/test-web": "^0.0.81",
