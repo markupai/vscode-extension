@@ -8,7 +8,7 @@ Native content linting for VS Code — the Markup AI Style Agent checks your doc
 
 To use Markup AI Lint, you need a Markup AI account. Once the extension is installed, sign in from the status bar or the Command Palette to start checking your content.
 
-This extension isn't a stand-alone authoring tool — it works only with the Markup AI platform. To procure the Markup AI solution, please visit [markup.ai/pricing](https://markup.ai/pricing/).
+This extension isn't a stand-alone authoring tool — it works only with the Markup AI platform. To procure the Markup AI solution, please visit [markup.ai/pricing](https://markup.ai/pricing/?utm_source=markup_vscode-extension&utm_medium=marketplace).
 
 ## Features
 

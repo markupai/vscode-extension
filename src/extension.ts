@@ -17,6 +17,7 @@ import {
   isWebEnvironment,
   isSupportedScheme,
   isCorsOrNetworkError,
+  getConsoleSignupUrl,
   SUPPORTED_SCHEMES,
 } from "./utils";
 import { DiagnosticsManager } from "./diagnosticsManager";
@@ -350,7 +351,7 @@ function scheduleCheck(document: vscode.TextDocument): void {
 // Authentication Commands
 // ============================================================================
 
-async function pickSignInMethod(): Promise<"browser" | "paste" | undefined> {
+async function pickSignInMethod(): Promise<"browser" | "paste" | "signup" | undefined> {
   if (!isBrowserSignInAvailable()) {
     return "paste";
   }
@@ -364,6 +365,10 @@ async function pickSignInMethod(): Promise<"browser" | "paste" | undefined> {
       label: "$(key) Paste access token or API key",
       detail: "For tokens obtained elsewhere (JWT or mat_… API key)",
     },
+    {
+      label: "$(add) Create an account",
+      detail: "Opens the Markup AI Console in your browser to sign up",
+    },
   ];
   const selected = await vscode.window.showQuickPick(items, {
     title: "Sign in to Markup AI",
@@ -371,6 +376,9 @@ async function pickSignInMethod(): Promise<"browser" | "paste" | undefined> {
   });
   if (!selected) {
     return undefined;
+  }
+  if (selected.label.includes("Create an account")) {
+    return "signup";
   }
   return selected.label.includes("browser") ? "browser" : "paste";
 }
@@ -406,6 +414,14 @@ async function performInteractiveSignIn(): Promise<boolean> {
   const method = await pickSignInMethod();
   if (!method) {
     return false;
+  }
+
+  if (method === "signup") {
+    await vscode.env.openExternal(vscode.Uri.parse(getConsoleSignupUrl()));
+    vscode.window.showInformationMessage(
+      `${USER_MESSAGE_PREFIX}complete sign-up in your browser, then run "MarkupAI: Sign In" to connect.`,
+    );
+    return;
   }
 
   const signedIn = method === "browser" ? await browserSignIn() : await promptForToken(auth);
