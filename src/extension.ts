@@ -384,15 +384,21 @@ async function browserSignIn(): Promise<boolean> {
         cancellable: false,
       },
       async (progress) => {
-        const result = await runBrowserSignIn({
-          apiBaseUrl: getApiBaseUrl(),
-          provider: OAUTH_PROVIDER,
-          onUserCode: (code) => {
-            showSignInCode(progress, code);
-          },
-        });
-        await auth.setSession(result);
-        return true;
+        let codeBox: vscode.Disposable | undefined;
+        try {
+          const result = await runBrowserSignIn({
+            apiBaseUrl: getApiBaseUrl(),
+            provider: OAUTH_PROVIDER,
+            onUserCode: (code) => {
+              codeBox = showSignInCode(progress, code);
+            },
+          });
+          await auth.setSession(result);
+          return true;
+        } finally {
+          // The code belongs to the attempt that just ended, whatever the outcome.
+          codeBox?.dispose();
+        }
       },
     );
   } catch (error) {
@@ -410,29 +416,54 @@ async function browserSignIn(): Promise<boolean> {
  * the relay releases the sign-in only when it matches, so the user must be
  * able to read it the whole time they are in the browser.
  *
- * A modal dialog rather than a toast: a toast reads as a notification and can
- * be dismissed or hidden behind the bell, while a dialog is plainly a step to
- * act on and stays until it is. The poll keeps running underneath it, so the
- * dialog never blocks the sign-in. "Copy code" closes it with the code on the
- * clipboard, and the progress toast repeats the code for anyone who wants it
- * after the dialog is gone. The wording matches the sidebar and the Oxygen
- * plugin, because the console page tells users to enter only a code shown on
- * their own screen.
+ * A quick input rather than a toast: a toast reads as a notification and can
+ * be dismissed or hidden behind the bell, while this is plainly a step to act
+ * on, drawn in VS Code's own UI at the top of the window. The code is the
+ * box's value, preselected, so Ctrl+C copies it at once; Enter or the copy
+ * button copy it too. `ignoreFocusOut` keeps it open while the browser is in
+ * front. The poll keeps running underneath it, and the progress toast repeats
+ * the code for anyone who closes the box early. The wording matches the
+ * sidebar and the Oxygen plugin, because the console page tells users to enter
+ * only a code shown on their own screen.
+ *
+ * @return disposes the box; called when the sign-in ends, whatever the outcome
  */
-function showSignInCode(progress: vscode.Progress<{ message?: string }>, code: string): void {
+function showSignInCode(
+  progress: vscode.Progress<{ message?: string }>,
+  code: string,
+): vscode.Disposable {
   progress.report({ message: `Enter this code in your browser to finish signing in: ${code}` });
-  void vscode.window
-    .showInformationMessage(
-      "Enter this code in your browser to finish signing in",
-      { modal: true, detail: code },
-      "Copy code",
-    )
-    .then((action) => {
-      if (action === "Copy code") {
-        return vscode.env.clipboard.writeText(code);
-      }
-      return undefined;
-    });
+
+  const copyButton: vscode.QuickInputButton = {
+    iconPath: new vscode.ThemeIcon("copy"),
+    tooltip: "Copy code",
+  };
+  const box = vscode.window.createInputBox();
+  box.title = "Sign in to Markup AI";
+  box.prompt = "Enter this code in your browser to finish signing in";
+  box.value = code;
+  box.valueSelection = [0, code.length];
+  box.ignoreFocusOut = true;
+  box.buttons = [copyButton];
+
+  const copy = () => {
+    void vscode.env.clipboard.writeText(code);
+    box.prompt = "Copied. Enter it in your browser to finish signing in";
+  };
+  box.onDidTriggerButton(copy);
+  box.onDidAccept(() => {
+    copy();
+    box.hide();
+  });
+  // The box is read-only in spirit: typing over the code would hide it.
+  box.onDidChangeValue((value) => {
+    if (value !== code) {
+      box.value = code;
+      box.valueSelection = [0, code.length];
+    }
+  });
+  box.show();
+  return box;
 }
 
 async function performInteractiveSignIn(): Promise<boolean> {
