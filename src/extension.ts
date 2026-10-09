@@ -407,17 +407,24 @@ async function browserSignIn(): Promise<boolean> {
 
 /**
  * The relay's confirmation code. After signing in, the browser asks for it and
- * the relay releases the sign-in only when it matches, so it must stay on
- * screen for the whole wait: the progress notification carries it, and a
- * second notification offers to copy it for users who would rather paste.
- * The wording matches the sidebar and the Oxygen plugin, because the console
- * page tells users to enter only a code shown on their own screen.
+ * the relay releases the sign-in only when it matches, so the user must be
+ * able to read it the whole time they are in the browser.
+ *
+ * A modal dialog rather than a toast: a toast reads as a notification and can
+ * be dismissed or hidden behind the bell, while a dialog is plainly a step to
+ * act on and stays until it is. The poll keeps running underneath it, so the
+ * dialog never blocks the sign-in. "Copy code" closes it with the code on the
+ * clipboard, and the progress toast repeats the code for anyone who wants it
+ * after the dialog is gone. The wording matches the sidebar and the Oxygen
+ * plugin, because the console page tells users to enter only a code shown on
+ * their own screen.
  */
 function showSignInCode(progress: vscode.Progress<{ message?: string }>, code: string): void {
   progress.report({ message: `Enter this code in your browser to finish signing in: ${code}` });
   void vscode.window
     .showInformationMessage(
-      `${USER_MESSAGE_PREFIX}enter this code in your browser to finish signing in: ${code}`,
+      "Enter this code in your browser to finish signing in",
+      { modal: true, detail: code },
       "Copy code",
     )
     .then((action) => {
