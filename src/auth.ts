@@ -8,6 +8,18 @@ const EXPIRES_AT_KEY = "markupai-lint.tokenExpiresAt";
 /** Refresh this long before the access token actually expires. */
 const EXPIRY_BUFFER_MS = 60_000;
 
+/**
+ * How long a window that lost a refresh race waits for the winner's write
+ * to land before concluding the token is genuinely revoked. The two
+ * /exchange answers are milliseconds apart; the winner then needs three
+ * sequential SecretStorage writes, so its refresh token lands last.
+ */
+const SIBLING_WRITE_WAIT_MS = 2_000;
+const SIBLING_WRITE_POLL_MS = 250;
+
+/** The relay said no to this refresh token, as opposed to not answering properly. */
+const REFUSAL_STATUSES: ReadonlySet<number> = new Set([400, 401, 403]);
+
 export interface SessionTokens {
   accessToken: string;
   /** Lifetime in seconds, from the OAuth exchange response. */
@@ -126,12 +138,18 @@ export class AuthManager implements vscode.Disposable {
     }
 
     if (!response.ok) {
+      if (!REFUSAL_STATUSES.has(response.status)) {
+        // An outage (5xx, 429, a proxy error), not a verdict on the token:
+        // keep the session so a later call can retry. Signing out here would
+        // wipe the shared secrets for every window over a relay hiccup.
+        return undefined;
+      }
       // Refresh tokens rotate: each refresh returns a new one and the old one
       // stops working. Two VS Code windows share this SecretStorage but run
       // separate extension hosts, so both can present the same token; the
-      // relay accepts the first and refuses the second. If storage already
-      // holds a token other than the one we sent, the other window won, and
-      // its session is the live one: adopt it rather than wiping it for both.
+      // relay accepts the first and refuses the second. If storage holds a
+      // token other than the one we sent, the other window won, and its
+      // session is the live one: adopt it rather than wiping it for both.
       const adopted = await this.adoptSessionRefreshedElsewhere(refreshToken);
       if (adopted) {
         return adopted;
@@ -146,6 +164,17 @@ export class AuthManager implements vscode.Disposable {
       return undefined;
     }
 
+    // Storage may have moved while the request was in flight: a sign-out in
+    // this or another window must not be undone by writing the result back,
+    // and another window's rotation must not be overwritten with ours.
+    const storedNow = await this.secrets.get(REFRESH_TOKEN_KEY);
+    if (!storedNow) {
+      return undefined;
+    }
+    if (storedNow !== refreshToken) {
+      return this.readSessionWrittenElsewhere();
+    }
+
     await this.setSession({
       accessToken: data.access_token,
       expiresIn: data.expires_in,
@@ -157,14 +186,31 @@ export class AuthManager implements vscode.Disposable {
   /**
    * After a refused refresh: the access token now in storage when another
    * window rotated the refresh token since this one read it, else undefined.
+   * The winner's write can land a moment after the loser's refusal, so
+   * storage is re-read for a short while before giving up.
    */
   private async adoptSessionRefreshedElsewhere(
     presentedRefreshToken: string,
   ): Promise<string | undefined> {
-    const stored = await this.secrets.get(REFRESH_TOKEN_KEY);
-    if (!stored || stored === presentedRefreshToken) {
-      return undefined;
+    const deadline = Date.now() + SIBLING_WRITE_WAIT_MS;
+    for (;;) {
+      const stored = await this.secrets.get(REFRESH_TOKEN_KEY);
+      if (stored && stored !== presentedRefreshToken) {
+        const accessToken = await this.readSessionWrittenElsewhere();
+        if (accessToken) {
+          return accessToken;
+        }
+        // The refresh token landed before the access token: not yet readable.
+      }
+      if (Date.now() >= deadline) {
+        return undefined;
+      }
+      await new Promise((resolve) => setTimeout(resolve, SIBLING_WRITE_POLL_MS));
     }
+  }
+
+  /** The access token another window stored, announcing the change; undefined when there is none. */
+  private async readSessionWrittenElsewhere(): Promise<string | undefined> {
     const accessToken = await this.secrets.get(ACCESS_TOKEN_KEY);
     if (!accessToken) {
       return undefined;
