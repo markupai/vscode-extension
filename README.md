@@ -26,7 +26,7 @@ Install from the VS Code Marketplace.
 
 ### 2. Sign In
 
-Click the **Markup AI Lint: Sign in** prompt in the status bar, or run `Markup AI Lint: Sign In` from the Command Palette, and complete the sign-in in your browser.
+Click the **Markup AI Lint: Sign in** prompt in the status bar, or run `Markup AI Lint: Sign In` from the Command Palette, and complete the sign-in in your browser. VS Code shows a short confirmation code at the top of the window; after you sign in, the browser asks for it. Type the code from your own VS Code window, never one from a link or message someone sent you. Closing the code box cancels the sign-in.
 
 ### 3. Start Writing
 
