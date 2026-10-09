@@ -145,6 +145,35 @@ describe("AuthManager", () => {
     expect(await auth.isSignedIn()).toBe(false);
   });
 
+  it("adopts the session another window refreshed first instead of signing out", async () => {
+    // Refresh tokens rotate. Two windows share one SecretStorage; the other window
+    // presented rt1 first and stored rt2, so this window's rt1 is now a reuse.
+    const fetchMock = vi.fn().mockImplementation(async () => {
+      await secrets.store("markupai-lint.accessToken", "fresh-from-other-window");
+      await secrets.store("markupai-lint.refreshToken", "rt2");
+      return new Response(JSON.stringify({ error: "invalid_grant" }), { status: 400 });
+    });
+    const { auth, secrets } = createAuth(fetchMock);
+    await auth.setSession({ accessToken: "stale", expiresIn: 1, refreshToken: "rt1" });
+
+    expect(await auth.getValidToken()).toBe("fresh-from-other-window");
+    expect(await auth.isSignedIn()).toBe(true);
+    expect(await secrets.get("markupai-lint.refreshToken")).toBe("rt2");
+  });
+
+  it("still signs out when the refused refresh token is the one in storage", async () => {
+    // Nobody else rotated it: the token is genuinely revoked.
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(new Response(JSON.stringify({ error: "invalid_grant" }), { status: 400 }));
+    const { auth, secrets } = createAuth(fetchMock);
+    await auth.setSession({ accessToken: "stale", expiresIn: 1, refreshToken: "rt1" });
+
+    expect(await auth.getValidToken()).toBeUndefined();
+    expect(await auth.isSignedIn()).toBe(false);
+    expect(await secrets.get("markupai-lint.refreshToken")).toBeUndefined();
+  });
+
   it("keeps the session on network errors during refresh", async () => {
     const fetchMock = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"));
     const { auth } = createAuth(fetchMock);

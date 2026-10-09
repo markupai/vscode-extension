@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import * as vscode from "vscode";
 import {
+  DEFAULT_TIMEOUT_MS,
   isBrowserSignInAvailable,
   runBrowserSignIn,
   type BrowserSignInOptions,
@@ -177,6 +178,98 @@ describe("runBrowserSignIn", () => {
     await expect(signIn(fetchImpl, { openExternal: () => Promise.resolve(false) })).rejects.toThrow(
       /could not open the browser/,
     );
+  });
+
+  it("waits five minutes by default: the relay's state TTL", () => {
+    // Two minutes used to be the limit. The wait now covers the Auth0 login, the
+    // organization picker, and reading and typing the confirmation code.
+    expect(DEFAULT_TIMEOUT_MS).toBe(300_000);
+  });
+
+  it("reports the relay's user_code before the browser opens", async () => {
+    const order: string[] = [];
+    const fetchImpl = fakeFetch((url) => {
+      if (url.endsWith("/start")) {
+        return jsonOk({ read_key: "rk", authorize_url: "https://x/", user_code: "BCDF-GHJK" });
+      }
+      if (url.includes("/poll")) {
+        return jsonOk({ status: "complete", code: "c" });
+      }
+      if (url.endsWith("/exchange")) {
+        return jsonOk({ access_token: "at" });
+      }
+      return notOk();
+    });
+
+    await signIn(fetchImpl, {
+      onUserCode: (code) => {
+        order.push(`code:${code}`);
+      },
+      openExternal: () => {
+        order.push("open");
+        return Promise.resolve(true);
+      },
+    });
+
+    // The code must be on screen by the time the user can reach the confirmation page.
+    expect(order).toEqual(["code:BCDF-GHJK", "open"]);
+  });
+
+  it("accepts a camelCase userCode", async () => {
+    const codes: string[] = [];
+    const fetchImpl = fakeFetch((url) => {
+      if (url.endsWith("/start")) {
+        return jsonOk({ readKey: "rk", authorizeUrl: "https://x/", userCode: "MNPQ-RSTV" });
+      }
+      if (url.includes("/poll")) {
+        return jsonOk({ status: "complete", code: "c" });
+      }
+      if (url.endsWith("/exchange")) {
+        return jsonOk({ access_token: "at" });
+      }
+      return notOk();
+    });
+    await signIn(fetchImpl, { onUserCode: (code) => codes.push(code) });
+    expect(codes).toEqual(["MNPQ-RSTV"]);
+  });
+
+  it("does not report a code, and still signs in, when the relay returns none", async () => {
+    const onUserCode = vi.fn();
+    const fetchImpl = fakeFetch((url) => {
+      if (url.endsWith("/start")) {
+        return jsonOk({ read_key: "rk", authorize_url: "https://x/" });
+      }
+      if (url.includes("/poll")) {
+        return jsonOk({ status: "complete", code: "c" });
+      }
+      if (url.endsWith("/exchange")) {
+        return jsonOk({ access_token: "at" });
+      }
+      return notOk();
+    });
+    const result = await signIn(fetchImpl, { onUserCode });
+    expect(result.accessToken).toBe("at");
+    expect(onUserCode).not.toHaveBeenCalled();
+  });
+
+  it("fails at once when /poll answers 400 (read key invalid or expired)", async () => {
+    let polls = 0;
+    const fetchImpl = fakeFetch((url) => {
+      if (url.endsWith("/start")) {
+        return jsonOk({ read_key: "rk", authorize_url: "https://x/" });
+      }
+      if (url.includes("/poll")) {
+        polls++;
+        return new Response(JSON.stringify({ status: "error", error: "Invalid read key." }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return notOk();
+    });
+    // A generous timeout: the rejection must come from the 400, not the deadline.
+    await expect(signIn(fetchImpl, { timeoutMs: 5_000 })).rejects.toThrow(/Invalid read key/);
+    expect(polls).toBe(1);
   });
 
   it("tolerates transient poll errors and eventually succeeds", async () => {

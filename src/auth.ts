@@ -126,6 +126,16 @@ export class AuthManager implements vscode.Disposable {
     }
 
     if (!response.ok) {
+      // Refresh tokens rotate: each refresh returns a new one and the old one
+      // stops working. Two VS Code windows share this SecretStorage but run
+      // separate extension hosts, so both can present the same token; the
+      // relay accepts the first and refuses the second. If storage already
+      // holds a token other than the one we sent, the other window won, and
+      // its session is the live one: adopt it rather than wiping it for both.
+      const adopted = await this.adoptSessionRefreshedElsewhere(refreshToken);
+      if (adopted) {
+        return adopted;
+      }
       await this.signOut();
       return undefined;
     }
@@ -142,6 +152,25 @@ export class AuthManager implements vscode.Disposable {
       refreshToken: data.refresh_token ?? refreshToken,
     });
     return data.access_token;
+  }
+
+  /**
+   * After a refused refresh: the access token now in storage when another
+   * window rotated the refresh token since this one read it, else undefined.
+   */
+  private async adoptSessionRefreshedElsewhere(
+    presentedRefreshToken: string,
+  ): Promise<string | undefined> {
+    const stored = await this.secrets.get(REFRESH_TOKEN_KEY);
+    if (!stored || stored === presentedRefreshToken) {
+      return undefined;
+    }
+    const accessToken = await this.secrets.get(ACCESS_TOKEN_KEY);
+    if (!accessToken) {
+      return undefined;
+    }
+    this.changed.fire();
+    return accessToken;
   }
 
   dispose(): void {

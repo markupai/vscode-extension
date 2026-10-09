@@ -383,10 +383,13 @@ async function browserSignIn(): Promise<boolean> {
         title: "Markup AI: Complete the sign-in in your browser…",
         cancellable: false,
       },
-      async () => {
+      async (progress) => {
         const result = await runBrowserSignIn({
           apiBaseUrl: getApiBaseUrl(),
           provider: OAUTH_PROVIDER,
+          onUserCode: (code) => {
+            showSignInCode(progress, code);
+          },
         });
         await auth.setSession(result);
         return true;
@@ -400,6 +403,29 @@ async function browserSignIn(): Promise<boolean> {
     }
     return false;
   }
+}
+
+/**
+ * The relay's confirmation code. After signing in, the browser asks for it and
+ * the relay releases the sign-in only when it matches, so it must stay on
+ * screen for the whole wait: the progress notification carries it, and a
+ * second notification offers to copy it for users who would rather paste.
+ * The wording matches the sidebar and the Oxygen plugin, because the console
+ * page tells users to enter only a code shown on their own screen.
+ */
+function showSignInCode(progress: vscode.Progress<{ message?: string }>, code: string): void {
+  progress.report({ message: `Enter this code in your browser to finish signing in: ${code}` });
+  void vscode.window
+    .showInformationMessage(
+      `${USER_MESSAGE_PREFIX}enter this code in your browser to finish signing in: ${code}`,
+      "Copy code",
+    )
+    .then((action) => {
+      if (action === "Copy code") {
+        return vscode.env.clipboard.writeText(code);
+      }
+      return undefined;
+    });
 }
 
 async function performInteractiveSignIn(): Promise<boolean> {

@@ -5,14 +5,20 @@ import { USER_MESSAGE_PREFIX } from "./constants";
  * Backend-mediated Auth0 sign-in — the same flow the sidebar-app uses for
  * iframe-embedded hosts, here against the "vscode-extension" provider:
  *
- *   1. POST {base}/oauth/{provider}/start → { read_key, authorize_url }
- *   2. Open authorize_url in the user's default browser
+ *   1. POST {base}/oauth/{provider}/start → { read_key, authorize_url, user_code }
+ *   2. Report user_code through `onUserCode` so the extension can show it: after
+ *      signing in, the browser asks the user for that code and the relay releases
+ *      the sign-in only when it matches. A relay without the confirmation step
+ *      returns no code, and the flow then completes as it always did.
+ *   3. Open authorize_url in the user's default browser
  *      (vscode.env.openExternal — works in both desktop and web hosts).
- *   3. Poll GET {base}/oauth/{provider}/poll?read_key=… every 2 s.
+ *   4. Poll GET {base}/oauth/{provider}/poll?read_key=… every 2 s, for up to
+ *      five minutes (the relay's state TTL — it forgets the flow after that).
  *        { status: "pending" }   → keep polling
  *        { status: "error", error } → abort
  *        { status: "complete", code } → proceed
- *   4. POST {base}/oauth/{provider}/exchange with
+ *        HTTP 400 → abort: the read key is invalid or expired, nothing can follow
+ *   5. POST {base}/oauth/{provider}/exchange with
  *      { grant_type: "authorization_code", code } → { access_token, … }
  *
  * No localhost server, no sidebar-app involvement — purely a VS Code-to-
@@ -30,6 +36,11 @@ export interface BrowserSignInOptions {
   readonly provider: string;
   readonly timeoutMs?: number;
   readonly pollIntervalMs?: number;
+  /**
+   * Receives the relay's confirmation code once `/start` returns one, before
+   * the browser opens. Not called when the relay returns none.
+   */
+  readonly onUserCode?: (code: string) => void;
   /** Exposed for tests — defaults to the platform `fetch`. */
   readonly fetchImpl?: typeof fetch;
   /** Exposed for tests — defaults to `vscode.env.openExternal`. */
@@ -41,6 +52,8 @@ interface StartResponse {
   readonly read_key?: string;
   readonly authorizeUrl?: string;
   readonly authorize_url?: string;
+  readonly userCode?: string;
+  readonly user_code?: string;
 }
 
 interface PollResponse {
@@ -58,7 +71,12 @@ interface ExchangeResponse {
   readonly refreshToken?: string;
 }
 
-const DEFAULT_TIMEOUT_MS = 120_000;
+/**
+ * Matches the relay's state TTL. The wait has to cover the Auth0 login, the
+ * organization picker, and reading and typing the confirmation code; waiting
+ * longer than the relay keeps the flow would gain nothing.
+ */
+export const DEFAULT_TIMEOUT_MS = 300_000;
 const DEFAULT_POLL_INTERVAL_MS = 2_000;
 
 /**
@@ -79,7 +97,10 @@ export async function runBrowserSignIn(opts: BrowserSignInOptions): Promise<Brow
   const base = stripTrailingSlash(opts.apiBaseUrl);
   const provider = encodeURIComponent(opts.provider);
 
-  const { readKey, authorizeUrl } = await startMediation(fetchImpl, base, provider);
+  const { readKey, authorizeUrl, userCode } = await startMediation(fetchImpl, base, provider);
+  if (userCode) {
+    opts.onUserCode?.(userCode);
+  }
 
   const opened = await openExternal(vscode.Uri.parse(authorizeUrl));
   if (!opened) {
@@ -97,7 +118,7 @@ async function startMediation(
   fetchImpl: typeof fetch,
   base: string,
   provider: string,
-): Promise<{ readKey: string; authorizeUrl: string }> {
+): Promise<{ readKey: string; authorizeUrl: string; userCode?: string }> {
   const res = await fetchImpl(`${base}/oauth/${provider}/start`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -111,7 +132,8 @@ async function startMediation(
   if (!readKey || !authorizeUrl) {
     throw new Error(`${USER_MESSAGE_PREFIX}OAuth start response missing keys.`);
   }
-  return { readKey, authorizeUrl };
+  const userCode = (data.userCode ?? data.user_code)?.trim();
+  return { readKey, authorizeUrl, ...(userCode ? { userCode } : {}) };
 }
 
 async function pollForCode(
@@ -134,6 +156,13 @@ async function pollForCode(
       });
     } catch {
       continue;
+    }
+    if (res.status === 400) {
+      // The relay refuses the read key: invalid, or past its TTL. Nothing can
+      // complete this flow any more, so surface it now rather than at the
+      // deadline. Any other failure is treated as transient.
+      const refused = await readPollError(res);
+      throw new Error(`${USER_MESSAGE_PREFIX}${refused ?? "sign-in expired. Please try again."}`);
     }
     if (!res.ok) continue;
     const data = (await res.json()) as PollResponse;
@@ -181,6 +210,15 @@ function delay(ms: number): Promise<void> {
 }
 
 /** Remove any trailing `/` chars. Linear, no regex backtracking. */
+async function readPollError(res: Response): Promise<string | undefined> {
+  try {
+    const data = (await res.json()) as PollResponse;
+    return data.error ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function stripTrailingSlash(s: string): string {
   let end = s.length;
   while (end > 0 && s[end - 1] === "/") end--;
