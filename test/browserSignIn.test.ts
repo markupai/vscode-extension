@@ -4,6 +4,7 @@ import {
   DEFAULT_TIMEOUT_MS,
   isBrowserSignInAvailable,
   runBrowserSignIn,
+  SignInCancelledError,
   type BrowserSignInOptions,
   type BrowserSignInResult,
 } from "../src/browserSignIn";
@@ -270,6 +271,49 @@ describe("runBrowserSignIn", () => {
     // A generous timeout: the rejection must come from the 400, not the deadline.
     await expect(signIn(fetchImpl, { timeoutMs: 5_000 })).rejects.toThrow(/Invalid read key/);
     expect(polls).toBe(1);
+  });
+
+  it("ends the wait at once with SignInCancelledError when the signal aborts", async () => {
+    let polls = 0;
+    const fetchImpl = fakeFetch((url) => {
+      if (url.endsWith("/start")) {
+        return jsonOk({ read_key: "rk", authorize_url: "https://x/", user_code: "BCDF-GHJK" });
+      }
+      if (url.includes("/poll")) {
+        polls++;
+        return jsonOk({ status: "pending" });
+      }
+      return notOk();
+    });
+    const cancel = new AbortController();
+
+    // A long interval and timeout: the rejection must come from the abort, not from either.
+    const pending = signIn(fetchImpl, {
+      signal: cancel.signal,
+      timeoutMs: 60_000,
+      pollIntervalMs: 10_000,
+      onUserCode: () => {
+        // The user closes the code box as soon as it appears.
+        setTimeout(() => {
+          cancel.abort();
+        }, 20);
+      },
+    });
+
+    const startedAt = Date.now();
+    await expect(pending).rejects.toBeInstanceOf(SignInCancelledError);
+    expect(Date.now() - startedAt).toBeLessThan(2_000);
+    expect(polls).toBe(0);
+  });
+
+  it("does not start a flow when the signal is already aborted", async () => {
+    const fetchImpl = vi.fn<typeof fetch>();
+    const cancel = new AbortController();
+    cancel.abort();
+    await expect(signIn(fetchImpl, { signal: cancel.signal })).rejects.toBeInstanceOf(
+      SignInCancelledError,
+    );
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 
   it("tolerates transient poll errors and eventually succeeds", async () => {

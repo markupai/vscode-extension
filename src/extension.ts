@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { OffsetTranslator } from "./offsetMapper";
 import { AuthManager, promptForToken } from "./auth";
-import { isBrowserSignInAvailable, runBrowserSignIn } from "./browserSignIn";
+import { isBrowserSignInAvailable, runBrowserSignIn, SignInCancelledError } from "./browserSignIn";
 import { StyleAgentClient, StyleAgentConfig, AuthError } from "./styleAgentApi";
 import { toCheckResult } from "./resultMapper";
 import { ContentIssue, DocumentAssessment, StyleGuideOption } from "./types";
@@ -376,6 +376,7 @@ async function pickSignInMethod(): Promise<"browser" | "paste" | undefined> {
 }
 
 async function browserSignIn(): Promise<boolean> {
+  const cancel = new AbortController();
   try {
     return await vscode.window.withProgress(
       {
@@ -383,14 +384,17 @@ async function browserSignIn(): Promise<boolean> {
         title: "Markup AI: Complete the sign-in in your browser…",
         cancellable: false,
       },
-      async (progress) => {
+      async () => {
         let codeBox: vscode.Disposable | undefined;
         try {
           const result = await runBrowserSignIn({
             apiBaseUrl: getApiBaseUrl(),
             provider: OAUTH_PROVIDER,
+            signal: cancel.signal,
             onUserCode: (code) => {
-              codeBox = showSignInCode(progress, code);
+              codeBox = showSignInCode(code, () => {
+                cancel.abort();
+              });
             },
           });
           await auth.setSession(result);
@@ -402,6 +406,13 @@ async function browserSignIn(): Promise<boolean> {
       },
     );
   } catch (error) {
+    if (error instanceof SignInCancelledError) {
+      // The user closed the code box: the attempt is abandoned, not failed.
+      vscode.window.showInformationMessage(
+        `${USER_MESSAGE_PREFIX}sign-in cancelled. Run Sign In again when you're ready.`,
+      );
+      return false;
+    }
     const message = error instanceof Error ? error.message : "sign-in failed.";
     const action = await vscode.window.showErrorMessage(message, "Paste token instead");
     if (action === "Paste token instead") {
@@ -419,24 +430,26 @@ async function browserSignIn(): Promise<boolean> {
  * A quick input rather than a toast: a toast reads as a notification and can
  * be dismissed or hidden behind the bell, while this is plainly a step to act
  * on, drawn in VS Code's own UI at the top of the window. The code is the
- * box's value, preselected, so Ctrl+C copies it at once; Enter or the copy
- * button copy it too. `ignoreFocusOut` keeps it open while the browser is in
- * front. The poll keeps running underneath it, and the progress toast repeats
- * the code for anyone who closes the box early. The wording matches the
- * sidebar and the Oxygen plugin, because the console page tells users to enter
- * only a code shown on their own screen.
+ * box's value, preselected, so Ctrl+C copies it at once; Enter and the copy
+ * button copy it and leave the box open. `ignoreFocusOut` keeps it open while
+ * the browser is in front. The box stays up for the whole wait: closing it,
+ * with the close button or Escape, abandons the attempt through `onClose`, and
+ * the user starts Sign In again. The poll keeps running underneath it. The box
+ * is the only place the code appears; a toast would read as a notification.
+ * The wording matches the sidebar and the Oxygen plugin, because the console
+ * page tells users to enter only a code shown on their own screen.
  *
- * @return disposes the box; called when the sign-in ends, whatever the outcome
+ * @return disposes the box without calling `onClose`; for when the attempt
+ *     ends on its own, whatever the outcome
  */
-function showSignInCode(
-  progress: vscode.Progress<{ message?: string }>,
-  code: string,
-): vscode.Disposable {
-  progress.report({ message: `Enter this code in your browser to finish signing in: ${code}` });
-
+function showSignInCode(code: string, onClose: () => void): vscode.Disposable {
   const copyButton: vscode.QuickInputButton = {
     iconPath: new vscode.ThemeIcon("copy"),
     tooltip: "Copy code",
+  };
+  const closeButton: vscode.QuickInputButton = {
+    iconPath: new vscode.ThemeIcon("close"),
+    tooltip: "Cancel sign-in",
   };
   const box = vscode.window.createInputBox();
   box.title = "Sign in to Markup AI";
@@ -444,17 +457,20 @@ function showSignInCode(
   box.value = code;
   box.valueSelection = [0, code.length];
   box.ignoreFocusOut = true;
-  box.buttons = [copyButton];
+  box.buttons = [copyButton, closeButton];
 
   const copy = () => {
     void vscode.env.clipboard.writeText(code);
     box.prompt = "Copied. Enter it in your browser to finish signing in";
   };
-  box.onDidTriggerButton(copy);
-  box.onDidAccept(() => {
+  box.onDidTriggerButton((button) => {
+    if (button === closeButton) {
+      box.hide();
+      return;
+    }
     copy();
-    box.hide();
   });
+  box.onDidAccept(copy);
   // The box is read-only in spirit: typing over the code would hide it.
   box.onDidChangeValue((value) => {
     if (value !== code) {
@@ -462,8 +478,25 @@ function showSignInCode(
       box.valueSelection = [0, code.length];
     }
   });
+  // onDidHide fires for the close button, Escape, and the dispose below; only
+  // the first two are the user abandoning the attempt.
+  let ended = false;
+  box.onDidHide(() => {
+    if (!ended) {
+      ended = true;
+      box.dispose();
+      onClose();
+    }
+  });
   box.show();
-  return box;
+  return {
+    dispose: () => {
+      if (!ended) {
+        ended = true;
+        box.dispose();
+      }
+    },
+  };
 }
 
 async function performInteractiveSignIn(): Promise<boolean> {

@@ -25,6 +25,14 @@ import { USER_MESSAGE_PREFIX } from "./constants";
  * API conversation, identical to what sidebar-app does for its own provider.
  */
 
+/** Thrown when the caller aborts the flow through {@link BrowserSignInOptions.signal}. */
+export class SignInCancelledError extends Error {
+  constructor() {
+    super(`${USER_MESSAGE_PREFIX}sign-in cancelled.`);
+    this.name = "SignInCancelledError";
+  }
+}
+
 export interface BrowserSignInResult {
   readonly accessToken: string;
   readonly expiresIn?: number;
@@ -41,6 +49,8 @@ export interface BrowserSignInOptions {
    * the browser opens. Not called when the relay returns none.
    */
   readonly onUserCode?: (code: string) => void;
+  /** Aborting it ends the wait at once with a {@link SignInCancelledError}. */
+  readonly signal?: AbortSignal;
   /** Exposed for tests — defaults to the platform `fetch`. */
   readonly fetchImpl?: typeof fetch;
   /** Exposed for tests — defaults to `vscode.env.openExternal`. */
@@ -97,6 +107,7 @@ export async function runBrowserSignIn(opts: BrowserSignInOptions): Promise<Brow
   const base = stripTrailingSlash(opts.apiBaseUrl);
   const provider = encodeURIComponent(opts.provider);
 
+  throwIfCancelled(opts.signal);
   const { readKey, authorizeUrl, userCode } = await startMediation(fetchImpl, base, provider);
   if (userCode) {
     opts.onUserCode?.(userCode);
@@ -110,8 +121,16 @@ export async function runBrowserSignIn(opts: BrowserSignInOptions): Promise<Brow
   const code = await pollForCode(fetchImpl, base, provider, readKey, {
     timeoutMs,
     pollIntervalMs,
+    signal: opts.signal,
   });
+  throwIfCancelled(opts.signal);
   return exchangeCode(fetchImpl, base, provider, code);
+}
+
+function throwIfCancelled(signal: AbortSignal | undefined): void {
+  if (signal?.aborted) {
+    throw new SignInCancelledError();
+  }
 }
 
 async function startMediation(
@@ -141,11 +160,12 @@ async function pollForCode(
   base: string,
   provider: string,
   readKey: string,
-  opts: { timeoutMs: number; pollIntervalMs: number },
+  opts: { timeoutMs: number; pollIntervalMs: number; signal?: AbortSignal },
 ): Promise<string> {
   const deadline = Date.now() + opts.timeoutMs;
   while (Date.now() < deadline) {
-    await delay(opts.pollIntervalMs);
+    await delay(opts.pollIntervalMs, opts.signal);
+    throwIfCancelled(opts.signal);
     const url = new URL(`${base}/oauth/${provider}/poll`);
     url.searchParams.set("read_key", readKey);
     let res: Response;
@@ -205,8 +225,23 @@ async function exchangeCode(
   };
 }
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+/** Resolves after `ms`, or at once when `signal` aborts, so a cancel need not wait out a poll interval. */
+function delay(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    if (signal?.aborted) {
+      resolve();
+      return;
+    }
+    const onAbort = () => {
+      clearTimeout(timer);
+      resolve();
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
 }
 
 /** Remove any trailing `/` chars. Linear, no regex backtracking. */
