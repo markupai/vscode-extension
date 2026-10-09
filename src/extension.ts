@@ -1,7 +1,8 @@
 import * as vscode from "vscode";
 import { OffsetTranslator } from "./offsetMapper";
 import { AuthManager, promptForToken } from "./auth";
-import { isBrowserSignInAvailable, runBrowserSignIn } from "./browserSignIn";
+import { isBrowserSignInAvailable, runBrowserSignIn, SignInCancelledError } from "./browserSignIn";
+import { presentSignInCode } from "./signInCode";
 import { StyleAgentClient, StyleAgentConfig, AuthError } from "./styleAgentApi";
 import { toCheckResult } from "./resultMapper";
 import { ContentIssue, DocumentAssessment, StyleGuideOption } from "./types";
@@ -375,24 +376,65 @@ async function pickSignInMethod(): Promise<"browser" | "paste" | undefined> {
   return selected.label.includes("browser") ? "browser" : "paste";
 }
 
-async function browserSignIn(): Promise<boolean> {
+/** The browser sign-in in flight, so a second Sign In joins it instead of starting a parallel flow. */
+let browserSignInInFlight: Promise<boolean> | undefined;
+
+function browserSignIn(): Promise<boolean> {
+  browserSignInInFlight ??= runBrowserSignInWithUi().finally(() => {
+    browserSignInInFlight = undefined;
+  });
+  return browserSignInInFlight;
+}
+
+async function runBrowserSignInWithUi(): Promise<boolean> {
+  const cancel = new AbortController();
   try {
     return await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
         title: "Markup AI: Complete the sign-in in your browser…",
-        cancellable: false,
+        // The notification's own cancel is the one affordance that exists
+        // against a relay without the confirmation step, where no code box
+        // appears; with one, it is the second way out besides the box.
+        cancellable: true,
       },
-      async () => {
-        const result = await runBrowserSignIn({
-          apiBaseUrl: getApiBaseUrl(),
-          provider: OAUTH_PROVIDER,
+      async (_progress, token) => {
+        token.onCancellationRequested(() => {
+          cancel.abort();
         });
-        await auth.setSession(result);
-        return true;
+        let codeBox: vscode.Disposable | undefined;
+        try {
+          const result = await runBrowserSignIn({
+            apiBaseUrl: getApiBaseUrl(),
+            provider: OAUTH_PROVIDER,
+            signal: cancel.signal,
+            onUserCode: (code) => {
+              codeBox = presentSignInCode(code, () => {
+                cancel.abort();
+              });
+            },
+          });
+          // A cancel that landed while the tokens were on their way back
+          // must not become a stored session.
+          if (cancel.signal.aborted) {
+            throw new SignInCancelledError();
+          }
+          await auth.setSession(result);
+          return true;
+        } finally {
+          // The code belongs to the attempt that just ended, whatever the outcome.
+          codeBox?.dispose();
+        }
       },
     );
   } catch (error) {
+    if (error instanceof SignInCancelledError) {
+      // The user cancelled: the attempt is abandoned, not failed.
+      vscode.window.showInformationMessage(
+        `${USER_MESSAGE_PREFIX}sign-in cancelled. Run Sign In again when you're ready.`,
+      );
+      return false;
+    }
     const message = error instanceof Error ? error.message : "sign-in failed.";
     const action = await vscode.window.showErrorMessage(message, "Paste token instead");
     if (action === "Paste token instead") {

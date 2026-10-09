@@ -5,6 +5,37 @@ All notable changes to the Markup AI Lint extension are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this
 project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Browser sign-in shows a confirmation code in a VS Code input box when the Markup AI
+  relay issues one. After signing in, the browser asks for that code and completes the
+  sign-in only when it matches, so a sign-in link can no longer hand your session to
+  whoever created it. Against a relay that issues no code, sign-in works as before.
+- The sign-in can be cancelled: from the code box's close button, from the "Complete
+  the sign-in in your browser" notification, or from the reminder shown when the code
+  box is hidden by another quick input.
+
+### Changed
+
+- The browser sign-in waits up to five minutes (previously two) for the sign-in and the
+  confirmation code, and each request to the relay is abandoned and retried after
+  fifteen seconds instead of stalling the wait.
+- An expired or abandoned sign-in now reads "sign-in expired. Please try again." instead
+  of the relay's own error text.
+
+### Fixed
+
+- Refresh tokens now rotate on every refresh. Two VS Code windows sharing one sign-in no
+  longer sign each other out when both refresh at once: the window that loses the race
+  adopts the other window's session, a refresh refused while the other window is still
+  writing waits for that write, and a relay outage (5xx, 429) during refresh keeps the
+  session instead of signing out.
+- A refresh that completes after you signed out no longer restores the session.
+- A dropped poll request or a non-JSON poll response during browser sign-in no longer
+  ends the sign-in.
+
 ## [1.0.2] - 2026-08-11
 
 ### Fixed
