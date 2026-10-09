@@ -1,9 +1,10 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import * as vscode from "vscode";
 import {
   DEFAULT_TIMEOUT_MS,
   isBrowserSignInAvailable,
   runBrowserSignIn,
+  SIGN_IN_EXPIRED_MESSAGE,
   SignInCancelledError,
   type BrowserSignInOptions,
   type BrowserSignInResult,
@@ -57,6 +58,10 @@ describe("isBrowserSignInAvailable", () => {
 });
 
 describe("runBrowserSignIn", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("happy path: start → poll-pending → poll-complete → exchange", async () => {
     const calls: string[] = [];
     const fetchImpl = fakeFetch((url) => {
@@ -234,6 +239,41 @@ describe("runBrowserSignIn", () => {
     expect(codes).toEqual(["MNPQ-RSTV"]);
   });
 
+  it("ignores an empty userCode and reports the user_code beside it", async () => {
+    const onUserCode = vi.fn();
+    const fetchImpl = fakeFetch((url) => {
+      if (url.endsWith("/start")) {
+        return jsonOk({
+          read_key: "rk",
+          authorize_url: "https://x/",
+          userCode: "",
+          user_code: " WXYZ-2345 ",
+        });
+      }
+      if (url.includes("/poll")) {
+        return jsonOk({ status: "complete", code: "c" });
+      }
+      return jsonOk({ access_token: "at" });
+    });
+    await signIn(fetchImpl, { onUserCode });
+    expect(onUserCode).toHaveBeenCalledWith("WXYZ-2345");
+  });
+
+  it("does not report a code that is not a string, and still signs in", async () => {
+    const onUserCode = vi.fn();
+    const fetchImpl = fakeFetch((url) => {
+      if (url.endsWith("/start")) {
+        return jsonOk({ read_key: "rk", authorize_url: "https://x/", user_code: 12345 });
+      }
+      if (url.includes("/poll")) {
+        return jsonOk({ status: "complete", code: "c" });
+      }
+      return jsonOk({ access_token: "at" });
+    });
+    await expect(signIn(fetchImpl, { onUserCode })).resolves.toMatchObject({ accessToken: "at" });
+    expect(onUserCode).not.toHaveBeenCalled();
+  });
+
   it("does not report a code, and still signs in, when the relay returns none", async () => {
     const onUserCode = vi.fn();
     const fetchImpl = fakeFetch((url) => {
@@ -269,8 +309,157 @@ describe("runBrowserSignIn", () => {
       return notOk();
     });
     // A generous timeout: the rejection must come from the 400, not the deadline.
-    await expect(signIn(fetchImpl, { timeoutMs: 5_000 })).rejects.toThrow(/Invalid read key/);
+    // The relay's own wording ("Invalid read key.") stays out of the message.
+    await expect(signIn(fetchImpl, { timeoutMs: 5_000 })).rejects.toThrow(SIGN_IN_EXPIRED_MESSAGE);
     expect(polls).toBe(1);
+  });
+
+  it("a 400 without an error field, or with a non-string one, reads the same", async () => {
+    const bodies = [{}, { status: "error", error: "" }, { status: "error", error: { code: 7 } }];
+    for (const body of bodies) {
+      const fetchImpl = fakeFetch((url) => {
+        if (url.endsWith("/start")) {
+          return jsonOk({ read_key: "rk", authorize_url: "https://x/" });
+        }
+        if (url.includes("/poll")) {
+          return new Response(JSON.stringify(body), { status: 400 });
+        }
+        return notOk();
+      });
+      await expect(signIn(fetchImpl, { timeoutMs: 5_000 })).rejects.toThrow(
+        SIGN_IN_EXPIRED_MESSAGE,
+      );
+    }
+  });
+
+  it("keeps polling when a 200 poll has no JSON body", async () => {
+    let polls = 0;
+    const fetchImpl = fakeFetch((url) => {
+      if (url.endsWith("/start")) {
+        return jsonOk({ read_key: "rk", authorize_url: "https://x/" });
+      }
+      if (url.includes("/poll")) {
+        polls++;
+        return polls === 1
+          ? new Response("<html>proxy page</html>", { status: 200 })
+          : jsonOk({ status: "complete", code: "c" });
+      }
+      if (url.endsWith("/exchange")) {
+        return jsonOk({ access_token: "at" });
+      }
+      return notOk();
+    });
+    await expect(signIn(fetchImpl)).resolves.toMatchObject({ accessToken: "at" });
+    expect(polls).toBe(2);
+  });
+
+  it("keeps polling when a poll request itself fails (dropped connection)", async () => {
+    let polls = 0;
+    const fetchImpl: typeof fetch = (input) => {
+      const url = urlOf(input);
+      if (url.endsWith("/start")) {
+        return Promise.resolve(jsonOk({ read_key: "rk", authorize_url: "https://x/" }));
+      }
+      if (url.includes("/poll")) {
+        polls++;
+        return polls <= 2
+          ? Promise.reject(new TypeError("fetch failed"))
+          : Promise.resolve(jsonOk({ status: "complete", code: "c" }));
+      }
+      return Promise.resolve(jsonOk({ access_token: "at" }));
+    };
+    await expect(signIn(fetchImpl)).resolves.toMatchObject({ accessToken: "at" });
+    expect(polls).toBe(3);
+  });
+
+  it("abandons a stalled poll request after the per-request timeout and retries", async () => {
+    let polls = 0;
+    const fetchImpl: typeof fetch = (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/start")) {
+        return Promise.resolve(jsonOk({ read_key: "rk", authorize_url: "https://x/" }));
+      }
+      if (url.includes("/poll")) {
+        polls++;
+        if (polls === 1) {
+          // Hangs until its signal aborts, as a real fetch would.
+          return new Promise((_, reject) => {
+            init?.signal?.addEventListener("abort", () => {
+              reject(new DOMException("aborted", "AbortError"));
+            });
+          });
+        }
+        return Promise.resolve(jsonOk({ status: "complete", code: "c" }));
+      }
+      return Promise.resolve(jsonOk({ access_token: "at" }));
+    };
+    await expect(
+      signIn(fetchImpl, { requestTimeoutMs: 30, timeoutMs: 2_000 }),
+    ).resolves.toMatchObject({ accessToken: "at" });
+    expect(polls).toBe(2);
+  });
+
+  it("passes the caller's signal to every relay request", async () => {
+    const signals: (AbortSignal | null | undefined)[] = [];
+    const fetchImpl: typeof fetch = (input, init) => {
+      signals.push(init?.signal);
+      const url = urlOf(input);
+      if (url.endsWith("/start")) {
+        return Promise.resolve(jsonOk({ read_key: "rk", authorize_url: "https://x/" }));
+      }
+      if (url.includes("/poll")) {
+        return Promise.resolve(jsonOk({ status: "complete", code: "c" }));
+      }
+      return Promise.resolve(jsonOk({ access_token: "at" }));
+    };
+    const cancel = new AbortController();
+    await signIn(fetchImpl, { signal: cancel.signal });
+
+    expect(signals).toHaveLength(3);
+    for (const signal of signals) {
+      expect(signal).toBeInstanceOf(AbortSignal);
+      expect(signal?.aborted).toBe(false);
+    }
+    cancel.abort();
+    // Each request signal follows the caller's.
+    for (const signal of signals) {
+      expect(signal?.aborted).toBe(true);
+    }
+  });
+
+  it("uses the five-minute wait when no timeout is given", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    let polls = 0;
+    const fetchImpl = fakeFetch((url) => {
+      if (url.endsWith("/start")) {
+        return jsonOk({ read_key: "rk", authorize_url: "https://x/" });
+      }
+      if (url.includes("/poll")) {
+        polls++;
+        return jsonOk({ status: "pending" });
+      }
+      return notOk();
+    });
+    let settled = false;
+    const pending = runBrowserSignIn({
+      apiBaseUrl: BASE,
+      provider: PROVIDER,
+      fetchImpl,
+      openExternal: () => Promise.resolve(true),
+    });
+    const assertion = expect(pending).rejects.toThrow(/timed out/);
+    void pending.catch(() => {
+      settled = true;
+    });
+
+    await vi.advanceTimersByTimeAsync(298_000);
+    expect(settled).toBe(false);
+    expect(polls).toBeGreaterThan(140);
+
+    await vi.advanceTimersByTimeAsync(4_000);
+    expect(settled).toBe(true);
+    await assertion;
   });
 
   it("ends the wait at once with SignInCancelledError when the signal aborts", async () => {
@@ -304,6 +493,58 @@ describe("runBrowserSignIn", () => {
     await expect(pending).rejects.toBeInstanceOf(SignInCancelledError);
     expect(Date.now() - startedAt).toBeLessThan(2_000);
     expect(polls).toBe(0);
+  });
+
+  it("does not exchange the code when the cancel lands as the poll completes", async () => {
+    const cancel = new AbortController();
+    const calls: string[] = [];
+    const fetchImpl: typeof fetch = (input) => {
+      const url = urlOf(input);
+      calls.push(url);
+      if (url.endsWith("/start")) {
+        return Promise.resolve(jsonOk({ read_key: "rk", authorize_url: "https://x/" }));
+      }
+      if (url.includes("/poll")) {
+        // The relay releases the code, but the user cancelled while it was in flight.
+        cancel.abort();
+        return Promise.resolve(jsonOk({ status: "complete", code: "c" }));
+      }
+      return Promise.resolve(jsonOk({ access_token: "at" }));
+    };
+
+    await expect(signIn(fetchImpl, { signal: cancel.signal })).rejects.toBeInstanceOf(
+      SignInCancelledError,
+    );
+    expect(calls.some((c) => c.endsWith("/exchange"))).toBe(false);
+  });
+
+  it("reports a cancel during the exchange, not a stored session", async () => {
+    const cancel = new AbortController();
+    const fetchImpl: typeof fetch = (input, init) => {
+      const url = urlOf(input);
+      if (url.endsWith("/start")) {
+        return Promise.resolve(jsonOk({ read_key: "rk", authorize_url: "https://x/" }));
+      }
+      if (url.includes("/poll")) {
+        return Promise.resolve(jsonOk({ status: "complete", code: "c" }));
+      }
+      // The exchange is in flight when the user cancels; the request is aborted.
+      return new Promise((resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => {
+          reject(new DOMException("aborted", "AbortError"));
+        });
+        setTimeout(() => {
+          cancel.abort();
+        }, 10);
+        setTimeout(() => {
+          resolve(jsonOk({ access_token: "at" }));
+        }, 100);
+      });
+    };
+
+    await expect(signIn(fetchImpl, { signal: cancel.signal })).rejects.toBeInstanceOf(
+      SignInCancelledError,
+    );
   });
 
   it("does not start a flow when the signal is already aborted", async () => {
