@@ -223,6 +223,28 @@ describe("AuthManager", () => {
     expect(await secrets.get("markupai-lint.refreshToken")).toBeUndefined();
   });
 
+  it("does not wait for a sibling write when the refused session was signed out meanwhile", async () => {
+    // Another window signed out while this refresh was in flight: nothing will be written.
+    vi.useFakeTimers();
+    const { auth, secrets } = createAuth(
+      vi.fn().mockImplementation(async () => {
+        await secrets.delete("markupai-lint.refreshToken");
+        return refused();
+      }),
+    );
+    await auth.setSession({ accessToken: "stale", expiresIn: 1, refreshToken: "rt1" });
+
+    let settled = false;
+    const pending = auth.getValidToken().finally(() => {
+      settled = true;
+    });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(settled).toBe(true);
+    expect(await pending).toBeUndefined();
+    expect(await auth.isSignedIn()).toBe(false);
+  });
+
   it("waits for the other window's write to land before treating a refusal as revocation", async () => {
     // The usual ordering: this window's 400 arrives first, the winner's three
     // SecretStorage writes finish a moment later, refresh token last.

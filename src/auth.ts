@@ -195,7 +195,11 @@ export class AuthManager implements vscode.Disposable {
     const deadline = Date.now() + SIBLING_WRITE_WAIT_MS;
     for (;;) {
       const stored = await this.secrets.get(REFRESH_TOKEN_KEY);
-      if (stored && stored !== presentedRefreshToken) {
+      if (!stored) {
+        // Signed out here or in another window: nothing will be written.
+        return undefined;
+      }
+      if (stored !== presentedRefreshToken) {
         const accessToken = await this.readSessionWrittenElsewhere();
         if (accessToken) {
           return accessToken;
