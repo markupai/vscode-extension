@@ -1,5 +1,4 @@
 import * as vscode from "vscode";
-import { USER_MESSAGE_PREFIX } from "./constants";
 
 /**
  * The relay's confirmation code. After signing in, the browser asks for it and
@@ -17,9 +16,11 @@ import { USER_MESSAGE_PREFIX } from "./constants";
  * close button, for Escape, and whenever another quick input opens (the
  * command palette, a file picker, this extension's own pickers). The stable
  * API gives no reason, so only the close button is taken as a cancel. Any
- * other hide keeps the sign-in running and offers the code again through a
- * notification, so the palette stays usable for the whole wait. The box is
- * the only place the code appears.
+ * other hide keeps the sign-in running and puts a status bar item up that
+ * brings the code back, so the palette stays usable for the whole wait. A
+ * status bar item rather than a notification: the presenter can take it down
+ * when the attempt ends, where a notification would linger next to the
+ * outcome. The box is the only place the code appears.
  */
 
 export interface SignInCodePresenter extends vscode.Disposable {
@@ -27,16 +28,15 @@ export interface SignInCodePresenter extends vscode.Disposable {
   show(): void;
 }
 
-const RE_OFFER_MESSAGE = `${USER_MESSAGE_PREFIX}the browser sign-in is still waiting for your code.`;
-const SHOW_CODE_ACTION = "Show code";
-const CANCEL_ACTION = "Cancel sign-in";
+/** Runs `show()` on the presenter in flight; registered only while one is. */
+export const SHOW_SIGN_IN_CODE_COMMAND = "markupai-lint.showSignInCode";
 
 /**
  * Presents `code` for as long as the sign-in attempt runs. `onCancel` fires
- * once, and only when the user asks to cancel: the box's close button or the
- * re-offer notification's cancel action. Disposing the presenter takes the
- * box down without calling `onCancel`; for when the attempt ends on its own,
- * whatever the outcome.
+ * once, and only when the user asks to cancel with the box's close button.
+ * Disposing the presenter takes the box and the status bar item down without
+ * calling `onCancel`; for when the attempt ends on its own, whatever the
+ * outcome.
  */
 export function presentSignInCode(code: string, onCancel: () => void): SignInCodePresenter {
   let ended = false;
@@ -51,31 +51,27 @@ export function presentSignInCode(code: string, onCancel: () => void): SignInCod
     onCancel();
   };
 
-  const reOffer = async () => {
-    const action = await vscode.window.showInformationMessage(
-      RE_OFFER_MESSAGE,
-      SHOW_CODE_ACTION,
-      CANCEL_ACTION,
-    );
-    if (ended) {
-      return;
-    }
-    if (action === SHOW_CODE_ACTION) {
-      show();
-    } else if (action === CANCEL_ACTION) {
-      cancel();
-    }
-  };
+  const reOffer = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
+  reOffer.text = "$(key) Markup AI sign-in code";
+  reOffer.tooltip = "The browser sign-in is still waiting for your code. Click to show it.";
+  reOffer.command = SHOW_SIGN_IN_CODE_COMMAND;
+  const showCommand = vscode.commands.registerCommand(SHOW_SIGN_IN_CODE_COMMAND, () => {
+    show();
+  });
 
   const show = () => {
     if (ended || cancelled) {
       return;
     }
+    reOffer.hide();
     box?.dispose();
     box = createCodeBox(code, {
-      onCancel: cancel,
+      onCancel: () => {
+        reOffer.hide();
+        cancel();
+      },
       onHidden: () => {
-        void reOffer();
+        reOffer.show();
       },
     });
     box.show();
@@ -88,6 +84,8 @@ export function presentSignInCode(code: string, onCancel: () => void): SignInCod
       ended = true;
       box?.dispose();
       box = undefined;
+      reOffer.dispose();
+      showCommand.dispose();
     },
   };
 }

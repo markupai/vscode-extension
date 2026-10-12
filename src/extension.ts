@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { OffsetTranslator } from "./offsetMapper";
 import { AuthManager, promptForToken } from "./auth";
 import { isBrowserSignInAvailable, runBrowserSignIn, SignInCancelledError } from "./browserSignIn";
-import { presentSignInCode } from "./signInCode";
+import { presentSignInCode, type SignInCodePresenter } from "./signInCode";
 import { StyleAgentClient, StyleAgentConfig, AuthError } from "./styleAgentApi";
 import { toCheckResult } from "./resultMapper";
 import { ContentIssue, DocumentAssessment, StyleGuideOption } from "./types";
@@ -378,6 +378,8 @@ async function pickSignInMethod(): Promise<"browser" | "paste" | undefined> {
 
 /** The browser sign-in in flight, so a second Sign In joins it instead of starting a parallel flow. */
 let browserSignInInFlight: Promise<boolean> | undefined;
+/** The code box of the sign-in in flight, once the relay has issued a code. */
+let signInCodePresenter: SignInCodePresenter | undefined;
 
 function browserSignIn(): Promise<boolean> {
   browserSignInInFlight ??= runBrowserSignInWithUi().finally(() => {
@@ -402,14 +404,13 @@ async function runBrowserSignInWithUi(): Promise<boolean> {
         token.onCancellationRequested(() => {
           cancel.abort();
         });
-        let codeBox: vscode.Disposable | undefined;
         try {
           const result = await runBrowserSignIn({
             apiBaseUrl: getApiBaseUrl(),
             provider: OAUTH_PROVIDER,
             signal: cancel.signal,
             onUserCode: (code) => {
-              codeBox = presentSignInCode(code, () => {
+              signInCodePresenter = presentSignInCode(code, () => {
                 cancel.abort();
               });
             },
@@ -423,7 +424,8 @@ async function runBrowserSignInWithUi(): Promise<boolean> {
           return true;
         } finally {
           // The code belongs to the attempt that just ended, whatever the outcome.
-          codeBox?.dispose();
+          signInCodePresenter?.dispose();
+          signInCodePresenter = undefined;
         }
       },
     );
@@ -445,10 +447,13 @@ async function runBrowserSignInWithUi(): Promise<boolean> {
 }
 
 async function performInteractiveSignIn(): Promise<boolean> {
-  const method = await pickSignInMethod();
+  // A second Sign In during a browser sign-in joins it, and brings the code
+  // back in case the user has lost sight of it.
+  const method = browserSignInInFlight ? "browser" : await pickSignInMethod();
   if (!method) {
     return false;
   }
+  signInCodePresenter?.show();
 
   const signedIn = method === "browser" ? await browserSignIn() : await promptForToken(auth);
   if (!signedIn) {
