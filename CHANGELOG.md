@@ -13,9 +13,10 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   relay issues one. After signing in, the browser asks for that code and completes the
   sign-in only when it matches, so a sign-in link can no longer hand your session to
   whoever created it. Against a relay that issues no code, sign-in works as before.
-- The sign-in can be cancelled: from the code box's close button, from the "Complete
-  the sign-in in your browser" notification, or from the reminder shown when the code
-  box is hidden by another quick input.
+- The sign-in can be cancelled from the code box's close button or from the "Complete
+  the sign-in in your browser" notification. When the code box is hidden by another
+  quick input, a "Markup AI sign-in code" status bar item brings it back, as does
+  running Sign In again.
 
 ### Changed
 
@@ -27,11 +28,11 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- Refresh tokens now rotate on every refresh. Two VS Code windows sharing one sign-in no
-  longer sign each other out when both refresh at once: the window that loses the race
-  adopts the other window's session, a refresh refused while the other window is still
-  writing waits for that write, and a relay outage (5xx, 429) during refresh keeps the
-  session instead of signing out.
+- Ready for refresh-token rotation: once the relay rotates refresh tokens, two VS Code
+  windows sharing one sign-in will not sign each other out when both refresh at once.
+  The window that loses the race adopts the other window's session, and a refresh
+  refused while the other window is still writing waits for that write.
+- A relay outage (5xx, 429) during a refresh keeps the session instead of signing out.
 - A refresh that completes after you signed out no longer restores the session.
 - A dropped poll request or a non-JSON poll response during browser sign-in no longer
   ends the sign-in.
