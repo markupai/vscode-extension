@@ -172,11 +172,17 @@ function requestSignal(relay: Relay): AbortSignal {
 async function startMediation(
   relay: Relay,
 ): Promise<{ readKey: string; authorizeUrl: string; userCode?: string }> {
-  const res = await relay.fetchImpl(`${relay.base}/oauth/${relay.provider}/start`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
-    signal: requestSignal(relay),
-  });
+  let res: Response;
+  try {
+    res = await relay.fetchImpl(`${relay.base}/oauth/${relay.provider}/start`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      signal: requestSignal(relay),
+    });
+  } catch {
+    throwIfCancelled(relay.signal);
+    throw new Error(`${USER_MESSAGE_PREFIX}failed to start OAuth flow (network).`);
+  }
   if (!res.ok) {
     throw new Error(`${USER_MESSAGE_PREFIX}failed to start OAuth flow (${String(res.status)}).`);
   }

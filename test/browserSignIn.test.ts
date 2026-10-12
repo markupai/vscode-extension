@@ -547,6 +547,33 @@ describe("runBrowserSignIn", () => {
     );
   });
 
+  it("reports a cancel during /start as a cancel, not a failure", async () => {
+    const cancel = new AbortController();
+    const fetchImpl: typeof fetch = (_input, init) =>
+      // /start is in flight when the user cancels from the progress notification.
+      new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => {
+          reject(new DOMException("aborted", "AbortError"));
+        });
+        setTimeout(() => {
+          cancel.abort();
+        }, 10);
+      });
+
+    await expect(signIn(fetchImpl, { signal: cancel.signal })).rejects.toBeInstanceOf(
+      SignInCancelledError,
+    );
+  });
+
+  it("reports a /start that never answers as a failure to start, with the prefix", async () => {
+    const fetchImpl: typeof fetch = () =>
+      Promise.reject(new DOMException("The operation timed out.", "TimeoutError"));
+
+    await expect(signIn(fetchImpl)).rejects.toThrow(
+      "Markup AI Lint: failed to start OAuth flow (network).",
+    );
+  });
+
   it("does not start a flow when the signal is already aborted", async () => {
     const fetchImpl = vi.fn<typeof fetch>();
     const cancel = new AbortController();
