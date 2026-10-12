@@ -4,7 +4,7 @@ Markup AI Lint needs a Markup AI account to check your content.
 
 Two ways to sign in:
 
-- **Browser** — opens markup.ai in your default browser and signs you in with your usual account.
+- **Browser** — opens markup.ai in your default browser and signs you in with your usual account. VS Code shows a short confirmation code; after signing in, the browser asks for it. Only enter a code shown in your own VS Code window.
 - **Token** — paste an access token (JWT) or a `mat_…` API key, useful for CI or when a token was issued elsewhere.
 
 You can always find sign-in again in:

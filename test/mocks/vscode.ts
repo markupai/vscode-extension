@@ -378,6 +378,8 @@ export const window = {
     },
   ),
 
+  createInputBox: vi.fn(() => new FakeInputBox()),
+
   activeTextEditor: undefined,
 
   onDidChangeActiveTextEditor: vi.fn(() => ({ dispose: vi.fn() })),
@@ -403,10 +405,80 @@ export const languages = {
 export const env: {
   uiKind: UIKind;
   openExternal: (uri: Uri) => Thenable<boolean>;
+  clipboard: { writeText: ReturnType<typeof vi.fn>; readText: ReturnType<typeof vi.fn> };
 } = {
   uiKind: UIKind.Desktop,
   openExternal: vi.fn(() => Promise.resolve(true)),
+  clipboard: {
+    writeText: vi.fn(() => Promise.resolve()),
+    readText: vi.fn(() => Promise.resolve("")),
+  },
 };
+
+export interface QuickInputButton {
+  iconPath: ThemeIcon | Uri;
+  tooltip?: string;
+}
+
+/**
+ * A `vscode.InputBox` stand-in whose events can be fired from a test:
+ * `fireButton`, `fireAccept`, `fireChangeValue`, and `hide()`, which fires
+ * `onDidHide` the way VS Code does for Escape, the close button, or another
+ * quick input opening. `dispose()` also fires `onDidHide`, as VS Code does.
+ */
+export class FakeInputBox {
+  title: string | undefined;
+  prompt: string | undefined;
+  value = "";
+  valueSelection: [number, number] | undefined;
+  ignoreFocusOut = false;
+  buttons: readonly QuickInputButton[] = [];
+  visible = false;
+  disposed = false;
+
+  private readonly buttonEmitter = new EventEmitter<QuickInputButton>();
+  private readonly acceptEmitter = new EventEmitter<void>();
+  private readonly changeEmitter = new EventEmitter<string>();
+  private readonly hideEmitter = new EventEmitter<void>();
+
+  onDidTriggerButton = this.buttonEmitter.event;
+  onDidAccept = this.acceptEmitter.event;
+  onDidChangeValue = this.changeEmitter.event;
+  onDidHide = this.hideEmitter.event;
+
+  show(): void {
+    this.visible = true;
+  }
+
+  hide(): void {
+    if (!this.visible) {
+      return;
+    }
+    this.visible = false;
+    this.hideEmitter.fire();
+  }
+
+  dispose(): void {
+    if (this.disposed) {
+      return;
+    }
+    this.disposed = true;
+    this.hide();
+  }
+
+  fireButton(button: QuickInputButton): void {
+    this.buttonEmitter.fire(button);
+  }
+
+  fireAccept(): void {
+    this.acceptEmitter.fire();
+  }
+
+  fireChangeValue(value: string): void {
+    this.value = value;
+    this.changeEmitter.fire(value);
+  }
+}
 
 // Mock commands
 export const commands = {
